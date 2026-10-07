@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  IIS config for this dashboard's static build. This client's IIS server does
+  not allow the URL Rewrite module or any server-side rewrite rule, so this
+  file does not use <rewrite> — it only sets static MIME types and
+  compression, both native IIS features requiring no extra module.
+
+  Because there is no server-side rewrite, the app is built with
+  VITE_ROUTER=hash (see IIS_DEPLOY notes), so routing happens entirely in the
+  URL fragment after "#" (e.g. /VPMS/#/executive) and IIS only ever needs to
+  serve index.html itself — a direct link or a page refresh never needs the
+  server to know about a client-side route.
+
+  SETUP
+  1. Rename this file to web.config and place it at the root of the folder
+     IIS serves (next to index.html) — copy it into dist/ after every build,
+     or keep it in public/ so Vite copies it automatically. Safe to ship on
+     GitHub Pages too; GitHub Pages ignores web.config.
+  2. No IIS modules beyond the default install are required.
+-->
+<configuration>
+  <system.webServer>
+    <staticContent>
+      <!-- IIS's built-in MIME map is missing these on many default installs;
+           without them the browser either refuses to run the module script
+           or the font silently fails to load. -->
+      <remove fileExtension=".js" />
+      <mimeMap fileExtension=".js" mimeType="application/javascript" />
+      <mimeMap fileExtension=".mjs" mimeType="application/javascript" />
+      <mimeMap fileExtension=".json" mimeType="application/json" />
+      <mimeMap fileExtension=".woff2" mimeType="font/woff2" />
+      <mimeMap fileExtension=".webmanifest" mimeType="application/manifest+json" />
+    </staticContent>
+
+    <httpCompression>
+      <!-- Static build output (JS/CSS bundles run 300-450KB) — serve
+           compressed or the page loads noticeably slower on the corporate
+           network than it did from GitHub Pages, which compresses by
+           default. -->
+      <dynamicTypes>
+        <add mimeType="*/*" enabled="false" />
+      </dynamicTypes>
+      <staticTypes>
+        <add mimeType="text/*" enabled="true" />
+        <add mimeType="application/javascript" enabled="true" />
+        <add mimeType="application/json" enabled="true" />
+        <add mimeType="*/*" enabled="false" />
+      </staticTypes>
+    </httpCompression>
+  </system.webServer>
+</configuration>
