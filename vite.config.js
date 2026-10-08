@@ -12,7 +12,7 @@ export default defineConfig({
   // IIS virtual application, or "/" for a dedicated site/binding at the
   // domain root. main.jsx's <BrowserRouter basename> reads this same value
   // via import.meta.env.BASE_URL, so routing follows automatically.
-  base: process.env.VITE_BASE_PATH || (process.env.GITHUB_ACTIONS ? '/VPMS_ExecutiveDashboards/' : '/'),
+  base: process.env.VITE_BASE_PATH || (process.env.GITHUB_ACTIONS ? '/vpms-executive-dashboard-template/' : '/'),
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
