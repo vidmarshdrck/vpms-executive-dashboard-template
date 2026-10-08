@@ -25,7 +25,7 @@ export const companyInfo = {
   // Per-KPI provenance (source record, HOD, sync time) requires the
   // canonical KPI data model described in src/lib/navisionIntegration.js
   // and does not exist yet.
-  dataSource: 'Sourced from Microsoft Navision',
+  dataSource: 'Entered via VPMS, GM-approved',
   dataIsProvisional: true,
 };
 
