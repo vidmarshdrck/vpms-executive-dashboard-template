@@ -34,6 +34,8 @@ const PERMISSION_ROLES = {
   'kpi.administer': [ROLES.ADMIN],
   'kpi.import': [ROLES.ADMIN, ROLES.GM],
   'kpi.enter': DEPARTMENT_ONLY,
+  'kpi.submit': DEPARTMENT_ONLY,
+  'kpi.approve': [ROLES.GM],
   'dashboard.org': ORG_WIDE,
   'dashboard.department': DEPARTMENT_ONLY,
   'dashboard.view': [...ORG_WIDE, ...DEPARTMENT_ONLY],

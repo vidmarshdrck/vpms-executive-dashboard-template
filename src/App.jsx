@@ -13,6 +13,8 @@ import KPIHeatmap from './pages/dashboard/KPIHeatmap.jsx'
 import Projects from './pages/dashboard/Projects.jsx'
 import Support from './pages/dashboard/Support.jsx'
 import Admin from './pages/dashboard/Admin.jsx'
+import KpiEntry from './pages/dashboard/KpiEntry.jsx'
+import KpiApprovals from './pages/dashboard/KpiApprovals.jsx'
 
 function ProtectedRoute() {
   const { user } = useAuth()
@@ -46,6 +48,12 @@ export default function App() {
         <Route index element={<HomeRedirect />} />
         <Route element={<RequirePermission permission="dashboard.department" />}>
           <Route path="my-department" element={<DepartmentScorecards />} />
+        </Route>
+        <Route element={<RequirePermission permission="kpi.submit" />}>
+          <Route path="kpi-entry" element={<KpiEntry />} />
+        </Route>
+        <Route element={<RequirePermission permission="kpi.approve" />}>
+          <Route path="kpi-approvals" element={<KpiApprovals />} />
         </Route>
         <Route element={<RequirePermission permission="dashboard.org" />}>
           <Route path="executive" element={<Executive />} />

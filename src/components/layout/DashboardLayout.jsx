@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Gauge, Building2, Waypoints, Activity, TrendingUp, Grid3X3, FolderKanban, Headset, Menu, X, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, Gauge, Building2, Waypoints, Activity, TrendingUp, Grid3X3, FolderKanban, Headset, Menu, X, ShieldCheck, ClipboardList, ClipboardCheck } from 'lucide-react'
 import { companyInfo } from '../../data/kpiData.js'
 import { DataStatus } from '../ui/StatusBadge.jsx'
 import { ProfileMenu } from '../ui/ProfileMenu.jsx'
@@ -28,8 +28,13 @@ const navItems = [
 ]
 
 const adminNavItem = { path: '/admin', label: 'Administration', icon: ShieldCheck, permission: 'system.configure' }
+// GM-only: the approval queue for KPI submissions (kpi.approve — see permissions.js).
+const approvalsNavItem = { path: '/kpi-approvals', label: 'KPI approvals', icon: ClipboardCheck, permission: 'kpi.approve' }
 // Department Heads and Staff only ever see their own department (PMS guide, "Who's who").
-const departmentNavItems = [{ path: '/my-department', label: 'My department', icon: Building2 }]
+const departmentNavItems = [
+  { path: '/my-department', label: 'My department', icon: Building2 },
+  { path: '/kpi-entry', label: 'KPI entry', icon: ClipboardList },
+]
 
 function initials(name = '') {
   return name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
@@ -43,7 +48,11 @@ export default function DashboardLayout() {
   const location = useLocation()
   const { user } = useAuth()
 
-  const orgNav = hasPermission(user, adminNavItem.permission) ? [...navItems, adminNavItem] : navItems
+  const orgNav = [
+    ...navItems,
+    ...(hasPermission(user, approvalsNavItem.permission) ? [approvalsNavItem] : []),
+    ...(hasPermission(user, adminNavItem.permission) ? [adminNavItem] : []),
+  ]
   const visibleNavItems = hasPermission(user, 'dashboard.org') ? orgNav : departmentNavItems
   const currentPage = visibleNavItems.find((item) => item.path === location.pathname)?.label || 'Dashboard'
 

@@ -4,13 +4,15 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Ca
 import { DataStatus, StatusBadge } from '../../components/ui/StatusBadge.jsx'
 import { PerspectiveScore, Sparkline, LegendLabel } from '../../components/ui/Scorecard.jsx'
 import { scoreStatus, formatScore } from '../../lib/scoreStatus.js'
-import { PERSPECTIVES, MONTHS, REPORTED_MONTHS, departments, departmentSource } from '../../data/scorecardData.js'
+import { PERSPECTIVES, MONTHS, REPORTED_MONTHS, departmentSource } from '../../data/scorecardData.js'
 import { scoreScorecard, periodAchievement, periodActual, kpiAchievement } from '../../lib/scorecard.js'
 import { DEFAULT_KPI_THRESHOLDS } from '../../lib/kpiThresholds.js'
 import { getHeatClass } from '../../data/kpiData.js'
 import { useReportingPeriod } from '../../lib/ReportingPeriodContext.jsx'
 import { useAuth } from '../../auth/AuthContext.jsx'
 import { hasPermission } from '../../auth/permissions.js'
+import { departmentsWithPublishedKpis } from '../../lib/departmentsWithPublishedKpis.js'
+import { useKpiSubmissionsVersion } from '../../lib/useKpiSubmissionsVersion.js'
 
 const range = (from, to) => Array.from({ length: to - from + 1 }, (_, i) => from + i)
 
@@ -72,7 +74,16 @@ export default function DepartmentScorecards() {
     return range(Math.min(from, to), Math.max(from, to))
   }, [timeframe, lastMonth])
 
-  const scored = useMemo(() => departments.map((d) => scoreDepartment(d, months)), [months])
+  // Baseline demo actuals with any GM-approved KPI submissions overlaid on
+  // top (see departmentsWithPublishedKpis.js) — this is the single source
+  // of truth this page reads from, so an approval needs no manual copy step
+  // to show up here. Recomputed whenever the submissions store changes,
+  // including from another browser tab (useKpiSubmissionsVersion).
+  const submissionsVersion = useKpiSubmissionsVersion()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run on submissionsVersion, which the function body reads via localStorage rather than as an argument
+  const departments = useMemo(() => departmentsWithPublishedKpis(), [submissionsVersion])
+
+  const scored = useMemo(() => departments.map((d) => scoreDepartment(d, months)), [departments, months])
   const ranked = useMemo(() => [...scored].sort((a, b) => b.overall - a.overall), [scored])
   const selected = scored.find((d) => d.id === (lockedId ?? selectedId)) ?? ranked[0]
   const companyAverage = scored.reduce((sum, d) => sum + d.overall, 0) / scored.length
