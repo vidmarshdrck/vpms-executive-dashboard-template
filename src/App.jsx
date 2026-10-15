@@ -40,7 +40,12 @@ function LoginRoute() {
   return user ? <Navigate to={homePath(user)} replace /> : <Login />
 }
 
+import Vhpms from './vhpms/Vhpms.jsx'
+
 export default function App() {
+  // Public, isolated local-only preview. Existing template auth/routes remain intact.
+  const location = useLocation()
+  if (new URLSearchParams(location.search).get('preview') === 'vhpms') return <Vhpms />
   return <Routes>
     <Route path="/login" element={<LoginRoute />} />
     <Route element={<ProtectedRoute />}>
