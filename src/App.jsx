@@ -45,7 +45,7 @@ import Vhpms from './vhpms/Vhpms.jsx'
 export default function App() {
   // Public, isolated local-only preview. Existing template auth/routes remain intact.
   const location = useLocation()
-  if (new URLSearchParams(location.search).get('preview') === 'vhpms') return <Vhpms />
+  if (import.meta.env.VITE_VHPMS_ONLY === 'true' || new URLSearchParams(location.search).get('preview') === 'vhpms') return <Vhpms />
   return <Routes>
     <Route path="/login" element={<LoginRoute />} />
     <Route element={<ProtectedRoute />}>
