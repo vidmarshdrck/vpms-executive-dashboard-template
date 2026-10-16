@@ -36,7 +36,7 @@ export function HeaderTimeframePicker() {
         aria-expanded={open}
         className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
       >
-        <CalendarDays size={12} className="text-[#B42318]" />
+        <CalendarDays size={12} className="text-[#1E4DFF]" />
         <span className="hidden sm:inline">{periodLabel}</span>
         <ChevronDown size={11} className="text-slate-400" />
       </button>
@@ -80,7 +80,7 @@ export function HeaderTimeframePicker() {
             </div>
             <div className="flex items-center justify-end gap-2 mt-4">
               <button type="button" onClick={() => setOpen(false)} className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700">Cancel</button>
-              <button type="button" onClick={apply} className="px-3 py-1.5 rounded-md bg-[#B42318] text-white text-xs font-bold hover:bg-[#9A1D14]">Apply</button>
+              <button type="button" onClick={apply} className="px-3 py-1.5 rounded-md bg-[#1E4DFF] text-white text-xs font-bold hover:bg-[#9A1D14]">Apply</button>
             </div>
           </div>
         </>

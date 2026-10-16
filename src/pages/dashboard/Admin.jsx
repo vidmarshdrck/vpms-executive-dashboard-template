@@ -26,7 +26,7 @@ export default function Admin() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {modules.map(({ icon: Icon, title, body }) => (
           <Card key={title}>
-            <CardHeader><CardTitle className="flex items-center gap-2"><Icon size={16} className="text-[#B42318]" />{title}</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Icon size={16} className="text-[#1E4DFF]" />{title}</CardTitle></CardHeader>
             <CardContent><p className="text-xs text-slate-500">{body}</p></CardContent>
           </Card>
         ))}

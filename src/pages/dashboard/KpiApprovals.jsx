@@ -84,7 +84,7 @@ export default function KpiApprovals() {
                 key={s.id}
                 type="button"
                 onClick={() => { setSelectedId(s.id); setComment(''); setMessage(null) }}
-                className={`w-full rounded-lg px-3 py-2 text-left text-sm ${selected?.id === s.id ? 'bg-[#FDECEC] text-[#B42318]' : 'hover:bg-slate-50 text-slate-700'}`}
+                className={`w-full rounded-lg px-3 py-2 text-left text-sm ${selected?.id === s.id ? 'bg-[#EEF2FF] text-[#1E4DFF]' : 'hover:bg-slate-50 text-slate-700'}`}
               >
                 <div className="font-semibold">{departmentName(s.departmentId)}</div>
                 <div className="text-xs text-slate-500">{s.period} · submitted {new Date(s.updatedAt).toLocaleDateString()}</div>
@@ -135,7 +135,7 @@ export default function KpiApprovals() {
               </label>
 
               <div className="flex items-center gap-3">
-                <button type="button" onClick={handleApprove} className="rounded-lg bg-[#B42318] px-4 py-2 text-sm font-semibold text-white hover:bg-[#9a1d13]">
+                <button type="button" onClick={handleApprove} className="rounded-lg bg-[#1E4DFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#9a1d13]">
                   Approve & publish
                 </button>
                 <button type="button" onClick={handleReturn} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">

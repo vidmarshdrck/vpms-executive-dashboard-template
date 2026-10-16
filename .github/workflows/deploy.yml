@@ -37,6 +37,8 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_BASE_PATH: /vhpms/
+          VITE_VHPMS_ONLY: 'true'
         run: npm run build
 
       - name: Setup Pages

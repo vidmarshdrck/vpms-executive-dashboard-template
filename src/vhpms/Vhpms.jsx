@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { LayoutDashboard, Activity, FolderKanban, ListTodo, CalendarDays, Wallet, Download, Printer, Menu, X, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { STORAGE_KEY, emptyState, parseState, addRecord, toggleTask, totals, weekKey, localDate } from './model.js'
 import LiveWorkspace from './LiveWorkspace.jsx'
+import { probeTaskApi, taskApiBase } from './backendStatus.js'
 import './vhpms.css'
 const businesses = ['All businesses', 'Vidmar Holdings', 'VAI', 'VE', 'REZ', 'BSG']
 const navigation = [['Executive',LayoutDashboard],['Operations',Activity],['Projects',FolderKanban],['Tasks',ListTodo],['Calendar',CalendarDays],['Finances',Wallet],['Live workspace',Activity]]
@@ -11,6 +12,8 @@ function load() { try { return parseState(localStorage.getItem(STORAGE_KEY)) } c
 function Badge({children}) { return <span className={`vh-badge ${String(children).toLowerCase().replaceAll(' ','-')}`}>{children}</span> }
 export default function Vhpms() {
   const [state,setState]=useState(load)
+  const [backend,setBackend]=useState('Checking backend')
+  useEffect(()=>{let live=true;const run=()=>probeTaskApi(taskApiBase(import.meta.env)).then(s=>{if(live)setBackend(s)});run();const id=setInterval(run,60000);return()=>{live=false;clearInterval(id)}},[])
   const [view,setView]=useState(import.meta.env.VITE_VHPMS_ONLY==='true'?'Live workspace':'Executive')
   const [business,setBusiness]=useState('All businesses')
   const [scope,setScope]=useState('Business')
@@ -46,7 +49,7 @@ export default function Vhpms() {
   return <div className="vh-app">
     <a className="vh-skip" href="#vh-main">Skip to content</a>
     <aside className={`vh-sidebar ${menu?'vh-open':''}`}><div className="vh-brand"><span className="vh-monogram">VH</span><div><strong>VHPMS</strong><small>Vidmar Holdings</small></div><button className="vh-mobile vh-icon" aria-label="Close navigation" onClick={()=>setMenu(false)}><X/></button></div><nav aria-label="VHPMS primary navigation">{navigation.map(([label,Icon])=><button key={label} aria-current={view===label?'page':undefined} onClick={()=>go(label)}><Icon size={19}/>{label}</button>)}</nav><div className="vh-side-footer"><Badge>Local preview</Badge><p>No financial accounts or agent systems are connected.</p><a href="https://github.com/vidmarshdrck/vpms-executive-dashboard-template" target="_blank" rel="noreferrer">Source repository <ArrowUpRight size={15}/></a></div></aside>
-    <div className="vh-workspace"><header className="vh-top"><div><button className="vh-mobile vh-icon" aria-label="Open navigation" aria-expanded={menu} onClick={()=>setMenu(!menu)}><Menu/></button><span>Workspace <span className="vh-muted">/ {view}</span></span></div><Badge>Backend disconnected</Badge></header>
+    <div className="vh-workspace"><header className="vh-top"><div><button className="vh-mobile vh-icon" aria-label="Open navigation" aria-expanded={menu} onClick={()=>setMenu(!menu)}><Menu/></button><span>Workspace <span className="vh-muted">/ {view}</span></span></div><span role="status" aria-live="polite"><Badge>{backend}</Badge></span></header>
     <main id="vh-main"><div className="vh-title"><div><h1>{view==='Executive'?'Executive overview':view}</h1><p>{view==='Executive'?'One working view of the group. Start with the next decision.':'Vidmar Holdings · browser-local workspace'}</p></div><div className="vh-actions"><button onClick={exportData}><Download size={17}/>Export JSON</button><button onClick={()=>window.print()}><Printer size={17}/>Print / PDF</button></div></div>
     <div className="vh-notice">{view==='Live workspace'?<><strong>Authenticated, read-only integration.</strong> No public task data, no browser-local fallback. SQL migration and owner business access must be provisioned before live records appear.</>:<><strong>Public local planner. Private data stays out.</strong> No live revenue, bank balances, trade signals, or agent execution are shown. Entries below stay in this browser; they do not sync across devices. Do not enter sensitive information. Use Live workspace for authorised source records.</>}</div>
     <div className="vh-toolbar"><label>Business<select aria-label="Business" value={business} onChange={e=>setBusiness(e.target.value)}>{businesses.map(b=><option key={b}>{b}</option>)}</select></label><span>Local workspace · {new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span></div>

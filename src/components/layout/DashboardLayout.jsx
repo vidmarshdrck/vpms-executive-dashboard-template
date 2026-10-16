@@ -97,7 +97,7 @@ export default function DashboardLayout() {
               to={path}
               title={collapsed ? label : undefined}
               onClick={() => setMobileOpen(false)}
-              className={({ isActive }) => `relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${collapsed ? 'justify-center' : ''} ${isActive ? 'bg-[#FDECEC] text-[#B42318]' : 'text-slate-600 hover:bg-slate-100'}`}
+              className={({ isActive }) => `relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${collapsed ? 'justify-center' : ''} ${isActive ? 'bg-[#EEF2FF] text-[#1E4DFF]' : 'text-slate-600 hover:bg-slate-100'}`}
             >
               <Icon size={18} strokeWidth={1.8} />
               {!collapsed && label}
@@ -112,7 +112,7 @@ export default function DashboardLayout() {
             title={collapsed ? `${user?.name} · ${user?.role}` : undefined}
             className={`w-full flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-slate-100 transition-colors ${collapsed ? 'justify-center' : ''}`}
           >
-            <div className="w-8 h-8 rounded-full bg-[#FDECEC] text-[#B42318] flex items-center justify-center text-[10px] font-bold flex-shrink-0">{initials(user?.name)}</div>
+            <div className="w-8 h-8 rounded-full bg-[#EEF2FF] text-[#1E4DFF] flex items-center justify-center text-[10px] font-bold flex-shrink-0">{initials(user?.name)}</div>
             {!collapsed && (
               <span className="min-w-0 text-left">
                 <span className="block text-xs font-semibold text-slate-800 truncate">{user?.name}</span>
@@ -135,7 +135,7 @@ export default function DashboardLayout() {
               {mobileOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
             <div className="min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#B42318]">VPMS executive dashboard</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#1E4DFF]">VPMS executive dashboard</div>
               <h1 className="font-bold text-slate-900 text-lg leading-tight truncate">{currentPage}</h1>
             </div>
             <div className="ml-auto flex-shrink-0">
