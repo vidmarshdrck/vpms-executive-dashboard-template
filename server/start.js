@@ -2,6 +2,7 @@ import {createServer} from 'node:http'
 import {pathToFileURL} from 'node:url'
 import {createSupabaseStore} from './supabase-store.js'
 import {ApiError,createTaskHandler} from './task-api.js'
+import {createInboxHandler,createInboxStore,parseAgentTokens,authenticateAgent} from './inbox-api.js'
 import {createBsgHandler,createBsgReader} from './bsg-read.js'
 export function runtimeHandler(env) {
  const ready=env.SUPABASE_URL==='https://bbpfkjucsabdfcmusqzu.supabase.co'&&
@@ -13,7 +14,11 @@ export function runtimeHandler(env) {
  const tasks=ready?createTaskHandler({...adapter,channel:env.VHPMS_COMMAND_CHANNEL}):createTaskHandler({authenticate:unavailable})
  let reader=null
  const bsg=createBsgHandler({authenticate:ready?adapter.authenticate:unavailable,reader:()=>reader??=createBsgReader({dataDir:env.BSG_DATA_DIR,knowledgeDir:env.BSG_KNOWLEDGE_DIR})})
- return (req,res)=>(new URL(req.url,'http://localhost').pathname.startsWith('/api/bsg/')?bsg:tasks)(req,res)
+ const tokens=parseAgentTokens(env.VHPMS_AGENT_TOKENS)
+ const inbox=createInboxHandler({authenticate:ready?adapter.authenticate:unavailable,authenticateAgent:h=>ready?authenticateAgent(tokens,h):null,
+  store:ready?createInboxStore({url:env.SUPABASE_URL,publishableKey:env.SUPABASE_PUBLISHABLE_KEY,serviceKey:env.SUPABASE_SERVICE_KEY}):null})
+ return (req,res)=>{const p=new URL(req.url,'http://localhost').pathname
+  return (p.startsWith('/api/bsg/')?bsg:p==='/api/inbox'||p.startsWith('/api/inbox/')?inbox:tasks)(req,res)}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
  const port=Number(process.env.VHPMS_COMMAND_PORT||8096)
