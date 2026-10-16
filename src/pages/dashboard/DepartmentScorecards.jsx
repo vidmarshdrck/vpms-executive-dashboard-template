@@ -127,7 +127,7 @@ export default function DepartmentScorecards() {
                 <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(148,163,184,.12)' }} />
                 <ReferenceLine x={green} stroke="#15803D" strokeDasharray="4 4" label={{ value: 'On target', position: 'top', fontSize: 10, fill: '#15803D' }} />
                 <Bar dataKey="overall" name="Overall score" radius={[0, 4, 4, 0]} maxBarSize={22} onClick={(entry) => setSelectedId(entry?.payload?.id ?? entry?.id)} className="cursor-pointer">
-                  {ranked.map((d) => <Cell key={d.id} fill={d.id === selected.id ? '#B42318' : '#CBD5E1'} />)}
+                  {ranked.map((d) => <Cell key={d.id} fill={d.id === selected.id ? '#1E4DFF' : '#CBD5E1'} />)}
                   <LabelList dataKey="overall" content={(props) => <RankLabel {...props} selectedId={selected.id} rows={ranked} />} />
                 </Bar>
               </BarChart>
@@ -210,7 +210,7 @@ export default function DepartmentScorecards() {
                 <Legend iconType="plainline" formatter={(value) => <LegendLabel value={value} />} />
                 <ReferenceLine y={green} stroke="#15803D" strokeDasharray="4 4" />
                 <Line type="monotone" dataKey="average" name="All departments" stroke="#94A3B8" strokeWidth={2} strokeDasharray="5 4" dot={false} activeDot={{ r: 4 }} />
-                <Line type="monotone" dataKey="department" name={selected.name} stroke="#B42318" strokeWidth={2} dot={{ r: 3, fill: '#B42318', strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="department" name={selected.name} stroke="#1E4DFF" strokeWidth={2} dot={{ r: 3, fill: '#1E4DFF', strokeWidth: 0 }} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>

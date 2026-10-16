@@ -14,7 +14,7 @@
 //     the pages and the scoring engine need no changes.
 
 export const PERSPECTIVES = [
-  { key: 'financial', name: 'Financial', weight: 1, color: '#B42318' },
+  { key: 'financial', name: 'Financial', weight: 1, color: '#1E4DFF' },
   { key: 'customer', name: 'Customer', weight: 2, color: '#2563B0' },
   { key: 'internal', name: 'Internal processes', weight: 3, color: '#B7791F' },
   { key: 'learning', name: 'Learning & growth', weight: 4, color: '#6D4BA8' },

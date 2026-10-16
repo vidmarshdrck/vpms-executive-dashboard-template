@@ -51,7 +51,7 @@ export default function BalancedScorecard() {
         <div className="flex flex-col gap-6 md:flex-row md:items-center">
           <ScoreGauge value={overall} label="Overall score" showThreshold={false} />
           <div className="flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#B42318] mb-2">Balanced scorecard</p>
+            <p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#1E4DFF] mb-2">Balanced scorecard</p>
             <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 leading-tight text-balance">
               {biggestGap.name} holds {Math.round(shares[biggestGap.key])}% of the KPIs and scores {formatScore(scores[biggestGap.key])}, which holds the overall score at {formatScore(overall)}.
             </h2>
@@ -93,7 +93,7 @@ export default function BalancedScorecard() {
               <Tooltip content={<PointsTooltip />} cursor={{ fill: 'rgba(148,163,184,.12)' }} />
               <Legend iconType="square" formatter={(value) => <LegendLabel value={value} />} />
               <Bar dataKey="available" name="Points available" fill="#64748B" radius={[4, 4, 0, 0]} maxBarSize={44} />
-              <Bar dataKey="earned" name="Points earned" fill="#B42318" radius={[4, 4, 0, 0]} maxBarSize={44}>
+              <Bar dataKey="earned" name="Points earned" fill="#1E4DFF" radius={[4, 4, 0, 0]} maxBarSize={44}>
                 <LabelList dataKey="earned" position="top" formatter={(v) => v.toFixed(1)} style={{ fontSize: 11, fill: '#1F2937', fontWeight: 600 }} />
               </Bar>
             </BarChart>

@@ -12,7 +12,7 @@ const actionRows = [
   ['Pending actions', issues.pendingActions, 'Normal', 'neutral', Clock],
 ]
 
-const statusColors = ['#B42318', '#1F2937', '#B45309', '#94A3B8', '#15803D']
+const statusColors = ['#1E4DFF', '#1F2937', '#B45309', '#94A3B8', '#15803D']
 
 export default function Projects() {
   const totalIssues = issues.unresolved + issues.revisions + issues.pendingActions
@@ -33,7 +33,7 @@ export default function Projects() {
     .sort((a, b) => b.count - a.count)
 
   return <div className="space-y-6 animate-fade-in">
-    <div><p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#B42318]">Delivery control</p><h2 className="text-xl font-bold text-slate-900 mt-1">Projects & actions</h2><p className="text-sm text-slate-500 mt-1">Where each project stands, and what needs attention next.</p></div>
+    <div><p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#1E4DFF]">Delivery control</p><h2 className="text-xl font-bold text-slate-900 mt-1">Projects & actions</h2><p className="text-sm text-slate-500 mt-1">Where each project stands, and what needs attention next.</p></div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{[[AlertTriangle, issues.unresolved, 'Unresolved issues', 'negative'], [RotateCcw, issues.revisions, 'Revisions required', 'warning'], [Clock, issues.pendingActions, 'Pending actions', 'neutral'], [CheckCircle2, totalIssues, 'Open items', 'neutral']].map(([Icon, value, label, tone]) => <Card key={label}><CardContent className="pt-5"><Icon size={18} className={tone === 'negative' ? 'text-[#B91C1C]' : tone === 'warning' ? 'text-[#B45309]' : 'text-slate-500'} /><div className="text-2xl font-black tabular-nums text-slate-900 mt-2">{value}</div><div className="text-xs text-slate-500">{label}</div></CardContent></Card>)}</div>
     <div className="grid grid-cols-1 xl:grid-cols-[.75fr_1.25fr] gap-6">
       <Card>
@@ -55,7 +55,7 @@ export default function Projects() {
                 <XAxis type="number" hide allowDecimals={false} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={90} />
                 <Tooltip formatter={(v) => [`${v} project${v === 1 ? '' : 's'}`, 'Projects']} />
-                <Bar dataKey="count" name="Projects" fill="#B42318" radius={[0, 4, 4, 0]} barSize={16} />
+                <Bar dataKey="count" name="Projects" fill="#1E4DFF" radius={[0, 4, 4, 0]} barSize={16} />
               </BarChart>
             </ResponsiveContainer>
           </div>

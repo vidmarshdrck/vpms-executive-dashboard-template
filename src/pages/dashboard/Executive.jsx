@@ -125,7 +125,7 @@ export default function Executive() {
   return <div className="space-y-6 animate-fade-in">
     <section className="vpms-gradient rounded-xl p-5 sm:p-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-3xl"><p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#B42318] mb-2">Management brief · {companyInfo.shortName}</p><h2 className="text-xl font-bold text-slate-900 mb-2">Energy security through reliable service delivery</h2><p className="text-sm leading-6 text-slate-600">{companyInfo.vision}</p></div>
+        <div className="max-w-3xl"><p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#1E4DFF] mb-2">Management brief · {companyInfo.shortName}</p><h2 className="text-xl font-bold text-slate-900 mb-2">Energy security through reliable service delivery</h2><p className="text-sm leading-6 text-slate-600">{companyInfo.vision}</p></div>
         <div className="hero-stats">
           <div className="hero-stat"><div className="hero-stat-label">Revenue actual</div><div className="hero-stat-value">{formatKwacha(totalActualRevenue, true)}</div></div>
           <div className="hero-stat"><div className="hero-stat-label">Revenue target</div><div className="hero-stat-value is-muted">{formatKwacha(totalTargetRevenue, true)}</div></div>
@@ -147,10 +147,10 @@ export default function Executive() {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><TrendingUp size={16} className="text-[#B42318]" />Revenue trend · ZMW</CardTitle>
+            <CardTitle className="flex items-center gap-2"><TrendingUp size={16} className="text-[#1E4DFF]" />Revenue trend · ZMW</CardTitle>
             <p className="text-xs text-slate-500 mt-1">{periodLabel} · sample figures from the workbook template, pending Finance</p>
           </CardHeader>
-          <CardContent><ResponsiveContainer width="100%" height={250}><LineChart data={filteredMonthlyRevenue} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}><CartesianGrid vertical={false} stroke="#F1F5F9" /><XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748B' }} /><YAxis tickFormatter={(v) => formatKwacha(v, true)} tick={{ fontSize: 10, fill: '#64748B' }} width={55} /><Tooltip formatter={(v) => [formatKwacha(v, true), 'Actual']} /><Line type="monotone" dataKey="revenue" name="Actual" stroke="#B42318" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} /></LineChart></ResponsiveContainer></CardContent>
+          <CardContent><ResponsiveContainer width="100%" height={250}><LineChart data={filteredMonthlyRevenue} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}><CartesianGrid vertical={false} stroke="#F1F5F9" /><XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748B' }} /><YAxis tickFormatter={(v) => formatKwacha(v, true)} tick={{ fontSize: 10, fill: '#64748B' }} width={55} /><Tooltip formatter={(v) => [formatKwacha(v, true), 'Actual']} /><Line type="monotone" dataKey="revenue" name="Actual" stroke="#1E4DFF" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} /></LineChart></ResponsiveContainer></CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle>How the overall score is built</CardTitle><p className="text-xs text-slate-500 mt-1">Points each perspective adds to the {overallLabel}% overall score, </p></CardHeader>
@@ -185,7 +185,7 @@ export default function Executive() {
       </div>
       <Card className="flex flex-col">
         <CardHeader><CardTitle>Priority follow-through</CardTitle><p className="text-xs text-slate-500 mt-1">Items requiring management attention</p></CardHeader>
-        <CardContent className="flex-1 flex flex-col"><div className="space-y-4 flex-1">{[...priorityProjects, pmsDemoProject].map((project) => { const perf = getKpiPerformance(project.completion, project.target); return <div key={project.name} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0"><div className="flex items-start justify-between gap-3"><div><div className="text-sm font-semibold text-slate-800">{project.name}</div><div className="text-xs text-slate-500 mt-1">{project.status} · {project.completion}% complete</div></div><StatusBadge label={TONE_LABEL[perf.tone]} tone={perf.badgeTone} /></div><TargetProgress actual={project.completion} target={project.target} format={(value) => `${value}%`} showStatus={false} /></div> })}</div><a href="/projects" className="inline-flex items-center gap-2 text-xs font-bold text-[#B42318] hover:underline mt-4">Open projects & actions <ArrowRight size={14} /></a></CardContent>
+        <CardContent className="flex-1 flex flex-col"><div className="space-y-4 flex-1">{[...priorityProjects, pmsDemoProject].map((project) => { const perf = getKpiPerformance(project.completion, project.target); return <div key={project.name} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0"><div className="flex items-start justify-between gap-3"><div><div className="text-sm font-semibold text-slate-800">{project.name}</div><div className="text-xs text-slate-500 mt-1">{project.status} · {project.completion}% complete</div></div><StatusBadge label={TONE_LABEL[perf.tone]} tone={perf.badgeTone} /></div><TargetProgress actual={project.completion} target={project.target} format={(value) => `${value}%`} showStatus={false} /></div> })}</div><a href="/projects" className="inline-flex items-center gap-2 text-xs font-bold text-[#1E4DFF] hover:underline mt-4">Open projects & actions <ArrowRight size={14} /></a></CardContent>
       </Card>
     </div>
     {/* GM brief format: Overview scorecard, Operations, Projects, Purchasing,
@@ -235,7 +235,7 @@ export default function Executive() {
                 <XAxis dataKey="quarter" tick={{ fontSize: 11, fill: '#64748B' }} />
                 <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} tick={{ fontSize: 10, fill: '#64748B' }} width={45} />
                 <Tooltip formatter={(v, name) => [`${v.toLocaleString()} m³`, name]} />
-                <Bar dataKey="received" name="Received" fill="#B42318" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="received" name="Received" fill="#1E4DFF" radius={[4, 4, 0, 0]}>
                   <LabelList dataKey="received" position="top" formatter={formatFigure} style={{ fontSize: 10, fill: '#475569' }} />
                 </Bar>
                 <Bar dataKey="distributed" name="Distributed" fill="#1F2937" radius={[4, 4, 0, 0]}>
@@ -254,7 +254,7 @@ export default function Executive() {
                   <XAxis dataKey="quarter" tick={{ fontSize: 11, fill: '#64748B' }} />
                   <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} tick={{ fontSize: 10, fill: '#64748B' }} width={45} />
                   <Tooltip formatter={(v, name) => [v === null ? 'No data yet' : `${v.toLocaleString()} m³`, name]} />
-                  <Bar dataKey="received" name="Received" fill="#B42318" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="received" name="Received" fill="#1E4DFF" radius={[4, 4, 0, 0]}>
                     <LabelList dataKey="received" position="top" formatter={(v) => (v === null || v === undefined ? '' : formatFigure(v))} style={{ fontSize: 10, fill: '#475569' }} />
                   </Bar>
                   <Bar dataKey="distributed" name="Distributed" fill="#1F2937" radius={[4, 4, 0, 0]}>
@@ -264,7 +264,7 @@ export default function Executive() {
               </ResponsiveContainer>
             </div>
           )}
-          <Link to="/operations" className="inline-flex items-center gap-2 text-xs font-bold text-[#B42318] hover:underline mt-3">Open Operations detail <ArrowRight size={14} /></Link>
+          <Link to="/operations" className="inline-flex items-center gap-2 text-xs font-bold text-[#1E4DFF] hover:underline mt-3">Open Operations detail <ArrowRight size={14} /></Link>
         </CardContent>
       </Card>
       <Card>

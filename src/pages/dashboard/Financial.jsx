@@ -38,7 +38,7 @@ const finKPIChart = financialKPIs.map((k) => ({
 // old palettes assigned colour by array position instead of quarter
 // identity, so e.g. Q1 and Q3 both rendered red on the KPI chart while the
 // pie used four different colours for the same quarters.
-const QUARTER_COLOR = { Q1: '#B42318', Q2: '#2563B0', Q3: '#15803D', Q4: '#B7791F' }
+const QUARTER_COLOR = { Q1: '#1E4DFF', Q2: '#2563B0', Q3: '#15803D', Q4: '#B7791F' }
 
 export default function Financial() {
   const { filteredMonthlyRevenue, periodLabel, timeframe } = useReportingPeriod()
@@ -128,9 +128,9 @@ export default function Financial() {
                 type="monotone"
                 dataKey="revenue"
                 name="Actual"
-                stroke="#B42318"
+                stroke="#1E4DFF"
                 strokeWidth={2.5}
-                dot={{ fill: '#B42318', r: 4 }}
+                dot={{ fill: '#1E4DFF', r: 4 }}
                 activeDot={{ r: 6 }}
               />
             </LineChart>
