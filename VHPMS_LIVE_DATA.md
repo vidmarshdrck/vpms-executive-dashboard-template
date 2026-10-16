@@ -30,6 +30,10 @@ Existing VE code: active local FastAPI dashboard `Businesses/Vidmar Entertainmen
 
 Existing TPPL quick chat (`src/lib/tazai.js`) is a regex/scripted reply helper, not a verified model endpoint. AI chat remains visibly present but disabled/not connected pending a scoped authenticated server integration, provider entitlement and write-confirmation design. No paid provider request is made. Google/Calendar consent is a separate gate.
 
+## Prepared authenticated task-command bridge
+
+`TASK_COMMAND_API.md` documents the implemented server-only create/read/update API, canonical Supabase RPC migration, idempotency/revision/audit guarantees and narrow Bags/Bags-Mark tool client. It is locally tested, **not deployed or connected**: shared SQL, real owner Auth identity, explicit write grants and trusted channel/session bindings are still required. No UI, gateway profiles or source-service credentials were changed.
+
 ## Verification
 
 `npm test` includes existing tests plus deterministic priority/source-projection tests and disposable PGlite PostgreSQL-engine execution of both migrations. Tests cover replay, anonymous denial, per-business isolation, no self-enrollment, priority approval requirements, security-invoker view isolation, manual override auditing, cross-business foreign keys and VE-member-only aggregates. Fixtures are test-only, never live data. This does not claim a remote migration or successful owner login.
