@@ -33,19 +33,19 @@ export const gmScorecard = {
     { code: 'FIN-01', perspective: 'financial', weight: 0.6, name: '15% return on capital employed (ROCE)', achievement: 80 },
     { code: 'FIN-02', perspective: 'financial', weight: 0.3, name: '60% operational cost against revenue annually', achievement: 65.8 },
     { code: 'FIN-03', perspective: 'financial', weight: 0.1, name: '1.5x asset turnover ratio attained', achievement: 80 },
-    { code: 'CUS-01', perspective: 'customer', weight: 0.4, name: '0.2% LSG loss of total product handled', achievement: 100 },
-    { code: 'CUS-02', perspective: 'customer', weight: 0.6, name: '0.4% PMS loss of total product handled', achievement: 90 },
-    { code: 'CUS-03', perspective: 'customer', weight: 0.5, name: 'Particle count ISO code 18/16/13 (LSG)', achievement: 60 },
+    { code: 'CUS-01', perspective: 'customer', weight: 0.4, name: '95% VE subscription renewal rate', achievement: 100 },
+    { code: 'CUS-02', perspective: 'customer', weight: 0.6, name: 'Under 5% monthly VE churn', achievement: 90 },
+    { code: 'CUS-03', perspective: 'customer', weight: 0.5, name: 'VAI deliverables accepted first time', achievement: 60 },
     { code: 'CUS-04', perspective: 'customer', weight: 0.5, name: 'Stakeholder satisfaction above 4.5 / 5', achievement: 91.7 },
-    { code: 'INT-01', perspective: 'internal', weight: 2, name: '45-minute truck turnaround time', achievement: 100 },
+    { code: 'INT-01', perspective: 'internal', weight: 2, name: '48-hour task turnaround across agents', achievement: 100 },
     { code: 'INT-02', perspective: 'internal', weight: 1, name: 'Zero recordable incidents', achievement: 50 },
-    { code: 'LRN-01', perspective: 'learning', weight: 1, name: '10% of staff certified in ATG, AI, instrumentation and marketing', achievement: 20 },
-    { code: 'LRN-02', perspective: 'learning', weight: 1, name: 'Construct 300,000 m³ storage tanks', achievement: 10 },
+    { code: 'LRN-01', perspective: 'learning', weight: 1, name: 'Every agent trained on its role playbook', achievement: 20 },
+    { code: 'LRN-02', perspective: 'learning', weight: 1, name: 'Acquire first REZ property', achievement: 10 },
     {
-      code: 'LRN-03', perspective: 'learning', weight: 1, name: 'Pipeline interconnecting depots (LFD link)', achievement: 0, reported: 40,
+      code: 'LRN-03', perspective: 'learning', weight: 1, name: 'Ten qualified VAI client leads', achievement: 0, reported: 40,
       note: 'Progress of 40% is recorded, but the performance cell is blank in the workbook, so it scores 0 in the approved 54.1%.',
     },
-    { code: 'LRN-04', perspective: 'learning', weight: 1, name: 'Procure one 100,000 MT cargo annually', achievement: 15 },
+    { code: 'LRN-04', perspective: 'learning', weight: 1, name: 'Launch three digital products annually', achievement: 15 },
   ],
 }
 
@@ -54,7 +54,7 @@ export const gmScorecard = {
 // initiative. From the workbook's "Balanced Scorecard" sheet.
 // ---------------------------------------------------------------------------
 export const strategyMap = {
-  vision: 'A leader in the procurement, hospitality and logistics of bulk petroleum products to ensure energy security through customer centric service',
+  vision: 'Own and coordinate the Vidmar subsidiary businesses under one holding structure: build systems, not tasks',
   years: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'],
   perspectives: [
     {
@@ -84,12 +84,12 @@ export const strategyMap = {
       key: 'customer',
       objectives: [
         {
-          name: 'Enhance storage and stock management',
-          initiatives: ['Real-time stock monitoring at all depots', 'Product filtration at all depots'],
+          name: 'Strengthen subscription operations',
+          initiatives: ['Real-time renewal tracking for VE', 'Payment verification by Boaz for every SMS'],
           measures: [
-            { name: 'LSG loss as % of product handled', targets: ['0.30%', '0.28%', '0.25%', '0.22%', '0.20%'], direction: 'lower' },
-            { name: 'PMS loss as % of product handled', targets: ['0.50%', '0.48%', '0.42%', '0.41%', '0.40%'], direction: 'lower' },
-            { name: 'Particle count ISO code (LSG)', targets: ['21/19/17', '19/18/14', '18/16/13', '18/16/13', '18/16/13'], direction: 'lower' },
+            { name: 'VE renewal rate', targets: ['0.30%', '0.28%', '0.25%', '0.22%', '0.20%'], direction: 'lower' },
+            { name: 'VE monthly churn', targets: ['0.50%', '0.48%', '0.42%', '0.41%', '0.40%'], direction: 'lower' },
+            { name: 'VAI first-time acceptance', targets: ['21/19/17', '19/18/14', '18/16/13', '18/16/13', '18/16/13'], direction: 'lower' },
           ],
         },
         {
@@ -106,9 +106,9 @@ export const strategyMap = {
       objectives: [
         {
           name: 'Improve management systems',
-          initiatives: ['System integration for paperless depots', 'Safety awareness index'],
+          initiatives: ['Paperless operations across businesses', 'Safety awareness index'],
           measures: [
-            { name: 'Truck turnaround time (minutes)', targets: ['140', '120', '90', '60', '45'], direction: 'lower' },
+            { name: 'Task turnaround time (hours)', targets: ['140', '120', '90', '60', '45'], direction: 'lower' },
             { name: 'Recordable incidents per year', targets: ['20', '15', '10', '5', '0'], direction: 'lower' },
           ],
         },
@@ -121,15 +121,15 @@ export const strategyMap = {
           name: 'Improve human capital and innovation',
           initiatives: ['Certified training in core competencies'],
           measures: [
-            { name: 'Staff certified in ATG, AI, instrumentation and marketing', targets: ['2%', '4%', '6%', '8%', '10%'] },
+            { name: 'Agents trained on role playbooks', targets: ['2%', '4%', '6%', '8%', '10%'] },
           ],
         },
         {
           name: 'Improve infrastructure and technology',
-          initiatives: ['PPP for 300,000 m³ storage capacity', 'PPP for an 8" interconnecting pipeline', 'Supplier partnerships for cargo procurement'],
+          initiatives: ['PPP for REZ property pipeline', 'VAI partner channel', 'Digital Commerce supplier partnerships'],
           measures: [
-            { name: '300,000 m³ storage tanks built (cumulative)', targets: ['20%', '40%', '60%', '80%', '100%'] },
-            { name: 'Pipeline interconnecting depots (LFD link)', targets: ['', '', 'Complete', '', ''] },
+            { name: 'REZ properties acquired (cumulative)', targets: ['20%', '40%', '60%', '80%', '100%'] },
+            { name: 'Ten qualified VAI client leads', targets: ['', '', 'Complete', '', ''] },
             { name: 'Cargoes procured', targets: ['', '1', '1', '1', '1'] },
           ],
         },
@@ -149,7 +149,7 @@ export const departmentSource = 'Demo data · for layout review only'
 // [perspective, name, unit, target, direction, weight, typical achievement, monthly spread]
 const DEPARTMENT_KPIS = {
   operations: {
-    name: 'Operations',
+    name: 'Vidmar Entertainment (VE)',
     kpis: [
       ['financial', 'Throughput against plan', '%', 95, 'higher', 2, 0.95, 0.04],
       ['financial', 'Overtime to basic pay ratio', '%', 10, 'lower', 1, 0.87, 0.07],
@@ -160,7 +160,7 @@ const DEPARTMENT_KPIS = {
     ],
   },
   engineering: {
-    name: 'Engineering',
+    name: 'Vidmar AI (VAI)',
     kpis: [
       ['financial', 'Maintenance spend within budget', '%', 100, 'higher', 1, 0.96, 0.03],
       ['customer', 'Meter calibration compliance', '%', 100, 'higher', 1, 0.97, 0.02],
@@ -180,7 +180,7 @@ const DEPARTMENT_KPIS = {
     ],
   },
   procurement: {
-    name: 'Procurement',
+    name: 'Real Estate Zambia (REZ)',
     kpis: [
       ['financial', 'Contracts awarded within budget', '%', 100, 'higher', 1, 0.85, 0.05],
       ['customer', 'Requisitions fulfilled within lead time', '%', 90, 'higher', 2, 0.77, 0.06],
@@ -190,7 +190,7 @@ const DEPARTMENT_KPIS = {
     ],
   },
   ict: {
-    name: 'ICT',
+    name: 'Technology',
     kpis: [
       ['financial', 'ICT spend within budget', '%', 100, 'higher', 1, 0.94, 0.03],
       ['customer', 'Help desk tickets resolved within SLA', '%', 90, 'higher', 2, 0.93, 0.04],
@@ -200,7 +200,7 @@ const DEPARTMENT_KPIS = {
     ],
   },
   hr: {
-    name: 'Human Resource',
+    name: 'People & Agents',
     kpis: [
       ['financial', 'Payroll processed without errors', '%', 100, 'higher', 1, 0.975, 0.015],
       ['customer', 'Vacancies filled within 60 days', '%', 80, 'higher', 1, 0.69, 0.08],
@@ -210,7 +210,7 @@ const DEPARTMENT_KPIS = {
     ],
   },
   safety: {
-    name: 'Safety',
+    name: 'BSG Trades',
     kpis: [
       ['financial', 'Insurance claims within limit', '%', 100, 'higher', 1, 0.97, 0.02],
       ['customer', 'Regulatory inspections passed', '%', 100, 'higher', 2, 0.98, 0.02],
@@ -220,20 +220,20 @@ const DEPARTMENT_KPIS = {
     ],
   },
   security: {
-    name: 'Security',
+    name: 'Legal & Compliance',
     kpis: [
       ['financial', 'Asset losses within insured limit', '%', 100, 'higher', 1, 0.9, 0.05],
       ['customer', 'Security complaints resolved', '%', 95, 'higher', 1, 0.88, 0.05],
-      ['internal', 'Access control compliance at depots', '%', 100, 'higher', 2, 0.85, 0.04],
+      ['internal', 'Access control compliance across businesses', '%', 100, 'higher', 2, 0.85, 0.04],
       ['internal', 'CCTV coverage operational', '%', 98, 'higher', 1, 0.82, 0.05],
       ['learning', 'Guards trained in incident response', '%', 100, 'higher', 1, 0.71, 0.04],
     ],
   },
   productMonitoring: {
-    name: 'Product Monitoring',
+    name: 'Digital Commerce',
     kpis: [
       ['financial', 'Stock reconciliation within tolerance', '%', 100, 'higher', 1, 0.91, 0.04],
-      ['customer', 'LSG loss within 0.2% target', '%', 100, 'higher', 2, 0.93, 0.04],
+      ['customer', 'VE renewal rate within target', '%', 100, 'higher', 2, 0.93, 0.04],
       ['customer', 'PMS loss within 0.4% target', '%', 100, 'higher', 2, 0.88, 0.05],
       ['internal', 'Samples meeting ISO 18/16/13', '%', 100, 'higher', 2, 0.75, 0.08],
       ['learning', 'Staff trained on real-time stock monitoring', '%', 80, 'higher', 1, 0.69, 0.05],

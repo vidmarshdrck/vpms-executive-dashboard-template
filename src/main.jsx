@@ -6,6 +6,9 @@ import { AuthProvider } from './auth/AuthContext.jsx'
 import '@fontsource-variable/outfit'
 import '@fontsource-variable/inter-tight'
 import './index.css'
+import { applyTheme, storedTheme } from './lib/theme.js'
+
+applyTheme(storedTheme())
 
 // This client's IIS server allows no URL Rewrite / server-side rewrite rules
 // (see IIS_DEPLOY notes) — BrowserRouter needs the server to hand any deep

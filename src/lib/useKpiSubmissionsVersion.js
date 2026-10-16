@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { subscribeToKpiSetup } from './kpiSetup.js'
 import { subscribeToSubmissions } from './kpiSubmissions.js'
 
 // Bumps a counter whenever the KPI submissions store changes, in this tab or
@@ -7,6 +8,6 @@ import { subscribeToSubmissions } from './kpiSubmissions.js'
 // should include this in their useMemo dependency list.
 export function useKpiSubmissionsVersion() {
   const [version, setVersion] = useState(0)
-  useEffect(() => subscribeToSubmissions(() => setVersion((v) => v + 1)), [])
+  useEffect(() => { const update = () => setVersion(value => value + 1); const a = subscribeToSubmissions(update), b = subscribeToKpiSetup(update); return () => { a(); b() } }, [])
   return version
 }

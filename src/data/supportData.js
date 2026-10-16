@@ -22,11 +22,11 @@ export const statuses = ['New', 'Assigned', 'In Progress', 'On Hold', 'Resolved'
 
 // Business-wide categories rather than IT-only ones — every department
 // raises tickets, not just IT, so the category should describe the nature
-// of the request (a billing query, a maintenance job, a vehicle claim)
+// of the request (a billing query, a maintenance job, a client request)
 // rather than assume an IT service desk shape.
-export const categories = ['Software & Systems', 'Network & Connectivity', 'Access & Security', 'Income', 'Expense', 'Maintenance', 'Transport']
+export const categories = ['Software & Systems', 'Network & Connectivity', 'Access & Security', 'Income', 'Expense', 'Vidmar AI (VAI)', 'Digital Commerce']
 
-export const departments = ['Administration', 'Finance', 'Human Resources', 'Security', 'Operations', 'Maintenance', 'Boomgate', 'Commercial', 'Dispatch', 'Transport']
+export const departments = ['Administration', 'Finance', 'Human Resources', 'Security', 'Operations', 'Vidmar AI (VAI)', 'BSG Trades', 'Real Estate Zambia (REZ)', 'Vidmar Entertainment (VE)', 'Digital Commerce']
 
 export const summary = {
   totalTickets: 229,
@@ -63,23 +63,23 @@ export const ticketsByCategory = [
   { name: 'Software & Systems', count: 60 },
   { name: 'Access & Security', count: 40 },
   { name: 'Network & Connectivity', count: 29 },
-  { name: 'Maintenance', count: 33 },
+  { name: 'Vidmar AI (VAI)', count: 33 },
   { name: 'Income', count: 28 },
   { name: 'Expense', count: 24 },
-  { name: 'Transport', count: 15 },
+  { name: 'Digital Commerce', count: 15 },
 ]
 
 export const ticketsByDepartment = [
   { name: 'Operations', count: 52 },
-  { name: 'Dispatch', count: 38 },
+  { name: 'Vidmar Entertainment (VE)', count: 38 },
   { name: 'Finance', count: 27 },
-  { name: 'Commercial', count: 24 },
+  { name: 'Real Estate Zambia (REZ)', count: 24 },
   { name: 'Administration', count: 22 },
   { name: 'Security', count: 19 },
-  { name: 'Maintenance', count: 17 },
-  { name: 'Transport', count: 15 },
+  { name: 'Vidmar AI (VAI)', count: 17 },
+  { name: 'Digital Commerce', count: 15 },
   { name: 'Human Resources', count: 10 },
-  { name: 'Boomgate', count: 5 },
+  { name: 'BSG Trades', count: 5 },
 ]
 
 const totalWithinSla = ticketsByPriority.reduce((sum, row) => sum + row.withinSla, 0)

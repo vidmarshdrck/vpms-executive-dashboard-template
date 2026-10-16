@@ -1,3 +1,4 @@
+import DepartmentKpiRegister from './DepartmentKpiRegister.jsx'
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card.jsx'
 import {
   financialKPIs,
@@ -73,6 +74,8 @@ function KPISection({ title, kpis, accentColor }) {
 export default function KPIHeatmap() {
   return (
     <div className="space-y-6 animate-fade-in">
+      <DepartmentKpiRegister />
+      <h2 className="text-lg font-semibold text-slate-900">Strategic plan reference</h2>
       {/* Legend */}
       <Card>
         <CardContent className="pt-5">

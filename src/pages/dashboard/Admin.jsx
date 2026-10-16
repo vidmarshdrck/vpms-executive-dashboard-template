@@ -2,7 +2,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Ca
 import { Users, ShieldCheck, Database, PlugZap, ScrollText, Construction } from 'lucide-react'
 
 const modules = [
-  { icon: Users, title: 'User management', body: 'Create, disable, and role-assign VPMS dashboard accounts.' },
+  { icon: Users, title: 'User management', body: 'Create, disable, and role-assign PMS dashboard accounts.' },
   { icon: ShieldCheck, title: 'Role management', body: 'Define permissions for the Admin, GM, Board, Dept Head and Staff roles.' },
   { icon: Database, title: 'KPI / data administration', body: 'Review and correct KPI values, targets, and per-KPI colour thresholds.' },
   { icon: PlugZap, title: 'Integration configuration', body: 'Configure the Navision connection once an approved API/endpoint is available.' },

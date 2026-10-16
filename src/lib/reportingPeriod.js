@@ -111,7 +111,11 @@ export function groupMonthlyIntoQuarters(series, valueKey) {
  * chart/table by the global reporting-period control, so a quarterly view
  * never disagrees with the header's selection.
  */
-export function quartersInTimeframe(timeframe, seriesLength = 12) {
+export function quartersInTimeframe(timeframe, seriesLength = 12, referenceDate = new Date()) {
+  if (timeframe.id !== 'custom') {
+    const current = quarterOfDate(referenceDate)
+    return [timeframe.id === 'last-quarter' ? previousQuarter(current) : current]
+  }
   const from = Math.max(0, Math.min(timeframe.customFrom ?? 0, seriesLength - 1))
   const to = Math.max(from, Math.min(timeframe.customTo ?? seriesLength - 1, seriesLength - 1))
   const touched = new Set()
