@@ -2,7 +2,7 @@
 export const START = { paper: 100, mt5_demo: 4000 }
 export const DEMO_RISK = 40
 export const rr = t => { const risk = Math.abs(t.entry - t.sl); return risk > 0 && t.tp != null ? Math.abs(t.tp - t.entry) / risk : null }
-const closed = trades => trades.filter(t => t.status === 'CLOSED' && t.close_time).sort((a, b) => a.close_time.localeCompare(b.close_time))
+const closed = trades => trades.filter(t => t.status === 'CLOSED' && t.close_time && (t.r_multiple != null || t.pnl != null)).sort((a, b) => a.close_time.localeCompare(b.close_time))
 // Assigns risk_usd / pnl from r_multiple for a single source, compounding paper risk on running balance.
 export function applyRisk(trades, source) {
   let bal = START[source]

@@ -2,14 +2,18 @@ import {createServer} from 'node:http'
 import {pathToFileURL} from 'node:url'
 import {createSupabaseStore} from './supabase-store.js'
 import {ApiError,createTaskHandler} from './task-api.js'
+import {createBsgHandler,createBsgReader} from './bsg-read.js'
 export function runtimeHandler(env) {
  const ready=env.SUPABASE_URL==='https://bbpfkjucsabdfcmusqzu.supabase.co'&&
   env.SUPABASE_PUBLISHABLE_KEY&&env.SUPABASE_SERVICE_KEY&&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(env.VHPMS_OWNER_UUID||'')&&
   ['bags-telegram','bags-mark'].includes(env.VHPMS_COMMAND_CHANNEL)
- if(!ready) return createTaskHandler({authenticate:async()=>{throw new ApiError(503,'prerequisites_missing')}})
- const adapter=createSupabaseStore({url:env.SUPABASE_URL,publishableKey:env.SUPABASE_PUBLISHABLE_KEY,serviceKey:env.SUPABASE_SERVICE_KEY,ownerId:env.VHPMS_OWNER_UUID})
- return createTaskHandler({...adapter,channel:env.VHPMS_COMMAND_CHANNEL})
+ const unavailable=async()=>{throw new ApiError(503,'prerequisites_missing')}
+ const adapter=ready?createSupabaseStore({url:env.SUPABASE_URL,publishableKey:env.SUPABASE_PUBLISHABLE_KEY,serviceKey:env.SUPABASE_SERVICE_KEY,ownerId:env.VHPMS_OWNER_UUID}):null
+ const tasks=ready?createTaskHandler({...adapter,channel:env.VHPMS_COMMAND_CHANNEL}):createTaskHandler({authenticate:unavailable})
+ let reader=null
+ const bsg=createBsgHandler({authenticate:ready?adapter.authenticate:unavailable,reader:()=>reader??=createBsgReader({dataDir:env.BSG_DATA_DIR,knowledgeDir:env.BSG_KNOWLEDGE_DIR})})
+ return (req,res)=>(new URL(req.url,'http://localhost').pathname.startsWith('/api/bsg/')?bsg:tasks)(req,res)
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
  const port=Number(process.env.VHPMS_COMMAND_PORT||8096)

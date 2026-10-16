@@ -25,3 +25,7 @@ test('fixture is flagged fake, deterministic and has no order time for paper', (
   assert.equal(bsgFixture.trades.filter(t => t.source === 'paper').length, 30); assert.equal(bsgFixture.trades.filter(t => t.source === 'mt5_demo').length, 6)
   assert.ok(bsgFixture.trades.every(t => rr(t) > 1.9 && rr(t) < 2.1))
 })
+test('VOID trades never enter metrics', () => {
+  const tr = [T('a', 'paper', 2, '2026-01-01T01:00:00Z'), { ...T('v', 'paper', null, null), status: 'VOID', original_r_multiple: 2 }]
+  assert.equal(stats(tr, 'paper').closed, 1); assert.equal(stats(tr, 'paper').balance, 102)
+})
