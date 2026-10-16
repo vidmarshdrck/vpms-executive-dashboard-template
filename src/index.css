@@ -50,7 +50,7 @@ h1,h2,h3,.card-title,.brand-mark { font-family:var(--font-display); letter-spaci
 .perspective-score-value { font-size:34px; line-height:38px; }
 .perspective-score::before { width:4px; }
 .perspective-score-head { font-size:12.5px; letter-spacing:.01em; }
-nav a[aria-current="page"] { background:var(--brand-red-tint); box-shadow:inset 3px 0 0 var(--brand-red); border-radius:0 8px 8px 0; }
+aside nav a[aria-current="page"] { background:var(--brand-red-tint); box-shadow:inset 3px 0 0 var(--brand-red); border-radius:0 8px 8px 0; }
 input:focus-visible,select:focus-visible { outline:none; border-color:var(--brand-red) !important; box-shadow:0 0 0 3px rgba(30,77,255,.18); }
 .dashboard-table th { background:transparent; border-bottom:1px solid var(--border); }
 .dashboard-table td { padding:11px 12px; }
@@ -81,8 +81,8 @@ h1,h2,h3,.card-title,.brand-mark { font-family:var(--font-sans); letter-spacing:
 /* Sidebar: no fill on the active item, a red marker and heavier weight instead */
 aside nav a { border-radius:6px; }
 aside nav a:hover { background:var(--surface-subtle); }
-nav a[aria-current="page"] { background:transparent; box-shadow:none; border-radius:6px; position:relative; color:var(--brand-red); font-weight:650; }
-nav a[aria-current="page"]::before { content:""; position:absolute; left:-12px; top:8px; bottom:8px; width:3px; border-radius:0 3px 3px 0; background:var(--brand-red); }
+aside nav a[aria-current="page"] { background:transparent; box-shadow:none; border-radius:6px; position:relative; color:var(--brand-red); font-weight:650; }
+aside nav a[aria-current="page"]::before { content:""; position:absolute; left:-12px; top:8px; bottom:8px; width:3px; border-radius:0 3px 3px 0; background:var(--brand-red); }
 header.border-b { background:rgba(255,255,255,.85); backdrop-filter:saturate(1.2) blur(8px); }
 
 /* Tables: quieter header, hover row */
@@ -100,3 +100,25 @@ main > div > :nth-child(2) .surface-card,main > div > :nth-child(2) .perspective
 main > div > :nth-child(3) .surface-card,main > div > :nth-child(3) .perspective-score,main > div > :nth-child(3) .perspective-link { animation-delay:.1s; }
 main > div > :nth-child(n+4) .surface-card,main > div > :nth-child(n+4) .perspective-score { animation-delay:.15s; }
 @media (prefers-reduced-motion: reduce) { main .surface-card,main .perspective-score,main .perspective-link { animation:none; } }
+
+/* Forum: rounder, softer surface scoped to the forum only (the rest of the app keeps its squared look). */
+.forum-ui .status-badge { border-radius:999px; padding:4px 10px; text-transform:none; letter-spacing:0; font-size:11px; font-weight:600; }
+.forum-ui textarea:focus, .forum-ui input:focus-visible, .forum-ui select:focus-visible { outline:none; box-shadow:none; }
+.forum-ui select:focus-visible, .forum-ui button:focus-visible, .forum-ui a:focus-visible { outline:2px solid #1E4DFF; outline-offset:2px; }
+.forum-press { transition:transform .25s cubic-bezier(.32,.72,0,1), background-color .2s ease, opacity .2s ease; }
+.forum-press:active:not(:disabled) { transform:scale(.96); }
+@keyframes forum-sheet-up { from { transform:translateY(100%); } to { transform:translateY(0); } }
+@keyframes forum-fade-in { from { opacity:0; } to { opacity:1; } }
+.forum-sheet { animation:forum-sheet-up .4s cubic-bezier(.32,.72,0,1); }
+.forum-fade { animation:forum-fade-in .3s ease-out; }
+@media (prefers-reduced-motion:reduce) { .forum-sheet, .forum-fade { animation:none; } .forum-press { transition:none; } }
+
+/* Branded Forum masthead and an unmistakable writing surface. */
+.forum-ui .forum-brand-header { background:var(--brand-red); color:#fff; backdrop-filter:none; }
+.forum-brand-header select { color-scheme:dark; }
+.forum-brand-header option { background:#8F1C13; color:#fff; }
+.forum-ui .forum-brand-header :focus-visible { outline:2px solid white; outline-offset:3px; box-shadow:none; }
+.forum-ui .forum-composer-input { background:#F1F2F4; color:#1E293B; caret-color:var(--brand-red); padding:14px 16px; font-size:16px; line-height:24px; border-radius:12px; min-height:76px; margin-bottom:12px; }
+.forum-ui .forum-composer-input::placeholder { color:#586579; opacity:1; }
+.forum-ui .forum-composer-input:focus { outline:2px solid var(--brand-red); outline-offset:3px; }
+.forum-brand-header ::selection, .forum-composer-input::selection { background:#EEF2FF; color:#7A1810; }

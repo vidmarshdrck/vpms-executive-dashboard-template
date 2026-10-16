@@ -4,8 +4,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Ca
 import { DataStatus, StatusBadge } from '../../components/ui/StatusBadge.jsx'
 import { PerspectiveScore, Sparkline, LegendLabel } from '../../components/ui/Scorecard.jsx'
 import { scoreStatus, formatScore } from '../../lib/scoreStatus.js'
-import { PERSPECTIVES, MONTHS, REPORTED_MONTHS, departmentSource } from '../../data/scorecardData.js'
-import { scoreScorecard, periodAchievement, periodActual, kpiAchievement } from '../../lib/scorecard.js'
+import { PERSPECTIVES, MONTHS, departmentSource } from '../../data/scorecardData.js'
+import { scoreScorecard, periodAchievement, periodActual, periodTarget, kpiAchievement } from '../../lib/scorecard.js'
 import { DEFAULT_KPI_THRESHOLDS } from '../../lib/kpiThresholds.js'
 import { getHeatClass } from '../../data/kpiData.js'
 import { useReportingPeriod } from '../../lib/ReportingPeriodContext.jsx'
@@ -13,6 +13,8 @@ import { useAuth } from '../../auth/AuthContext.jsx'
 import { hasPermission } from '../../auth/permissions.js'
 import { departmentsWithPublishedKpis } from '../../lib/departmentsWithPublishedKpis.js'
 import { useKpiSubmissionsVersion } from '../../lib/useKpiSubmissionsVersion.js'
+import { quartersInTimeframe, QUARTERS } from '../../lib/reportingPeriod.js'
+import { formatKpiDifference } from '../../lib/kpiDifference.js'
 
 const range = (from, to) => Array.from({ length: to - from + 1 }, (_, i) => from + i)
 
@@ -25,7 +27,7 @@ function scoreDepartment(department, months) {
 
 function formatValue(value, unit) {
   if (value === null || value === undefined) return '—'
-  if (unit === '%') return `${value.toFixed(1)}%`
+  if (unit === '%') return `${value === null || value === undefined ? '—' : `${value.toFixed(1)}%`}`
   if (unit === 'LTIFR') return value.toFixed(2)
   return `${value.toFixed(1)} ${unit}`
 }
@@ -50,8 +52,31 @@ function RankLabel({ x, y, width, height, value, index, rows, selectedId }) {
   const isSelected = rows[index]?.id === selectedId
   return (
     <text x={x + width - 8} y={y + height / 2} dy={4} textAnchor="end" fontSize={11} fontWeight={650} fill={isSelected ? '#FFFFFF' : '#1F2937'} style={{ fontVariantNumeric: 'tabular-nums' }}>
-      {value.toFixed(1)}%
+      {value === null || value === undefined ? '—' : `${value.toFixed(1)}%`}
     </text>
+  )
+}
+
+// One KPI row. `department` (optional) adds a leading department cell so the
+// same row layout serves both the single-department view and the GM's
+// cross-department comparison.
+function KpiRow({ kpi, months, department }) {
+  const kpiStatus = scoreStatus(kpi.achievement)
+  const monthly = kpi.actuals.map((v, index) => kpiAchievement(v, kpi.targets?.[index] ?? kpi.target, kpi.directions?.[index] || kpi.direction))
+  return (
+    <>
+      {department}
+      <td className="text-slate-800 min-w-[220px]">
+        {kpi.name}
+        {kpi.direction === 'lower' && <span className="ml-1.5 text-[10.5px] text-slate-500 whitespace-nowrap">↓ lower is better</span>}
+      </td>
+      <td className="numeric">{kpi.weight}</td>
+      <td className="numeric">{formatValue(periodTarget(kpi, months), kpi.unit)}</td>
+      <td className="numeric font-semibold text-slate-800">{formatValue(periodActual(kpi, months), kpi.unit)}</td>
+      <td className="numeric font-semibold text-slate-800">{formatKpiDifference(periodActual(kpi, months), periodTarget(kpi, months), kpi.unit)}</td>
+      <td><Sparkline values={monthly} color={kpiStatus.color} /></td>
+      <td><StatusBadge label={kpiStatus.label} tone={kpiStatus.badgeTone} /></td>
+    </>
   )
 }
 
@@ -67,12 +92,9 @@ export default function DepartmentScorecards() {
   // selection is clamped to what's actually reported rather than showing
   // months that don't exist yet as zero.
   const { timeframe, periodLabel } = useReportingPeriod()
-  const lastMonth = REPORTED_MONTHS - 1
-  const months = useMemo(() => {
-    const from = Math.min(timeframe.customFrom, lastMonth)
-    const to = Math.min(Math.max(timeframe.customFrom, timeframe.customTo), lastMonth)
-    return range(Math.min(from, to), Math.max(from, to))
-  }, [timeframe, lastMonth])
+  const months = useMemo(() => timeframe.id === 'custom'
+    ? range(Math.max(0, timeframe.customFrom), Math.min(11, Math.max(timeframe.customFrom, timeframe.customTo)))
+    : quartersInTimeframe(timeframe).flatMap(quarter => { const start = QUARTERS.indexOf(quarter) * 3; return range(start, start + 2) }), [timeframe])
 
   // Baseline demo actuals with any GM-approved KPI submissions overlaid on
   // top (see departmentsWithPublishedKpis.js) — this is the single source
@@ -81,21 +103,22 @@ export default function DepartmentScorecards() {
   // including from another browser tab (useKpiSubmissionsVersion).
   const submissionsVersion = useKpiSubmissionsVersion()
   // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run on submissionsVersion, which the function body reads via localStorage rather than as an argument
-  const departments = useMemo(() => departmentsWithPublishedKpis(), [submissionsVersion])
+  const departments = useMemo(() => departmentsWithPublishedKpis(timeframe.customYear, months), [submissionsVersion, timeframe.customYear, months])
 
   const scored = useMemo(() => departments.map((d) => scoreDepartment(d, months)), [departments, months])
   const ranked = useMemo(() => [...scored].sort((a, b) => b.overall - a.overall), [scored])
   const selected = scored.find((d) => d.id === (lockedId ?? selectedId)) ?? ranked[0]
-  const companyAverage = scored.reduce((sum, d) => sum + d.overall, 0) / scored.length
+  const reportedDepartments = scored.filter(department => department.overall !== null)
+  const companyAverage = reportedDepartments.length ? reportedDepartments.reduce((sum, department) => sum + department.overall, 0) / reportedDepartments.length : null
   const onTarget = scored.filter((d) => d.overall >= green).length
 
   // Month-by-month score for the selected department against the average of all departments.
-  const trend = MONTHS.slice(0, REPORTED_MONTHS).map((month, i) => {
-    const monthScores = departments.map((d) => scoreDepartment(d, [i]).overall)
+  const trend = MONTHS.map((month, i) => {
+    const monthScores = departments.map((d) => scoreDepartment(d, [i]).overall).filter(value => value !== null)
     return {
       month,
       department: scoreDepartment(departments.find((d) => d.id === selected.id), [i]).overall,
-      average: monthScores.reduce((a, b) => a + b, 0) / monthScores.length,
+      average: monthScores.length ? monthScores.reduce((a, b) => a + b, 0) / monthScores.length : null,
     }
   })
 
@@ -216,53 +239,93 @@ export default function DepartmentScorecards() {
           </CardContent>
         </Card>
 
-        {/* Grouped by perspective — one section per perspective, in the same
-            layout as the department's own KPI tracking sheet, rather than one
-            flat table with a Perspective column to scan for. */}
-        {PERSPECTIVES.filter((p) => selected.kpis.some((k) => k.perspective === p.key)).map((perspective) => (
-          <Card key={perspective.key}>
-            <CardHeader>
-              <CardTitle><span className="inline-flex items-center gap-2"><span className="w-2 h-2 rounded-sm" style={{ background: perspective.color }} />{perspective.name}</span></CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="table-wrap">
-                <table className="dashboard-table">
-                  <thead>
-                    <tr>
-                      <th>Measure</th>
-                      <th className="numeric">Weight</th>
-                      <th className="numeric">Target</th>
-                      <th className="numeric">Actual</th>
-                      <th className="numeric">Achievement</th>
-                      <th>Trend</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selected.kpis.filter((k) => k.perspective === perspective.key).map((kpi) => {
-                      const kpiStatus = scoreStatus(kpi.achievement)
-                      const monthly = kpi.actuals.slice(0, REPORTED_MONTHS).map((v) => kpiAchievement(v, kpi.target, kpi.direction))
-                      return (
-                        <tr key={kpi.code}>
-                          <td className="text-slate-800 min-w-[220px]">
-                            {kpi.name}
-                            {kpi.direction === 'lower' && <span className="ml-1.5 text-[10.5px] text-slate-500 whitespace-nowrap">↓ lower is better</span>}
-                          </td>
-                          <td className="numeric">{kpi.weight}</td>
-                          <td className="numeric">{formatValue(kpi.target, kpi.unit)}</td>
-                          <td className="numeric font-semibold text-slate-800">{formatValue(periodActual(kpi, months), kpi.unit)}</td>
-                          <td className="numeric font-semibold text-slate-800">{formatScore(kpi.achievement)}</td>
-                          <td><Sparkline values={monthly} color={kpiStatus.color} /></td>
-                          <td><StatusBadge label={kpiStatus.label} tone={kpiStatus.badgeTone} /></td>
+        {lockedId ? (
+          /* Grouped by perspective: one section per perspective, in the same
+             layout as the department's own KPI tracking sheet. */
+          PERSPECTIVES.filter((p) => selected.kpis.some((k) => k.perspective === p.key)).map((perspective) => (
+            <Card key={perspective.key}>
+              <CardHeader>
+                <CardTitle><span className="inline-flex items-center gap-2"><span className="w-2 h-2 rounded-sm" style={{ background: perspective.color }} />{perspective.name}</span></CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="table-wrap">
+                  <table className="dashboard-table">
+                    <thead>
+                      <tr>
+                        <th>Measure</th>
+                        <th className="numeric">Weight</th>
+                        <th className="numeric">Target</th>
+                        <th className="numeric">Actual</th>
+                        <th className="numeric" title="Actual minus target">Difference</th>
+                        <th>Trend</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selected.kpis.filter((k) => k.perspective === perspective.key).map((kpi) => (
+                        <tr key={kpi.code}><KpiRow kpi={kpi} months={months} /></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <>
+            <div className="border-t border-slate-200 pt-6">
+              <h2 className="text-lg font-semibold text-slate-900">Departments compared by perspective</h2>
+              <p className="text-sm text-slate-500">Every department's approved KPIs side by side, so each department can be compared with the others. {periodLabel}</p>
+            </div>
+            {PERSPECTIVES.filter((p) => ranked.some((d) => d.kpis.some((k) => k.perspective === p.key))).map((perspective) => (
+              <Card key={perspective.key}>
+                <CardHeader>
+                  <CardTitle><span className="inline-flex items-center gap-2"><span className="w-2 h-2 rounded-sm" style={{ background: perspective.color }} />{perspective.name}</span></CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="table-wrap">
+                    <table className="dashboard-table">
+                      <thead>
+                        <tr>
+                          <th>Department</th>
+                          <th>Measure</th>
+                          <th className="numeric">Weight</th>
+                          <th className="numeric">Target</th>
+                          <th className="numeric">Actual</th>
+                          <th className="numeric" title="Actual minus target">Difference</th>
+                          <th>Trend</th>
+                          <th>Status</th>
                         </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                      </thead>
+                      {ranked.map((d) => {
+                        const rows = d.kpis.filter((k) => k.perspective === perspective.key)
+                        if (!rows.length) return null
+                        // One tbody per department so its rows read as a group.
+                        return (
+                          <tbody key={d.id} className="border-t-2 border-slate-200">
+                            {rows.map((kpi, i) => (
+                              <tr key={kpi.code}>
+                                <KpiRow
+                                  kpi={kpi}
+                                  months={months}
+                                  department={i === 0 ? (
+                                    <td rowSpan={rows.length} className="align-top font-semibold text-slate-900 whitespace-nowrap bg-slate-50/70">
+                                      <button type="button" onClick={() => setSelectedId(d.id)} className="text-left hover:text-[#1E4DFF]" title="Open this department above">{d.name}</button>
+                                    </td>
+                                  ) : null}
+                                />
+                              </tr>
+                            ))}
+                          </tbody>
+                        )
+                      })}
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        )}
       </section>
     </div>
   )

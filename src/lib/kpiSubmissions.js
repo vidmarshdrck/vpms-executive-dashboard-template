@@ -1,3 +1,5 @@
+import { getKpiActivation, parseKpiPeriod, submissionValues } from './kpiSetup.js'
+
 // KPI submission workflow: Draft -> Submitted -> Approved (= Published), with
 // a Returned branch back to Draft for revision.
 //
@@ -59,8 +61,7 @@ function writeStore(store) {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify(store))
   } catch {
-    // localStorage unavailable (private mode, quota, etc.) — the workflow
-    // simply won't persist; callers already hold the in-memory result.
+    throw new Error('KPI submission could not be saved. Free some browser storage and try again.')
   }
   window.dispatchEvent(new Event(CHANGE_EVENT))
 }
@@ -131,18 +132,23 @@ export function getActiveSubmission(user, departmentId, period) {
  */
 export function createDraft(user, departmentId, period) {
   requireDeptUser(user, departmentId)
+  parseKpiPeriod(period)
+  const activation = getKpiActivation(departmentId, period)
+  if (!activation) throw new Error('The GM has not activated KPIs for this department and quarter.')
   const existingActive = getActiveSubmission(user, departmentId, period)
   if (existingActive) return existingActive
 
   const store = readStore()
-  const previousApproved = store.submissions.find((s) => s.departmentId === departmentId && s.period === period && s.status === STATUS.APPROVED)
+  const previousApproved = store.submissions.filter((s) => s.departmentId === departmentId && s.period === period && s.status === STATUS.APPROVED).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]
 
   const submission = {
-    id: `${periodKey(departmentId, period)}::${Date.now()}`,
+    id: `${periodKey(departmentId, period)}::${crypto.randomUUID()}`,
     departmentId,
     period,
     status: STATUS.DRAFT,
-    values: {},
+    values: previousApproved?.values ? { ...previousApproved.values } : {},
+    kpis: activation.kpis,
+    activationId: activation.id,
     reviewComment: null,
     revisionOf: previousApproved?.id ?? null,
     createdBy: actorOf(user),
@@ -168,7 +174,7 @@ export function saveDraft(submissionId, values, user) {
   if (submission.status !== STATUS.DRAFT && submission.status !== STATUS.RETURNED) {
     throw new Error(`Cannot edit a submission that is ${submission.status}.`)
   }
-  submission.values = { ...values }
+  submission.values = submission.kpis ? submissionValues(submission.kpis, values, submission.period) : { ...values }
   submission.updatedAt = new Date().toISOString()
   if (submission.status === STATUS.RETURNED) submission.status = STATUS.DRAFT
   writeStore(store)
@@ -185,6 +191,13 @@ export function submitForReview(submissionId, user) {
   requireDeptUser(user, submission.departmentId)
   if (submission.status !== STATUS.DRAFT && submission.status !== STATUS.RETURNED) {
     throw new Error(`Cannot submit a submission that is ${submission.status}.`)
+  }
+  if (submission.kpis) {
+    submission.values = submissionValues(submission.kpis, submission.values, submission.period)
+    for (const kpi of submission.kpis) {
+      const value = submission.values[kpi.code]
+      if (value === '' || value === null || value === undefined || !Number.isFinite(Number(value)) || Number(value) < 0) throw new Error(`Enter a non-negative actual for ${kpi.name}${kpi.source !== 'manual' ? ', or approve its source book entries first' : ''}.`)
+    }
   }
   const validationError = validateValues(submission.values)
   if (validationError) throw new Error(validationError)
@@ -244,6 +257,8 @@ export function approveSubmission(submissionId, user, comment) {
     if (value === '' || value === null || value === undefined) continue
     store.published[publishedKey(submission.departmentId, kpiCode, submission.period)] = {
       value: Number(value),
+      kpi: submission.kpis?.find(kpi => kpi.code === kpiCode),
+      period: submission.period,
       submissionId: submission.id,
       approvedBy: actorOf(user),
       approvedAt: submission.updatedAt,

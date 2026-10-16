@@ -58,8 +58,8 @@ export default function Login() {
       <section className="flex flex-col p-6 sm:p-10 xl:p-16 overflow-y-auto">
         {/* Logo + brand name live here, on the white side, for every screen size. */}
         <div className="mb-8 flex items-center gap-3">
-          <img src={`${BASE}vpms-logo.svg`} alt="VPMS" className="w-9 h-9 rounded border border-slate-200 object-contain p-1" />
-          <div><div className="brand-mark text-base font-bold tracking-tight text-[#1E4DFF]">VPMS</div><div className="text-[10px] uppercase tracking-[.14em] text-slate-500">Vidmar Performance Management System</div></div>
+          <img src={`${BASE}vpms-logo.svg`} alt="Vidmar Holdings" className="w-9 h-9 rounded border border-slate-200 object-contain" />
+          <div><div className="brand-mark text-base font-bold tracking-tight text-[#1E4DFF]">Vidmar Holdings</div><div className="text-[10px] uppercase tracking-[.14em] text-slate-500">Performance Management · VPMS</div></div>
         </div>
         <div className="flex-1 flex items-center">
         <div className="w-full max-w-sm mx-auto">

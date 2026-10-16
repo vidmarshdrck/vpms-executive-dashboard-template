@@ -1,4 +1,4 @@
-// KPI Data — [Your Company]
+// KPI Data — Vidmar Holdings (VPMS)
 //
 // Current source: manual Excel import (Strategic KPI workbook). This is a
 // development/import pathway, not the production data flow — see
@@ -13,7 +13,7 @@
 import { classifyKpi } from '../lib/kpiThresholds.js'
 
 export const companyInfo = {
-  name: 'Your Company',
+  name: 'Vidmar Holdings',
   shortName: 'VPMS',
   vision: 'A leader in the procurement, hospitality and logistics of bulk petroleum products to ensure energy security through customer centric service',
   employees: 222,
@@ -25,7 +25,7 @@ export const companyInfo = {
   // Per-KPI provenance (source record, HOD, sync time) requires the
   // canonical KPI data model described in src/lib/navisionIntegration.js
   // and does not exist yet.
-  dataSource: 'Entered via VPMS, GM-approved',
+  dataSource: 'Entered via PMS',
   dataIsProvisional: true,
 };
 

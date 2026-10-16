@@ -5,30 +5,12 @@ import { ScoreGauge, PerspectiveScore, LegendLabel } from '../../components/ui/S
 import { scoreStatus, formatScore } from '../../lib/scoreStatus.js'
 import { PERSPECTIVES, PERSPECTIVE_BY_KEY, gmScorecard } from '../../data/scorecardData.js'
 import { companyInfo } from '../../data/kpiData.js'
-import { scoreScorecard, ACHIEVEMENT_CAP } from '../../lib/scorecard.js'
+import { scoreScorecard, periodAchievement, ACHIEVEMENT_CAP } from '../../lib/scorecard.js'
+import { activatedKpiScore, departmentsWithPublishedKpis } from '../../lib/departmentsWithPublishedKpis.js'
+import { useKpiSubmissionsVersion } from '../../lib/useKpiSubmissionsVersion.js'
+import { useReportingPeriod } from '../../lib/ReportingPeriodContext.jsx'
+import { monthsForTimeframe } from '../../lib/executiveSummary.js'
 import { Info } from 'lucide-react'
-
-const { scores, overall, contributions, shares } = scoreScorecard(PERSPECTIVES, gmScorecard.kpis)
-
-// Points each KPI adds to the overall score (its capped achievement divided by
-// the number of KPIs). They add up to `overall`.
-const kpiCount = gmScorecard.kpis.length
-const kpiRows = gmScorecard.kpis.map((kpi) => {
-  const perspective = PERSPECTIVE_BY_KEY[kpi.perspective]
-  const capped = Math.min(kpi.achievement, ACHIEVEMENT_CAP)
-  return { ...kpi, perspective, share: 100 / kpiCount, points: capped / kpiCount }
-})
-
-const pointsChart = PERSPECTIVES.map((p) => ({
-  name: p.name,
-  available: shares[p.key],
-  earned: contributions[p.key],
-}))
-
-// The perspective leaving the most points on the table drives the headline.
-const biggestGap = PERSPECTIVES
-  .map((p) => ({ ...p, gap: shares[p.key] - contributions[p.key] }))
-  .sort((a, b) => b.gap - a.gap)[0]
 
 function PointsTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -43,6 +25,33 @@ function PointsTooltip({ active, payload, label }) {
 }
 
 export default function BalancedScorecard() {
+  useKpiSubmissionsVersion()
+  const { timeframe, periodLabel } = useReportingPeriod()
+  const months = monthsForTimeframe(timeframe), year = timeframe.customYear
+  const activeScore = activatedKpiScore(year, months)
+  const assignedKpis = activeScore ? departmentsWithPublishedKpis(year, months, true).flatMap(department => department.kpis.map(kpi => ({ ...kpi, name: `${department.name} · ${kpi.name}`, achievement: periodAchievement(kpi, months) }))) : gmScorecard.kpis
+const { scores, overall, contributions, shares } = activeScore || scoreScorecard(PERSPECTIVES, assignedKpis)
+
+// Points each KPI adds to the overall score (its capped achievement divided by
+// the number of KPIs). They add up to `overall`.
+const kpiCount = assignedKpis.filter(kpi => kpi.achievement !== null).length
+const kpiRows = assignedKpis.map((kpi) => {
+  const perspective = PERSPECTIVE_BY_KEY[kpi.perspective]
+  const capped = kpi.achievement === null ? null : Math.min(kpi.achievement, ACHIEVEMENT_CAP)
+  return { ...kpi, perspective, share: kpiCount && capped !== null ? 100 / kpiCount : 0, points: capped === null ? null : capped / kpiCount }
+})
+
+const pointsChart = PERSPECTIVES.map((p) => ({
+  name: p.name,
+  available: shares[p.key],
+  earned: contributions[p.key] ?? 0,
+}))
+
+// The perspective leaving the most points on the table drives the headline.
+const biggestGap = PERSPECTIVES
+  .map((p) => ({ ...p, gap: shares[p.key] - (contributions[p.key] ?? 0) }))
+  .sort((a, b) => b.gap - a.gap)[0]
+
   const status = scoreStatus(overall)
 
   return (
@@ -61,7 +70,7 @@ export default function BalancedScorecard() {
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <StatusBadge label={status.label} tone={status.badgeTone} />
-              <DataStatus source={gmScorecard.source} period={gmScorecard.period} isProvisional={companyInfo.dataIsProvisional} />
+              <DataStatus source={activeScore ? 'Approved department KPIs' : gmScorecard.source} period={activeScore ? periodLabel : gmScorecard.period} isProvisional={!activeScore && companyInfo.dataIsProvisional} />
             </div>
           </div>
         </div>
@@ -103,7 +112,7 @@ export default function BalancedScorecard() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Weighted KPI scorecard</CardTitle>
+          <CardTitle>KPI scorecard</CardTitle>
           <p className="text-xs text-slate-500 mt-1">Performance against target, share of the overall score, and points earned</p>
         </CardHeader>
         <CardContent>
@@ -135,7 +144,7 @@ export default function BalancedScorecard() {
                       <td className="numeric">{row.weight}</td>
                       <td className="numeric font-semibold text-slate-800">{formatScore(row.achievement)}</td>
                       <td className="numeric">{row.share.toFixed(1)}%</td>
-                      <td className="numeric font-semibold text-slate-800">{row.points.toFixed(2)}</td>
+                      <td className="numeric font-semibold text-slate-800">{row.points === null ? '—' : row.points.toFixed(2)}</td>
                       <td><StatusBadge label={kpiStatus.label} tone={kpiStatus.badgeTone} /></td>
                     </tr>
                   )
@@ -144,7 +153,7 @@ export default function BalancedScorecard() {
               <tfoot>
                 <tr>
                   <td colSpan={6} className="font-black text-slate-800 border-t border-slate-200 py-3 px-3">Overall score</td>
-                  <td className="numeric font-black text-slate-900 border-t border-slate-200 px-3">{overall.toFixed(2)}</td>
+                  <td className="numeric font-black text-slate-900 border-t border-slate-200 px-3">{overall === null ? '—' : overall.toFixed(2)}</td>
                   <td className="border-t border-slate-200" />
                 </tr>
               </tfoot>

@@ -65,7 +65,7 @@ export function scoreScorecard(perspectives, kpis, cap = ACHIEVEMENT_CAP) {
  */
 export function periodAchievement(kpi, monthIndexes, cap = ACHIEVEMENT_CAP) {
   const values = monthIndexes
-    .map((i) => kpiAchievement(kpi.actuals[i], kpi.target, kpi.direction))
+    .map((i) => kpiAchievement(kpi.actuals[i], Array.isArray(kpi.targets) ? kpi.targets[i] : kpi.target, kpi.directions?.[i] || kpi.direction))
     .filter((v) => v !== null)
     .map((v) => Math.min(v, cap))
   if (values.length === 0) return null
@@ -77,4 +77,11 @@ export function periodActual(kpi, monthIndexes) {
   const values = monthIndexes.map((i) => kpi.actuals[i]).filter((v) => v !== null && v !== undefined)
   if (values.length === 0) return null
   return values.reduce((a, b) => a + b, 0) / values.length
+}
+
+/** Mean target for the selected months; quarter snapshots retain their own targets. */
+export function periodTarget(kpi, months) {
+  if (!Array.isArray(kpi.targets)) return kpi.target
+  const values = months.map(month => kpi.targets[month]).filter(value => value !== null && value !== undefined)
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null
 }
