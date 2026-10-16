@@ -10,7 +10,7 @@ import { BOOK_FIELDS, BOOK_NAMES, PRODUCTS, saveBookEntry, reviewBookEntry } fro
 import { useEntryBooks } from '../../lib/useEntryBooks.js'
 
 const control = 'mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 disabled:bg-slate-100'
-const primary = 'min-h-11 rounded-lg bg-[#1E4DFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#8F1C13] disabled:opacity-50'
+const primary = 'min-h-11 rounded-lg bg-[#1E4DFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1638CC] disabled:opacity-50'
 const secondary = 'min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50'
 const tone = { DRAFT: 'neutral', SUBMITTED: 'warning', RETURNED: 'negative', APPROVED: 'positive' }
 const statusLabel = { DRAFT: 'Draft', SUBMITTED: 'Awaiting review', RETURNED: 'Returned', APPROVED: 'Approved' }

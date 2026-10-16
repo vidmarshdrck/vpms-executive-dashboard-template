@@ -94,7 +94,7 @@ export default function TaskCreateDialog({ onClose, onCreate, initialTask, initi
           {error && <InlineMessage tone="negative">{error}</InlineMessage>}
           <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
             <span className="text-[11px] text-slate-500">{initialTask ? 'Original creation time is preserved.' : 'Created date and time are recorded automatically.'}</span>
-            <div className="flex gap-2"><button type="button" onClick={onClose} className="min-h-9 rounded-lg px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={!priority || uploading} className="min-h-9 rounded-lg bg-[#1E4DFF] px-4 text-sm font-semibold text-white hover:bg-[#9A1D14] disabled:cursor-not-allowed disabled:opacity-50">{initialTask ? 'Save changes' : 'Create task'}</button></div>
+            <div className="flex gap-2"><button type="button" onClick={onClose} className="min-h-9 rounded-lg px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={!priority || uploading} className="min-h-9 rounded-lg bg-[#1E4DFF] px-4 text-sm font-semibold text-white hover:bg-[#1638CC] disabled:cursor-not-allowed disabled:opacity-50">{initialTask ? 'Save changes' : 'Create task'}</button></div>
           </div>
         </form>
       </div>

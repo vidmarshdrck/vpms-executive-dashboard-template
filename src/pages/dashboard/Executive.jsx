@@ -144,13 +144,13 @@ const overviewRows = [
     <InlineMessage tone="negative">{books.error}</InlineMessage>
     <section className="vpms-gradient rounded-xl p-5 sm:p-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-3xl"><p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#1E4DFF] mb-2">Management brief · {companyInfo.shortName}</p><h2 className="text-xl font-bold text-slate-900 mb-2">Energy security through reliable service delivery</h2><p className="text-sm leading-6 text-slate-600">{companyInfo.vision}</p></div>
+        <div className="max-w-3xl"><p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#1E4DFF] mb-2">Management brief · {companyInfo.shortName}</p><h2 className="text-xl font-bold text-slate-900 mb-2">Build systems. Not tasks.</h2><p className="text-sm leading-6 text-slate-600">{companyInfo.vision}</p></div>
         <div className="hero-stats">
           <div className="hero-stat"><div className="hero-stat-label">Revenue actual</div><div className="hero-stat-value">{reportedRevenue.length ? formatKwacha(totalActualRevenue, true) : '—'}</div></div>
           <div className="hero-stat"><div className="hero-stat-label">Revenue target</div><div className="hero-stat-value is-muted">{reportedRevenue.length ? formatKwacha(totalTargetRevenue, true) : '—'}</div></div>
           <div className="hero-score">
             <div className="hero-stat-label whitespace-nowrap">Overall score</div>
-            <div className="hero-score-value" style={{ color: scoreStatus(overallScore).color }}>{overallLabel}<span>%</span></div>
+            <div className="hero-score-value" style={{ color: "#1E4DFF" }}>{overallLabel}<span>%</span></div>
           </div>
         </div>
       </div>
@@ -245,7 +245,7 @@ const overviewRows = [
 
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
       <Card>
-        <CardHeader><CardTitle>Operations · Product received vs distributed (m³)</CardTitle><p className="text-xs text-slate-500 mt-1">{periodLabel} · {hasOperations ? `${bookYear} · approved Operations entries, LSG and PMS combined` : 'Strategic plan workbook'}</p></CardHeader>
+        <CardHeader><CardTitle>Operations · subscriptions sold vs renewed</CardTitle><p className="text-xs text-slate-500 mt-1">{periodLabel} · {hasOperations ? `${bookYear} · approved VE entries` : 'Strategic plan workbook'}</p></CardHeader>
         <CardContent>
           {operationsQ1Q2.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>

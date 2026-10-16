@@ -15,7 +15,7 @@ import { classifyKpi } from '../lib/kpiThresholds.js'
 export const companyInfo = {
   name: 'Vidmar Holdings',
   shortName: 'VPMS',
-  vision: 'A leader in the procurement, hospitality and logistics of bulk petroleum products to ensure energy security through customer centric service',
+  vision: 'Own and coordinate the Vidmar subsidiary businesses under one holding structure: build systems, not tasks',
   employees: 222,
   employeesPrev: 223,
   currency: 'ZMW',
@@ -110,10 +110,10 @@ export const operationsChart = [
 // dashboardMetrics.js. `department` (also illustrative) is the owning
 // department, used for the project-count-by-department chart.
 export const projects = [
-  { name: 'Vehicle Reg No. Reader', completion: 98, target: 100, status: 'On Track', deadline: '2026-10-15', department: 'Operations' },
-  { name: 'Meter Upgrade (Colioris)', completion: 80, target: 100, status: 'In Progress', deadline: '2026-11-30', department: 'Commercial' },
-  { name: 'Tank 7 Conversion', completion: 5, target: 100, status: 'Early Stage', deadline: '2027-03-31', department: 'Maintenance' },
-  { name: 'Terminal Management System', completion: 20, target: 100, status: 'In Progress', deadline: '2026-12-15', department: 'Dispatch' },
+  { name: 'VE subscription renewal automation', completion: 98, target: 100, status: 'On Track', deadline: '2026-10-15', department: 'Operations' },
+  { name: 'VAI client dashboard rollout', completion: 80, target: 100, status: 'In Progress', deadline: '2026-11-30', department: 'Real Estate Zambia (REZ)' },
+  { name: 'REZ SEC Zambia compliance pack', completion: 5, target: 100, status: 'Early Stage', deadline: '2027-03-31', department: 'Vidmar AI (VAI)' },
+  { name: 'BSG MT5 demo bridge', completion: 20, target: 100, status: 'In Progress', deadline: '2026-12-15', department: 'Vidmar Entertainment (VE)' },
 ];
 
 export const issues = {
@@ -166,17 +166,17 @@ export const financialKPIs = [
 
 export const customerKPIs = [
   {
-    name: 'LSG Loss Compliance',
+    name: 'VE Renewal Rate',
     target: 100,
     quarters: { Q1: 100, Q2: 120, Q3: null, Q4: null },
   },
   {
-    name: 'PMS Loss Compliance',
+    name: 'VE Churn Control',
     target: 100,
     quarters: { Q1: 90, Q2: 110, Q3: 113, Q4: null },
   },
   {
-    name: 'ISO Code Compliance',
+    name: 'VAI Delivery Quality',
     target: 100,
     quarters: { Q1: 60, Q2: 70, Q3: 100, Q4: null },
   },
@@ -189,7 +189,7 @@ export const customerKPIs = [
 
 export const internalKPIs = [
   {
-    name: 'Truck Turnaround',
+    name: 'Task Turnaround',
     target: 100,
     quarters: { Q1: 100, Q2: 80, Q3: 120, Q4: null },
   },
@@ -208,19 +208,19 @@ export const learningKPIs = [
     performance: 20,
   },
   {
-    name: 'Storage Tank Construction',
+    name: 'REZ Portfolio Build',
     target: 100,
     quarters: { Q1: 10, Q2: null, Q3: null, Q4: null },
     performance: 10,
   },
   {
-    name: 'Pipeline Construction',
+    name: 'VAI Client Pipeline',
     target: 100,
     quarters: { Q1: 40, Q2: null, Q3: null, Q4: null },
     performance: 40,
   },
   {
-    name: 'Cargo Procurement',
+    name: 'Digital Commerce Launches',
     target: 100,
     quarters: { Q1: 15, Q2: null, Q3: null, Q4: null },
     performance: 15,

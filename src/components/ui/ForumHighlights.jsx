@@ -39,9 +39,9 @@ export default function ForumHighlights() {
           {count > 1 && <div className="flex items-center justify-between px-4 py-3">
             <span className="text-xs tabular-nums text-slate-500">{index + 1} / {count}</span>
             <div className="flex gap-1">
-              <button type="button" onClick={() => move(-1)} aria-label="Previous photo" className="flex h-9 w-9 items-center justify-center rounded-full text-[#1E4DFF] hover:bg-red-50"><ChevronLeft size={18} /></button>
-              {!reducedMotion && <button type="button" onClick={() => setPaused((value) => !value)} aria-label={paused ? 'Play slideshow' : 'Pause slideshow'} className="flex h-9 w-9 items-center justify-center rounded-full text-[#1E4DFF] hover:bg-red-50">{paused ? <Play size={16} /> : <Pause size={16} />}</button>}
-              <button type="button" onClick={() => move(1)} aria-label="Next photo" className="flex h-9 w-9 items-center justify-center rounded-full text-[#1E4DFF] hover:bg-red-50"><ChevronRight size={18} /></button>
+              <button type="button" onClick={() => move(-1)} aria-label="Previous photo" className="flex h-9 w-9 items-center justify-center rounded-full text-[#1E4DFF] hover:bg-[#EEF2FF]"><ChevronLeft size={18} /></button>
+              {!reducedMotion && <button type="button" onClick={() => setPaused((value) => !value)} aria-label={paused ? 'Play slideshow' : 'Pause slideshow'} className="flex h-9 w-9 items-center justify-center rounded-full text-[#1E4DFF] hover:bg-[#EEF2FF]">{paused ? <Play size={16} /> : <Pause size={16} />}</button>}
+              <button type="button" onClick={() => move(1)} aria-label="Next photo" className="flex h-9 w-9 items-center justify-center rounded-full text-[#1E4DFF] hover:bg-[#EEF2FF]"><ChevronRight size={18} /></button>
             </div>
           </div>}
           {count === 1 && <div className="h-4" />}

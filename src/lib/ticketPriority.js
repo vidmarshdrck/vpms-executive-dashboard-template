@@ -1,4 +1,4 @@
-// The Tazai ticket priority rules supplied by the PMS owner. Task owners and
+// The Bagheera ticket priority rules supplied by the PMS owner. Task owners and
 // affected departments are distinct: an ICT task can concern Finance, for
 // example. Existing historical task priorities are never recalculated.
 export const ISSUE_CATEGORIES = [
@@ -8,7 +8,7 @@ export const ISSUE_CATEGORIES = [
 
 export const TICKET_DEPARTMENTS = [
   'Administration', 'Finance', 'Human Resource', 'Security', 'Operations',
-  'Maintenance', 'Boom Gate', 'Commercial', 'Dispatch',
+  'Vidmar AI (VAI)', 'BSG Trades', 'Real Estate Zambia (REZ)', 'Vidmar Entertainment (VE)',
 ]
 
 export const PRIORITY_MATRIX = {
@@ -17,10 +17,10 @@ export const PRIORITY_MATRIX = {
   'Human Resource': ['Medium', 'Medium', 'High', 'High', 'High', 'Low', 'Critical'],
   Security: ['High', 'High', 'Critical', 'Critical', 'High', 'Low', 'Critical'],
   Operations: ['High', 'High', 'Critical', 'High', 'High', 'Medium', 'Critical'],
-  Maintenance: ['High', 'High', 'High', 'Medium', 'Medium', 'Medium', 'Critical'],
-  'Boom Gate': ['Critical', 'Critical', 'Critical', 'Critical', 'High', 'Medium', 'Critical'],
-  Commercial: ['High', 'High', 'Critical', 'High', 'High', 'Medium', 'Critical'],
-  Dispatch: ['Critical', 'Critical', 'Critical', 'Critical', 'High', 'High', 'Critical'],
+  'Vidmar AI (VAI)': ['High', 'High', 'High', 'Medium', 'Medium', 'Medium', 'Critical'],
+  'BSG Trades': ['Critical', 'Critical', 'Critical', 'Critical', 'High', 'Medium', 'Critical'],
+  'Real Estate Zambia (REZ)': ['High', 'High', 'Critical', 'High', 'High', 'Medium', 'Critical'],
+  'Vidmar Entertainment (VE)': ['Critical', 'Critical', 'Critical', 'Critical', 'High', 'High', 'Critical'],
 }
 
 export const PRIORITY_EXPLANATIONS = {
@@ -30,7 +30,7 @@ export const PRIORITY_EXPLANATIONS = {
   Low: 'Minor inconvenience or issue involving a non-essential service, device, or function. A Low-priority issue has limited operational impact and can normally be addressed during routine support work.',
 }
 
-const DEPARTMENT_ALIASES = { 'Human Resources': 'Human Resource', Boomgate: 'Boom Gate' }
+const DEPARTMENT_ALIASES = { 'Human Resources': 'Human Resource', Boomgate: 'BSG Trades' }
 
 export function priorityFor(department, category) {
   if (!department || !category) return null

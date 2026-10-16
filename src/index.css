@@ -116,9 +116,28 @@ main > div > :nth-child(n+4) .surface-card,main > div > :nth-child(n+4) .perspec
 /* Branded Forum masthead and an unmistakable writing surface. */
 .forum-ui .forum-brand-header { background:var(--brand-red); color:#fff; backdrop-filter:none; }
 .forum-brand-header select { color-scheme:dark; }
-.forum-brand-header option { background:#8F1C13; color:#fff; }
+.forum-brand-header option { background:#1638CC; color:#fff; }
 .forum-ui .forum-brand-header :focus-visible { outline:2px solid white; outline-offset:3px; box-shadow:none; }
 .forum-ui .forum-composer-input { background:#F1F2F4; color:#1E293B; caret-color:var(--brand-red); padding:14px 16px; font-size:16px; line-height:24px; border-radius:12px; min-height:76px; margin-bottom:12px; }
 .forum-ui .forum-composer-input::placeholder { color:#586579; opacity:1; }
 .forum-ui .forum-composer-input:focus { outline:2px solid var(--brand-red); outline-offset:3px; }
 .forum-brand-header ::selection, .forum-composer-input::selection { background:#EEF2FF; color:#7A1810; }
+
+/* Dark mode: html.dark (toggle in header, persisted as localStorage 'vpms-theme'). Token swap + Tailwind neutral overrides. */
+html.dark { --canvas:#0B0B0F; --surface:#15161C; --surface-subtle:#1D1F27; --text-primary:#F1F5F9; --text-secondary:#CBD5E1; --text-muted:#94A3B8; --border:#2A2D38; --neutral-tint:#262A35; --brand-red-tint:#1A2350; --positive-tint:#12301F; --warning-tint:#33290B; --caution-tint:#3A2210; --negative-tint:#3A1517; --target:#64748B; --comparison:#CBD5E1; }
+html.dark body { background:var(--canvas); color:var(--text-primary); }
+html.dark :is(.bg-white,.bg-slate-50,.bg-gray-50,.bg-stone-50,.bg-stone-100,.bg-\[\#F3F2EE\],.bg-\[\#FAFCFE\],.bg-\[\#F8FAFC\]) { background-color:var(--surface) !important; }
+html.dark :is(.bg-slate-100,.bg-gray-100,.bg-slate-200) { background-color:var(--surface-subtle) !important; }
+html.dark :is(.text-slate-900,.text-slate-800,.text-gray-900,.text-gray-800,.text-stone-900,.text-\[\#0B0B0F\]) { color:var(--text-primary) !important; }
+html.dark :is(.text-slate-700,.text-slate-600,.text-gray-700,.text-gray-600) { color:var(--text-secondary) !important; }
+html.dark :is(.text-slate-500,.text-slate-400,.text-gray-500,.text-gray-400) { color:var(--text-muted) !important; }
+html.dark :is(.border-slate-100,.border-slate-200,.border-slate-300,.border-gray-200,.border-gray-100) { border-color:var(--border) !important; }
+html.dark :is(.divide-slate-100,.divide-slate-200) > * + * { border-color:var(--border) !important; }
+html.dark :is(.hover\:bg-slate-50,.hover\:bg-slate-100,.hover\:bg-gray-50):hover { background-color:var(--surface-subtle) !important; }
+html.dark :is(.bg-\[\#EEF2FF\],.bg-blue-50) { background-color:var(--brand-red-tint) !important; }
+html.dark :is(input,select,textarea) { background-color:var(--surface-subtle); color:var(--text-primary); border-color:var(--border); }
+html.dark .dashboard-table tr:hover td { background:var(--surface-subtle); }
+html.dark .recharts-cartesian-grid line { stroke:var(--border); }
+html.dark .recharts-text, html.dark .recharts-cartesian-axis-tick-value { fill:var(--text-muted); }
+html.dark .recharts-default-tooltip { background:var(--surface) !important; border-color:var(--border) !important; color:var(--text-primary); }
+html.dark .vh-embed button, html.dark .vh-embed input, html.dark .vh-embed select, html.dark .vh-embed textarea { background:var(--surface-subtle); color:var(--text-primary); }

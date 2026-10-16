@@ -80,7 +80,7 @@ export function HeaderTimeframePicker() {
             </div>
             <div className="flex items-center justify-end gap-2 mt-4">
               <button type="button" onClick={() => setOpen(false)} className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700">Cancel</button>
-              <button type="button" onClick={apply} className="px-3 py-1.5 rounded-md bg-[#1E4DFF] text-white text-xs font-bold hover:bg-[#9A1D14]">Apply</button>
+              <button type="button" onClick={apply} className="px-3 py-1.5 rounded-md bg-[#1E4DFF] text-white text-xs font-bold hover:bg-[#1638CC]">Apply</button>
             </div>
           </div>
         </>

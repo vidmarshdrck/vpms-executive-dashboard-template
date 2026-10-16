@@ -34,7 +34,7 @@ export default function ForumProfileHeader() {
       <div className="relative shrink-0">
         <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-white/20 text-2xl font-semibold sm:h-24 sm:w-24">{photos[user.id] ? <img src={photos[user.id]} alt={`${displayName}'s profile`} className="h-full w-full object-cover" /> : displayName.split(' ').map(part => part[0]).join('').slice(0, 2)}</div>
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" aria-label="Profile photo file" className="hidden" onChange={changePhoto} />
-        <button type="button" disabled={busy} onClick={() => fileRef.current.click()} aria-label="Change profile photo" title="Change profile photo" className="absolute -bottom-1 -right-1 flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#1E4DFF] hover:bg-red-50 disabled:opacity-50"><Pencil size={17} /></button>
+        <button type="button" disabled={busy} onClick={() => fileRef.current.click()} aria-label="Change profile photo" title="Change profile photo" className="absolute -bottom-1 -right-1 flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#1E4DFF] hover:bg-[#EEF2FF] disabled:opacity-50"><Pencil size={17} /></button>
       </div>
       <div className="flex items-center gap-1">
         {!editing && <button type="button" aria-label="Edit profile" title="Edit profile" onClick={() => { setForm({ displayName, bio: profile.bio || '', joinedOn: profile.joinedOn || '' }); setEditing(true); setMessage(''); setError('') }} className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-white/15"><Pencil size={18} /></button>}
@@ -44,7 +44,7 @@ export default function ForumProfileHeader() {
     {editing ? <form onSubmit={submit} className="mt-5 space-y-3 pb-3">
       <label className="block text-sm font-medium">Display name<input autoFocus required maxLength={60} value={form.displayName} onChange={event => setForm({ ...form, displayName: event.target.value })} className={field} /></label>
       <label className="block text-sm font-medium">Bio<textarea rows={2} maxLength={240} value={form.bio} onChange={event => setForm({ ...form, bio: event.target.value })} className={field} /></label>
-      <label className="block text-sm font-medium">Joined Tazama<input type="date" max={new Date().toISOString().slice(0, 10)} value={form.joinedOn} onChange={event => setForm({ ...form, joinedOn: event.target.value })} className={field} /></label>
+      <label className="block text-sm font-medium">Joined Vidmar<input type="date" max={new Date().toISOString().slice(0, 10)} value={form.joinedOn} onChange={event => setForm({ ...form, joinedOn: event.target.value })} className={field} /></label>
       <p className="text-xs text-white/90">Your display name appears on named posts. Your login username stays @{user.username}.</p>
       <div className="flex gap-2"><button type="submit" className="min-h-11 rounded-full bg-white px-5 text-sm font-semibold text-[#1E4DFF]">Save profile</button><button type="button" onClick={() => { setEditing(false); setError('') }} className="min-h-11 rounded-full px-4 text-sm hover:bg-white/15">Cancel</button></div>
     </form> : <div className="mt-4 pb-3">

@@ -8,7 +8,7 @@ import { QUARTERS, quarterOfDate } from '../../lib/reportingPeriod.js'
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card.jsx'
 import { InlineMessage } from '../../components/ui/InlineMessage.jsx'
 const field = 'mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900'
-const primary = 'min-h-11 rounded-lg bg-[#1E4DFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#8F1C13] disabled:opacity-50'
+const primary = 'min-h-11 rounded-lg bg-[#1E4DFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1638CC] disabled:opacity-50'
 const secondary = 'min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50'
 const fresh = () => ({ name: '', perspective: 'financial', target: '', unit: '%', direction: 'higher', weight: 1, source: 'manual', included: true })
 export default function KpiSetup() {

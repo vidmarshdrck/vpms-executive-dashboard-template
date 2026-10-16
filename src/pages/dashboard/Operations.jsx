@@ -104,7 +104,7 @@ export default function Operations() {
       {/* Volume Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Product Received vs Distributed (m³)</CardTitle>
+          <CardTitle>Subscriptions sold vs renewed</CardTitle>
           <p className="text-xs text-slate-500 mt-1">{periodLabel}</p>
         </CardHeader>
         <CardContent>
@@ -114,7 +114,7 @@ export default function Operations() {
               <XAxis dataKey="quarter" />
               <YAxis tickFormatter={volumeFormatter} width={65} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v, name) => [v === null ? 'No data' : `${v.toLocaleString()} m³`, name]} />
-              <Bar dataKey="received" name="Product Received" fill="#1E4DFF" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="received" name="Sold" fill="#1E4DFF" radius={[4, 4, 0, 0]} />
               <Bar dataKey="distributed" name="Product Distributed" fill="#1F2937" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

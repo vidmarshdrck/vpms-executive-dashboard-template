@@ -37,7 +37,7 @@ const CATEGORY_STYLE = {
   Suggestion: 'bg-sky-50 text-sky-800',
   Operations: 'bg-indigo-50 text-indigo-800',
   'Ethics & Integrity': 'bg-violet-50 text-violet-800',
-  'Anti-Corruption': 'bg-rose-50 text-rose-800',
+  'Brand': 'bg-rose-50 text-rose-800',
   Other: 'bg-stone-100 text-stone-600',
 }
 const TYPE_LABEL = { POST: 'Post', ANNOUNCEMENT: 'Announcement', EVENT: 'Event' }
@@ -363,7 +363,7 @@ export function ForumFeed({ profile = false }) {
   const shown = showFilter && filter ? byTab[tab].filter((p) => p.category === filter) : byTab[tab]
   return (
     <>
-      <header className={`forum-brand-header z-10 border-b border-[#8F1C13] text-white ${profile ? '' : 'sticky top-0'}`}>
+      <header className={`forum-brand-header z-10 border-b border-[#1638CC] text-white ${profile ? '' : 'sticky top-0'}`}>
         {profile ? <ForumProfileHeader /> : <div className="flex flex-wrap items-start gap-3 px-4 pt-4">
           <div className="min-w-0 flex-1 basis-full sm:basis-0">
             <h2 className="text-xl font-bold leading-tight text-white">VPMS Forum</h2>
@@ -375,7 +375,7 @@ export function ForumFeed({ profile = false }) {
           </div>
           <div className="flex flex-shrink-0 items-center gap-2">
             {showFilter && (
-              <label className="relative flex h-10 items-center gap-1.5 rounded-full border border-white/40 bg-[#8F1C13] pl-3 pr-2 text-sm text-white">
+              <label className="relative flex h-10 items-center gap-1.5 rounded-full border border-white/40 bg-[#1638CC] pl-3 pr-2 text-sm text-white">
                 <Filter size={14} className="text-white/90" aria-hidden="true" />
                 <select value={filter} onChange={(e) => setFilter(e.target.value)} aria-label="Filter by category" className="max-w-[9.5rem] cursor-pointer appearance-none truncate bg-transparent pr-1 text-sm focus:outline-none">
                   <option value="">All categories</option>

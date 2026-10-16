@@ -1,4 +1,4 @@
 export const forumHighlights = [
-  { src: 'forum/no-corruption.jpeg', alt: 'No corruption: a crossed-out exchange of money', caption: 'Say no to corruption.' },
-  { src: 'forum/anti-corruption-day.jpeg', alt: 'International Anti-Corruption Day poster, 9 December', caption: 'Honesty and integrity in our workplace.' },
+  { src: 'forum/build-systems.svg', alt: 'Vidmar Holdings: Build systems. Not tasks.', caption: 'Build systems. Not tasks.' },
+  { src: 'forum/scale-what-works.svg', alt: 'Vidmar Holdings: Scale what works.', caption: 'Scale what works.' },
 ]

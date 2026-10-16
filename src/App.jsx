@@ -2,7 +2,7 @@ import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from './auth/AuthContext.jsx'
 import { hasPermission, homePath } from './auth/permissions.js'
 import DashboardLayout from './components/layout/DashboardLayout.jsx'
-import Tazai from './pages/dashboard/Tazai.jsx'
+import Bagheera from './pages/dashboard/Tazai.jsx'
 import Login from './pages/Login.jsx'
 import Executive from './pages/dashboard/Executive.jsx'
 import BalancedScorecard from './pages/dashboard/BalancedScorecard.jsx'
@@ -56,7 +56,7 @@ export default function App() {
     <Route element={<ProtectedRoute />}>
       <Route path="/" element={<DashboardLayout />}>
         <Route index element={<HomeRedirect />} />
-        <Route path="tazai" element={<Tazai />} />
+        <Route path="tazai" element={<Bagheera />} />
         <Route element={<RequirePermission permission="dashboard.department" />}>
           <Route path="my-department" element={<DepartmentScorecards />} />
         </Route>

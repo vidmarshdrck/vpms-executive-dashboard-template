@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Eye, EyeOff, LockKeyhole, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 
-// Six depot photographs from the organization's asset library, cross-fading on a
+// Login background photographs, cross-fading on a
 // timer. Purely decorative — the credentials themselves are never shown on
 // this page (see forgotten-password note below and demoAuth.js).
 const BASE = import.meta.env.BASE_URL

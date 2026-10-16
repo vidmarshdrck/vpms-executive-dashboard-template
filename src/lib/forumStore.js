@@ -16,9 +16,9 @@ import { hasPermission } from '../auth/permissions.js'
 const STORE_KEY = 'vpms-forum-v2'
 const CHANGE_EVENT = 'vpms:forum-changed'
 
-export const CATEGORIES = ['General', 'Safety', 'Workplace Concern', 'Suggestion', 'Operations', 'Ethics & Integrity', 'Anti-Corruption', 'Other']
+export const CATEGORIES = ['General', 'Safety', 'Workplace Concern', 'Suggestion', 'Operations', 'Ethics & Integrity', 'Brand', 'Other']
 export const DEFAULT_CATEGORY = 'Other'
-export const SENSITIVE_CATEGORIES = ['Safety', 'Ethics & Integrity', 'Anti-Corruption']
+export const SENSITIVE_CATEGORIES = ['Safety', 'Ethics & Integrity', 'Brand']
 export const REPORT_REASONS = ['Harassment', 'Threatening content', 'False/misleading information', 'Offensive content', 'Spam', 'Safety concern', 'Other']
 export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 export const MAX_IMAGE_BYTES = 800 * 1024
@@ -40,7 +40,7 @@ function seed() {
     posts: [
       P('a1', 'gm', 'EMP-0001', 'General Manager', true, null, null, 'Month-end KPI submissions are due on the 5th. Department heads, please enter your figures for GM approval. (Sample announcement)', 3, { type: 'ANNOUNCEMENT' }),
       P('a2', 'gm', 'EMP-0001', 'General Manager', true, null, null, 'The staff forum is now open. Share concerns, ideas and updates, and keep posts factual and respectful. (Sample announcement)', 30, { type: 'ANNOUNCEMENT' }),
-      P('e1', 'gm', 'EMP-0001', 'General Manager', true, null, null, 'Safety toolbox talk for all depot staff. (Sample event)', 28, { type: 'EVENT', eventAt: now + 2 * 24 * HOUR, location: 'Main depot' }),
+      P('e1', 'gm', 'EMP-0001', 'General Manager', true, null, null, 'Weekly operations review for all business leads. (Sample event)', 28, { type: 'EVENT', eventAt: now + 2 * 24 * HOUR, location: 'Main depot' }),
       P('e2', 'gm', 'EMP-0001', 'General Manager', true, null, null, 'Quarterly performance review with department heads. (Sample event)', 40, { type: 'EVENT', eventAt: now + 6 * 24 * HOUR, location: 'Boardroom' }),
       P('e3', 'gm', 'EMP-0001', 'General Manager', true, null, null, 'Staff recognition awards. (Sample event)', 52, { type: 'EVENT', eventAt: now + 20 * 24 * HOUR, location: 'Head office' }),
       P('p1', 'seed-1', 'EMP-1042', 'Sample Staff A', true, 'operations', 'Safety', 'The walkway near the loading bay gets slippery after rain. Could we get anti-slip strips or a warning sign? (Sample post)', 2),
@@ -49,7 +49,7 @@ function seed() {
       P('p4', 'seed-4', 'EMP-4107', 'Sample Staff D', true, 'productMonitoring', 'General', 'Welcome to the VPMS Staff Forum. Please keep posts factual and respectful. (Sample post)', 50),
       P('p5', 'seed-5', 'EMP-5120', 'Sample Staff E', false, 'operations', 'Operations', 'Truck turnaround at the gantry slows down after 3pm. Could we stagger loading slots between the two bays? (Sample post)', 12),
       P('p6', 'seed-6', 'EMP-6044', 'Sample Staff F', false, 'procurement', 'Ethics & Integrity', 'Please remind everyone to declare gifts from suppliers in line with the code of conduct. (Sample post)', 18),
-      P('p7', 'seed-7', 'EMP-7031', 'Sample Staff G', false, 'security', 'Anti-Corruption', 'Reminder that any request for payment to speed up a service should be reported through the proper channel. (Sample post)', 34),
+      P('p7', 'seed-7', 'EMP-7031', 'Sample Staff G', false, 'security', 'Brand', 'Reminder that any request for payment to speed up a service should be reported through the proper channel. (Sample post)', 34),
       P('p8', 'seed-8', 'EMP-8002', 'Sample Staff H', true, 'engineering', 'Other', 'Lost and found: a blue hard hat was left at the workshop. Please collect it from the front desk. (Sample post)', 60),
     ],
     comments: [

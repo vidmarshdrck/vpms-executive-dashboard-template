@@ -9,7 +9,7 @@ export const KPI_SOURCES = [
   { id: 'finance.revenue', label: 'Approved revenue total', departmentId: 'finance', unit: 'ZMW' },
   { id: 'finance.expenditure', label: 'Approved operating expenditure', departmentId: 'finance', unit: 'ZMW' },
   { id: 'finance.revenueAchievement', label: 'Approved revenue ÷ book target (%)', departmentId: 'finance', unit: '%' },
-  { id: 'operations.received', label: 'Approved product received total', departmentId: 'operations', unit: 'm³' },
+  { id: 'operations.received', label: 'Approved subscriptions sold total', departmentId: 'operations', unit: 'm³' },
   { id: 'operations.distributed', label: 'Approved product distributed total', departmentId: 'operations', unit: 'm³' },
   { id: 'operations.distributionRate', label: 'Approved distributed ÷ received (%)', departmentId: 'operations', unit: '%' },
 ]

@@ -28,8 +28,8 @@ test('all 63 department/category combinations match the supplied priority matrix
 })
 
 test('priority updates from both inputs and stays unset until both are valid', () => {
-  assert.equal(priorityFor('Dispatch', 'Hardware'), 'Critical')
-  assert.equal(priorityFor('Dispatch', 'Printer Issues'), 'High')
+  assert.equal(priorityFor('Vidmar Entertainment (VE)', 'Hardware'), 'Critical')
+  assert.equal(priorityFor('Vidmar Entertainment (VE)', 'Printer Issues'), 'High')
   assert.equal(priorityFor('Administration', 'Printer Issues'), 'Low')
   assert.equal(priorityFor('Finance', 'Printer Issues'), 'Medium')
   assert.equal(priorityFor('', 'Hardware'), null)

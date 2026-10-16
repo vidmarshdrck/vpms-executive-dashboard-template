@@ -140,7 +140,7 @@ export default function KpiApprovals() {
               </label>
 
               <div className="flex items-center gap-3">
-                <button type="button" onClick={handleApprove} className="rounded-lg bg-[#1E4DFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#9a1d13]">
+                <button type="button" onClick={handleApprove} className="rounded-lg bg-[#1E4DFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1638CC]">
                   Approve & publish
                 </button>
                 <button type="button" onClick={handleReturn} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">

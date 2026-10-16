@@ -16,17 +16,17 @@ function isolated(fn) {
   globalThis.window = { dispatchEvent() {} }
   try { fn(map) } finally { globalThis.localStorage = previousStorage; globalThis.window = previousWindow }
 }
-test('Tazai chat histories are scoped to the signed-in user', () => isolated(() => {
+test('Bagheera chat histories are scoped to the signed-in user', () => isolated(() => {
   saveChats(finance, [{ id: 'c1', title: 'Private task request', messages: [] }])
   assert.equal(readChats(finance)[0].title, 'Private task request')
   assert.deepEqual(readChats(ict), [])
 }))
-test('quick Tazai answers in page context and directs complex requests to the full assistant', () => {
+test('quick Bagheera answers in page context and directs complex requests to the full assistant', () => {
   assert.match(quickTazaiReply('Where are my KPI targets?', finance, 'KPI'), /KPI entry/)
-  assert.match(quickTazaiReply('My printer is broken', finance, 'Executive overview'), /full Tazai/)
+  assert.match(quickTazaiReply('My printer is broken', finance, 'Executive overview'), /full Bagheera/)
   assert.match(quickTazaiReply('Hello', finance, 'Finance'), /Hello, Finance/)
 })
-test('Tazai queues note email ten minutes after the last edit', () => {
+test('Bagheera queues note email ten minutes after the last edit', () => {
   const schedule = scheduleTazaiNoteEmail('Check the revenue variance', { ...finance, email: 'finance_head@vpms.demo' }, 'Executive overview', 1000)
   assert.equal(schedule.dueAt, 1000 + TAZAI_NOTE_EMAIL_DELAY)
   assert.equal(schedule.email, 'finance_head@vpms.demo')

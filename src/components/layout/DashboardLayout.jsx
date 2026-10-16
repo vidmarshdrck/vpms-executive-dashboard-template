@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import ThemeToggle from '../ui/ThemeToggle.jsx'
 import { Outlet, NavLink, Link, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Gauge, Building2, Activity, TrendingUp, Menu, X, ShieldCheck, ClipboardList, MessagesSquare, ListChecks, Sparkles, Radio, CandlestickChart } from 'lucide-react'
 import { companyInfo } from '../../data/kpiData.js'
@@ -27,7 +28,7 @@ const navItems = [
   { path: '/support-overview', label: 'Activities', icon: ListChecks },
   { path: '/live-workspace', label: 'Live workspace', icon: Radio },
   { path: '/bsg', label: 'BSG trading', icon: CandlestickChart },
-  { path: '/tazai', label: 'Tazai', icon: Sparkles },
+  { path: '/tazai', label: 'Bagheera', icon: Sparkles },
   { path: '/forum', label: 'Forum', icon: MessagesSquare },
 ]
 
@@ -37,7 +38,7 @@ const departmentNavItems = [
   { path: '/my-department', label: 'My department', icon: Building2 },
   { path: '/kpi', label: 'KPI', icon: ClipboardList },
   { path: '/activities', label: 'Activities', icon: ListChecks },
-  { path: '/tazai', label: 'Tazai', icon: Sparkles },
+  { path: '/tazai', label: 'Bagheera', icon: Sparkles },
   { path: '/forum', label: 'Forum', icon: MessagesSquare },
 ]
 
@@ -59,7 +60,7 @@ export default function DashboardLayout() {
   const visibleNavItems = hasPermission(user, 'dashboard.org') ? orgNav : departmentNavItems
   const isSocial = location.pathname.startsWith('/forum') || location.pathname === '/profile'
   const isTazai = location.pathname === '/tazai'
-  const mobileNav = [visibleNavItems[0], { path: '/kpi', label: 'KPI', icon: ClipboardList }, { path: '/tazai', label: 'Tazai', icon: Sparkles }, { path: user.departmentId ? '/activities' : '/support-overview', label: 'Activities', icon: ListChecks }, { path: '/forum', label: 'Forum', icon: MessagesSquare }]
+  const mobileNav = [visibleNavItems[0], { path: '/kpi', label: 'KPI', icon: ClipboardList }, { path: '/tazai', label: 'Bagheera', icon: Sparkles }, { path: user.departmentId ? '/activities' : '/support-overview', label: 'Activities', icon: ListChecks }, { path: '/forum', label: 'Forum', icon: MessagesSquare }]
   const currentPage = location.pathname === '/profile' ? 'Profile' : visibleNavItems.find((item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`))?.label || 'Dashboard'
 
   useEffect(() => {
@@ -148,6 +149,7 @@ export default function DashboardLayout() {
             <div className="ml-auto flex flex-shrink-0 items-center gap-2">
               {!isTazai && !isSocial && hasPermission(user, 'dashboard.org') && <ExportMenu />}
               {!isTazai && !isSocial && <HeaderTimeframePicker />}
+              <ThemeToggle />
               <Link to="/profile" aria-label="Open profile" className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-[#EEF2FF] text-sm font-semibold text-[#1E4DFF] lg:hidden">{photos[user.id] ? <img src={photos[user.id]} alt="" className="h-full w-full object-cover" /> : initials(displayName)}</Link>
             </div>
           </header>

@@ -67,7 +67,7 @@ function NewProjectDialog({ user, initialProject, onClose, triggerRef }) {
         <p className="text-xs text-slate-500">Progress is calculated from linked tasks marked Done. {initialProject ? 'Original creation time and assigned department are preserved.' : 'New projects start at 0%.'}</p>
         <AttachmentPicker files={form.attachments} onChange={attachments => setForm(current => ({ ...current, attachments }))} onBusy={setUploading} />
         {error && <InlineMessage tone="negative">{error}</InlineMessage>}
-        <div className="flex justify-end gap-2 border-t border-slate-100 pt-3"><button type="button" onClick={onClose} className="min-h-9 rounded-lg px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={uploading} className="min-h-9 rounded-lg bg-[#1E4DFF] px-4 text-sm font-semibold text-white hover:bg-[#9A1D14]">{initialProject ? 'Save changes' : 'Create project'}</button></div>
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-3"><button type="button" onClick={onClose} className="min-h-9 rounded-lg px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={uploading} className="min-h-9 rounded-lg bg-[#1E4DFF] px-4 text-sm font-semibold text-white hover:bg-[#1638CC]">{initialProject ? 'Save changes' : 'Create project'}</button></div>
       </form>
     </div>
   </div>

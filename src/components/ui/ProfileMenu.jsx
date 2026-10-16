@@ -73,7 +73,7 @@ export function ProfileMenu({ open, onClose }) {
                 {photos[user.id] ? <img src={photos[user.id]} alt={`${user.name}'s profile`} className="h-full w-full object-cover" /> : initials(user?.name)}
               </div>
               <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" aria-label="Profile photo file" className="hidden" onChange={uploadPhoto} />
-              <button type="button" aria-label="Upload profile photo" title="Change profile photo" disabled={savingPhoto} onClick={() => fileRef.current?.click()} className="absolute -bottom-1 -right-2 flex h-9 w-9 items-center justify-center rounded-full bg-[#1E4DFF] text-white shadow-md hover:bg-[#8F1C13] disabled:opacity-50"><Pencil size={15} /></button>
+              <button type="button" aria-label="Upload profile photo" title="Change profile photo" disabled={savingPhoto} onClick={() => fileRef.current?.click()} className="absolute -bottom-1 -right-2 flex h-9 w-9 items-center justify-center rounded-full bg-[#1E4DFF] text-white shadow-md hover:bg-[#1638CC] disabled:opacity-50"><Pencil size={15} /></button>
             </div>
             <div>
               <div className="text-sm font-bold text-slate-900">{user?.name}</div>

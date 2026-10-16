@@ -18,10 +18,10 @@ export function quickTazaiReply(text, user, currentPage = 'the dashboard') {
   if (/\b(kpi|goal|target)\b/i.test(question)) return user?.role === 'GM'
     ? 'Open KPI → KPI setup to define department KPIs and activate them for a year and quarter. KPI register shows the activated targets and approved actuals.'
     : 'Open KPI to view the KPIs activated for your department. Department heads can enter actuals under KPI entry, then submit them for review.'
-  if (/\b(task|ticket|printer|network|password|issue|error|broken|not working|outage|laptop)\b/i.test(question)) return 'I can help prepare that request. Open full Tazai below to add details, files or a voice note and create the task for the right department.'
-  if (/\b(project|activity|activities)\b/i.test(question)) return 'Open Activities to review tasks and projects. You can also open full Tazai and ask it to show your tasks.'
+  if (/\b(task|ticket|printer|network|password|issue|error|broken|not working|outage|laptop)\b/i.test(question)) return 'I can help prepare that request. Open full Bagheera below to add details, files or a voice note and create the task for the right department.'
+  if (/\b(project|activity|activities)\b/i.test(question)) return 'Open Activities to review tasks and projects. You can also open full Bagheera and ask it to show your tasks.'
   if (/\b(forum|post|announcement|event)\b/i.test(question)) return 'Open Forum to read staff posts, announcements and events, or to create a post.'
-  return `I can answer quick questions about this PMS while you stay on ${currentPage}. For task creation, attachments, voice controls and chat history, open full Tazai.`
+  return `I can answer quick questions about this PMS while you stay on ${currentPage}. For task creation, attachments, voice controls and chat history, open full Bagheera.`
 }
 export function scheduleTazaiNoteEmail(notes, user, currentPage, now = Date.now()) {
   const body = String(notes || '').trim()
