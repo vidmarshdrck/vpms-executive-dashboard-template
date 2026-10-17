@@ -25,6 +25,7 @@ import KpiApprovals from './pages/dashboard/KpiApprovals.jsx'
 import Kpi, { KpiIndex } from './pages/dashboard/Kpi.jsx'
 import LiveWorkspacePage from './pages/dashboard/LiveWorkspacePage.jsx'
 import BsgPage from './pages/dashboard/BsgPage.jsx'
+import InboxPage from './pages/dashboard/InboxPage.jsx'
 
 function ProtectedRoute() {
   const { user } = useAuth()
@@ -99,6 +100,7 @@ export default function App() {
           <Route path="operations" element={<Operations />} />
           <Route path="live-workspace" element={<LiveWorkspacePage />} />
           <Route path="bsg" element={<BsgPage />} />
+          <Route path="inbox" element={<InboxPage />} />
           <Route path="financial" element={<Financial />} />
           <Route path="heatmap" element={<Navigate to="/kpi/register" replace />} />
           <Route path="projects" element={<Navigate to="/support-overview/projects" replace />} />

@@ -8,7 +8,6 @@ export const FIXTURE_ON = import.meta.env.VITE_BSG_FIXTURE === 'true'
 const usd = n => n == null ? '—' : `${n < 0 ? '-' : ''}$${Math.abs(n).toFixed(2)}`
 const pct = n => n == null ? '—' : `${(n * 100).toFixed(1)}%`
 const SRC = { paper: 'Paper ($100 start, 1R = 1% of running balance; VOID excluded)', mt5_demo: 'MT5 demo 6345797 ($4,000, 1R = $40)' }
-export function FixtureBanner() { return <div role="alert" className="vh-bsg-fixture">FIXTURE DATA, not real trades</div> }
 function Trades({ data }) {
   const [src, setSrc] = useState('all'), [status, setStatus] = useState('all')
   const priced = useMemo(() => { const m = new Map([...applyRisk(data.trades, 'paper'), ...applyRisk(data.trades, 'mt5_demo')].map(t => [t.signal_id, t])); return data.trades.map(t => m.get(t.signal_id) || t) }, [data])
@@ -23,7 +22,7 @@ function Performance({ data }) {
     return <section key={src} className="vh-panel"><div className="vh-section-head"><h2>{SRC[src]}</h2>{!s.sampleOk && <span className="vh-badge pending">Insufficient sample ({s.closed} closed)</span>}</div>
       <div className="vh-summary"><div><span>Closed-trade balance</span><strong>{usd(s.balance)}</strong><small>{s.open} open</small></div><div><span>Win rate</span><strong>{pct(s.winRate)}</strong><small>{s.closed} closed</small></div><div><span>Avg R</span><strong>{s.avgR == null ? '—' : s.avgR.toFixed(2)}</strong><small>P&L {usd(s.pnl)}</small></div><div><span>Max drawdown</span><strong>{s.maxDrawdownPct.toFixed(2)}%</strong><small>From closed trades</small></div></div>
       <div className="vh-bsg-charts"><div><h3>Balance</h3><ResponsiveContainer width="100%" height={200}><LineChart data={curve}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="n" /><YAxis domain={['auto', 'auto']} /><Tooltip /><Line dataKey="balance" stroke="#1E4DFF" dot={false} /></LineChart></ResponsiveContainer></div>
-        <div><h3>Drawdown %</h3><ResponsiveContainer width="100%" height={200}><LineChart data={curve}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="n" /><YAxis /><Tooltip /><Line dataKey="drawdown" stroke="#B91C1C" dot={false} /></LineChart></ResponsiveContainer></div>
+        <div><h3>Drawdown %</h3><ResponsiveContainer width="100%" height={200}><LineChart data={curve}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="n" /><YAxis /><Tooltip /><Line dataKey="drawdown" stroke="#64748B" dot={false} /></LineChart></ResponsiveContainer></div>
         <div><h3>P&L by day</h3><ResponsiveContainer width="100%" height={200}><BarChart data={groupPnl(data.trades, src, 'day')}><XAxis dataKey="key" /><YAxis /><Tooltip /><Bar dataKey="pnl" fill="#1E4DFF" /></BarChart></ResponsiveContainer></div>
         <div><h3>P&L by symbol</h3><ResponsiveContainer width="100%" height={200}><BarChart data={groupPnl(data.trades, src, 'symbol')}><XAxis dataKey="key" /><YAxis /><Tooltip /><Bar dataKey="pnl" fill="#1E4DFF" /></BarChart></ResponsiveContainer></div></div></section> })}</>
 }
@@ -70,6 +69,6 @@ export default function BsgSection() {
   const state = useBsgData()
   if (!state.data) return <section className="vh-panel"><h2>BSG data</h2><p>{state.loading ? 'Loading read-only BSG summary…' : state.error}</p></section>
   const data = state.data
-  return <><FixtureBanner /><div className="vh-tabs" role="group" aria-label="BSG views">{['Trades', 'Performance', 'Strategies'].map(t => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}</div>
+  return <><div className="vh-tabs" role="group" aria-label="BSG views">{['Trades', 'Performance', 'Strategies'].map(t => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}</div>
     {tab === 'Trades' && <><Headline data={data} /><Pending data={data} /><Trades data={data} /></>}{tab === 'Performance' && <Performance data={data} />}{tab === 'Strategies' && <Strategies data={data} />}</>
 }

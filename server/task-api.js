@@ -17,7 +17,7 @@ export function validateTask(data,create=false) {
  if(data.due_at!=null&&(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(data.due_at)||!Number.isFinite(Date.parse(data.due_at)))) throw new ApiError(400,'explicit_due_timestamp_required')
  return data
 }
-async function readBody(req) {
+export async function readBody(req) {
  const chunks=[];let size=0
  for await(const chunk of req){size+=chunk.length;if(size>16384) throw new ApiError(413,'body_too_large');chunks.push(chunk)}
  const bytes=new Uint8Array(size);let offset=0

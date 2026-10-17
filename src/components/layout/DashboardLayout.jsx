@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import ThemeToggle from '../ui/ThemeToggle.jsx'
 import { Outlet, NavLink, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Gauge, Building2, Activity, TrendingUp, Menu, X, ShieldCheck, ClipboardList, MessagesSquare, ListChecks, Sparkles, Radio, CandlestickChart } from 'lucide-react'
+import { LayoutDashboard, Gauge, Building2, Activity, TrendingUp, Menu, X, ShieldCheck, ClipboardList, MessagesSquare, ListChecks, Sparkles, Radio, CandlestickChart, Inbox } from 'lucide-react'
 import { companyInfo } from '../../data/kpiData.js'
 import { DataStatus } from '../ui/StatusBadge.jsx'
 import { HeaderTimeframePicker } from '../ui/HeaderTimeframePicker.jsx'
@@ -12,6 +12,8 @@ import { ReportingPeriodProvider } from '../../lib/ReportingPeriodContext.jsx'
 import { useProfilePhotos } from '../../lib/profilePhotos.js'
 import { useUserProfiles } from '../../lib/userProfiles.js'
 import { recordActivity } from '../../lib/activityLog.js'
+import { useInbox } from '../../vhpms/inbox/store.js'
+import { unreadCount } from '../../vhpms/inbox/logic.js'
 import { TazaiAssistant } from '../ui/TazaiAssistant.jsx'
 
 // Order follows how management actually uses it: the org-wide picture first
@@ -20,6 +22,7 @@ import { TazaiAssistant } from '../ui/TazaiAssistant.jsx'
 // less frequent strategic/administrative views last.
 const navItems = [
   { path: '/executive', label: 'Executive overview', icon: LayoutDashboard },
+  { path: '/inbox', label: 'Inbox', icon: Inbox },
   { path: '/operations', label: 'Operations', icon: Activity },
   { path: '/financial', label: 'Financial', icon: TrendingUp },
   { path: '/departments', label: 'Departments', icon: Building2 },
@@ -54,6 +57,7 @@ export default function DashboardLayout() {
   const { user } = useAuth()
   const photos = useProfilePhotos()
   const profiles = useUserProfiles()
+  const inboxUnread = unreadCount(useInbox().items)
   const displayName = profiles[user.id]?.displayName || user.name
 
   const orgNav = hasPermission(user, adminNavItem.permission) ? [...navItems, adminNavItem] : navItems
@@ -108,6 +112,7 @@ export default function DashboardLayout() {
             >
               <Icon size={18} strokeWidth={1.8} />
               {!collapsed && label}
+              {path === '/inbox' && inboxUnread > 0 && <span aria-label={`${inboxUnread} unread`} className={collapsed ? 'absolute top-1 right-1 h-2 w-2 rounded-full bg-[#1E4DFF]' : 'ml-auto rounded-full bg-[#1E4DFF] px-2 py-0.5 text-[10px] font-bold text-white'}>{collapsed ? '' : inboxUnread}</span>}
             </NavLink>
           ))}
         </nav>

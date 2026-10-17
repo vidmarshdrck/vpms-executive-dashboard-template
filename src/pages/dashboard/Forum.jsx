@@ -37,7 +37,7 @@ const CATEGORY_STYLE = {
   Suggestion: 'bg-sky-50 text-sky-800',
   Operations: 'bg-indigo-50 text-indigo-800',
   'Ethics & Integrity': 'bg-violet-50 text-violet-800',
-  'Brand': 'bg-rose-50 text-rose-800',
+  'Brand': 'bg-[#EEF2FF] text-[#1638CC]',
   Other: 'bg-stone-100 text-stone-600',
 }
 const TYPE_LABEL = { POST: 'Post', ANNOUNCEMENT: 'Announcement', EVENT: 'Event' }
@@ -288,7 +288,7 @@ function PostRow({ post, detail = false }) {
           <span className="ml-auto flex items-center" onClick={(e) => e.stopPropagation()}>
             {post.authorId !== user.id && !removed && <ReportMenu kind="POST" id={post.id} />}
             {!removed && (post.authorId === user.id || canModerate(user)) && (
-              <button type="button" aria-label="Delete post" onClick={stop(() => { if (window.confirm('Remove this post?')) run(() => deletePost(user, post.id)) })} className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-red-700"><Trash2 size={15} /></button>
+              <button type="button" aria-label="Delete post" onClick={stop(() => { if (window.confirm('Remove this post?')) run(() => deletePost(user, post.id)) })} className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-900"><Trash2 size={15} /></button>
             )}
           </span>
         </div>
@@ -443,7 +443,7 @@ function Reply({ c }) {
           <span className="ml-auto flex items-center">
             {c.status === 'VISIBLE' && c.authorId !== user.id && <ReportMenu kind="COMMENT" id={c.id} />}
             {c.status === 'VISIBLE' && (c.authorId === user.id || canModerate(user)) && (
-              <button type="button" aria-label="Remove comment" onClick={() => run(() => removeComment(user, c.id))} className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-red-700"><Trash2 size={15} /></button>
+              <button type="button" aria-label="Remove comment" onClick={() => run(() => removeComment(user, c.id))} className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-900"><Trash2 size={15} /></button>
             )}
           </span>
         </div>
