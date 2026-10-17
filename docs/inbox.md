@@ -61,7 +61,13 @@ curl -sS -X POST http://127.0.0.1:8096/api/inbox \
   - `src/vhpms/inbox/`: fixture.js, logic.js (+tests), store.js (a shared external store, so the nav badge and the page stay in sync), InboxSection.jsx
   - `src/pages/dashboard/InboxPage.jsx`
   - Route `/inbox`
-- **Fixture mode** (`VITE_BSG_FIXTURE=true`): 8 synthetic items with a red "FIXTURE DATA, not real approvals" banner. Decisions only change local state.
+- **Layout:**
+  - Summary count cards (Needs approval / Decisions / Assigned to you / Decided). The cards act as filters.
+  - Desktop: two panes. On the left, a list grouped by Needs approval / Decisions / Assigned to you; each row shows an agent avatar, title, type chip, relative time and an unread dot. On the right, a detail panel with request facts, the related link, an activity thread and a sticky comment + Approve/Reject bar.
+  - Mobile (<1024px): a single list, with a slide-up detail sheet (portal, 88dvh).
+  - Keyboard: j/k to move, a to approve, r to reject. A reject with no comment focuses the comment box. Shortcuts are ignored while typing.
+  - Full dark mode through the TPPL tokens.
+- **Sample-data mode** (`VITE_BSG_FIXTURE=true`): 9 synthetic items, marked by a small grey "Sample data" pill in the page header (the red banners were removed). Decisions only change local state.
 - **Live mode:** uses the shared Supabase session (sign in on Live workspace) and calls the API.
 
 ## Tests
