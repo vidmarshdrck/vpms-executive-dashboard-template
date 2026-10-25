@@ -1,11 +1,20 @@
 // Pure normalisers: BSG server JSON → VHPMS UI shapes. Missing values stay null; nothing is invented.
 const num = v => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) ? null : Number(v)
-const iso = v => { if (v === null || v === undefined || v === '') return null; const n = typeof v === 'number' ? (v < 1e12 ? v * 1000 : v) : Date.parse(v); return Number.isFinite(n) ? new Date(n).toISOString() : null }
+// Live open_ts values look like "2026-10-23 15:45 CAT" (Central Africa Time, UTC+2). Date.parse rejects the token.
+const catTs = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2})?)\s+CAT$/i
+const iso = v => {
+  if (v === null || v === undefined || v === '') return null
+  const raw = typeof v === 'string' && catTs.test(v.trim()) ? v.trim().replace(catTs, (_, d, t) => `${d}T${t.length === 5 ? `${t}:00` : t}+02:00`) : v
+  const n = typeof raw === 'number' ? (raw < 1e12 ? raw * 1000 : raw) : Date.parse(raw)
+  return Number.isFinite(n) ? new Date(n).toISOString() : null
+}
 const dir = d => { const s = String(d || '').toUpperCase(); return s.startsWith('B') || s === 'LONG' ? 'BUY' : s.startsWith('S') || s === 'SHORT' ? 'SELL' : null }
 export const strategyName = v => `TTrades fractal ${v || 'unversioned'}`
 export function tradeStatus(t) {
   const s = String(t.status || '').toUpperCase()
   if (s.startsWith('VOID')) return 'VOID'
+  // CLOSED_SL / CLOSED_TP are closed even when exit_ts is missing; do not fall through to OPEN.
+  if (s.startsWith('CLOSED')) return 'CLOSED'
   if (s === 'OPEN' || s === 'ACTIVE' || s === 'PENDING') return t.exit_ts ? 'CLOSED' : 'OPEN'
   if (t.exit_ts || ['CLOSED', 'WIN', 'LOSS', 'BREAKEVEN', 'BE', 'TP', 'SL'].includes(s)) return 'CLOSED'
   return 'OPEN'
@@ -18,7 +27,7 @@ export function normaliseTrade(t) {
     entry, sl, tp, rr: num(t.rr), structure: t.structure ?? null, signal_time: iso(t.open_ts), order_time: null, raw_status: t.status ?? null, status,
     close_time: status === 'CLOSED' ? iso(t.exit_ts) : null,
     // Voided trades keep their original outcome for display only; metrics exclude them (status !== 'CLOSED').
-    r_multiple: status === 'CLOSED' ? num(t.r_multiple ?? t.result_r ?? t.original_r_multiple) : null, pnl: status === 'CLOSED' ? num(t.pnl) : null,
+    r_multiple: status === 'CLOSED' ? num(t.r_multiple ?? t.result_r ?? t.original_r_multiple) : null, pnl: status === 'CLOSED' ? num([t.pnl, t.dollar_pnl].find(v => v !== null && v !== undefined && v !== '')) : null,
     void_reason: status === 'VOID' ? (t.void_reason ?? null) : null, original_result: t.original_result ?? null, original_r_multiple: num(t.original_r_multiple),
     mode: t.mode ?? null, originating_agent: t.originating_agent ?? null, opposing_agent: t.opposing_agent ?? null, boaz_decision: t.boaz_decision ?? null,
   }

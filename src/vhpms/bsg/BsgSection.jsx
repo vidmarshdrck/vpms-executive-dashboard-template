@@ -70,6 +70,6 @@ export default function BsgSection() {
   const state = useBsgData()
   if (!state.data) return <section className="vh-panel"><h2>BSG data</h2><p>{state.loading ? 'Loading read-only BSG summary…' : state.error}</p></section>
   const data = state.data
-  return <><FixtureBanner /><div className="vh-tabs" role="group" aria-label="BSG views">{['Trades', 'Performance', 'Strategies'].map(t => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}</div>
+  return <>{FIXTURE_ON && <FixtureBanner />}<div className="vh-tabs" role="group" aria-label="BSG views">{['Trades', 'Performance', 'Strategies'].map(t => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}</div>
     {tab === 'Trades' && <><Headline data={data} /><Pending data={data} /><Trades data={data} /></>}{tab === 'Performance' && <Performance data={data} />}{tab === 'Strategies' && <Strategies data={data} />}</>
 }
