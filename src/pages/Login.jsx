@@ -65,7 +65,6 @@ export default function Login() {
           <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-600">
             Ideas <span className="text-[#2563EB]">·</span> Systems <span className="text-[#2563EB]">·</span> People <span className="text-[#2563EB]">·</span> Wealth
           </p>
-          <p className="vh-powered mt-4" aria-label="Powered by VIDMΛR" />
         </div>
         <div className="flex-1 flex items-center">
         <div className="w-full max-w-sm mx-auto">
@@ -99,6 +98,7 @@ export default function Login() {
           </form>
         </div>
         </div>
+        <p className="vh-powered mt-auto pt-8" aria-label="Powered by VIDMΛR" />
       </section>
   </main>
 }
