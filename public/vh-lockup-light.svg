@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64" role="img" aria-label="Vidmar Holdings">
+  <path d="M4 10 L22 54 L18 54 L0 10 Z" fill="#2563EB"/>
+  <path d="M48 10 L30 54 L26 54 L42 12 L48 10 Z" fill="#1F2937"/>
+  <text x="64" y="32" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="700" letter-spacing="0.12em" fill="#0B1220">VIDMAR</text>
+  <text x="64" y="50" font-family="Inter, system-ui, sans-serif" font-size="10" font-weight="600" letter-spacing="0.28em" fill="#1F2937">HOLDINGS</text>
+</svg>

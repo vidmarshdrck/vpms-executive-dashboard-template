@@ -30,7 +30,7 @@ import { Ticket, Inbox, CheckCircle2, Timer, ShieldAlert } from 'lucide-react'
 
 // Index 3 (Low priority) was #94A3B8, too pale against a white background —
 // darkened to a legible slate.
-const PALETTE = ['#B42318', '#1F2937', '#B45309', '#475569', '#15803D', '#0EA5E9', '#7C3AED', '#DB2777', '#65A30D']
+const PALETTE = ['#2563EB', '#1F2937', '#B45309', '#475569', '#15803D', '#0EA5E9', '#7C3AED', '#DB2777', '#65A30D']
 
 const slaComplianceTone = classifyKpi(slaCompliance.percent)
 
@@ -110,7 +110,7 @@ export default function Support() {
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748B' }} />
               <YAxis tick={{ fontSize: 10, fill: '#64748B' }} width={35} allowDecimals={false} />
               <Tooltip formatter={(v) => [v === null ? 'No data' : v, 'Tickets']} />
-              <Line type="monotone" dataKey="tickets" name="Tickets logged" stroke="#B42318" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} connectNulls={false} />
+              <Line type="monotone" dataKey="tickets" name="Tickets logged" stroke="#2563EB" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} connectNulls={false} />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
@@ -160,7 +160,7 @@ export default function Support() {
               <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-15} textAnchor="end" height={50} />
               <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
               <Tooltip />
-              <Bar dataKey="count" name="Tickets" fill="#B42318" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" name="Tickets" fill="#2563EB" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

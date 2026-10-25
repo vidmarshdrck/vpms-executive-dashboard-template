@@ -36,7 +36,7 @@ export default function StrategyMap() {
   return (
     <div className="space-y-5 animate-fade-in">
       <section className="vpms-gradient rounded-xl p-5 sm:p-6">
-        <p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#B42318] mb-2">Strategy map · {companyInfo.shortName}</p>
+        <p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#2563EB] mb-2">Strategy map · {companyInfo.shortName}</p>
         <h2 className="text-lg sm:text-xl font-semibold text-slate-900 leading-snug max-w-3xl text-balance">{strategyMap.vision}</h2>
         <p className="text-sm text-slate-500 mt-2 max-w-3xl text-pretty">
           Every objective, its measures, the five-year target path and the initiatives that deliver it, grouped by Balanced Scorecard perspective.

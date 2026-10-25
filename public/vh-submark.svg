@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Vidmar">
+  <!-- Open V sub-mark per logo-system-sheet: left brand blue, right light, gap at apex.
+       RECONSTRUCTION from raster sheet — replace when original vectors exist. -->
+  <path d="M10 12 L28 52 L24 52 L6 12 Z" fill="#2563EB"/>
+  <path d="M54 12 L36 52 L32 52 L48 14 L54 12 Z" fill="#F8FAFC"/>
+</svg>

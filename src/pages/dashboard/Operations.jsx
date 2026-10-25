@@ -17,7 +17,7 @@ import { quartersInTimeframe } from '../../lib/reportingPeriod.js'
 import { Package, Truck, Wrench, Users } from 'lucide-react'
 
 const volumeFormatter = (v) => `${(v / 1000).toFixed(0)}K m³`
-const volumeSplitColors = ['#B42318', '#1F2937']
+const volumeSplitColors = ['#2563EB', '#1F2937']
 
 export default function Operations() {
   // Every quarter-level chart/table on this page follows the same global
@@ -114,7 +114,7 @@ export default function Operations() {
               <XAxis dataKey="quarter" />
               <YAxis tickFormatter={volumeFormatter} width={65} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v, name) => [v === null ? 'No data' : `${v.toLocaleString()} m³`, name]} />
-              <Bar dataKey="received" name="Product Received" fill="#B42318" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="received" name="Product Received" fill="#2563EB" radius={[4, 4, 0, 0]} />
               <Bar dataKey="distributed" name="Product Distributed" fill="#1F2937" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

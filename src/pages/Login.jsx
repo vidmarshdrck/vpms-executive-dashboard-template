@@ -57,14 +57,19 @@ export default function Login() {
     </section>
       <section className="flex flex-col p-6 sm:p-10 xl:p-16 overflow-y-auto">
         {/* Logo + brand name live here, on the white side, for every screen size. */}
-        <div className="mb-8 flex items-center gap-3">
-          <img src={`${BASE}vpms-logo.svg`} alt="VPMS" className="w-9 h-9 rounded border border-slate-200 object-contain p-1" />
-          <div><div className="brand-mark text-base font-bold tracking-tight text-[#B42318]">VPMS</div><div className="text-[10px] uppercase tracking-[.14em] text-slate-500">Vidmar Performance Management System</div></div>
+        <div className="mb-8">
+          {/* Login/splash: mark ≥64px + wordmark + tagline. Uses Hiram lockup-light (no tagline in SVG) + tagline text. RECONSTRUCTION. */}
+          <div className="flex items-center gap-4">
+            <img src={`${BASE}vh-lockup-light.svg`} alt="Vidmar Holdings" className="h-24 w-auto max-w-full object-contain object-left" height={96} />
+          </div>
+          <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-600">
+            Ideas <span className="text-[#2563EB]">·</span> Systems <span className="text-[#2563EB]">·</span> People <span className="text-[#2563EB]">·</span> Wealth
+          </p>
         </div>
         <div className="flex-1 flex items-center">
         <div className="w-full max-w-sm mx-auto">
           <div className="mb-5">
-            <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#B42318]">Secure sign-in</p>
+            <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#2563EB]">Secure sign-in</p>
             <h2 className="text-2xl font-semibold text-slate-900 mt-2">Sign in to the VPMS dashboard</h2>
             <p className="text-sm text-slate-500 mt-1.5">Enter your assigned credentials to continue.</p>
           </div>
@@ -80,7 +85,7 @@ export default function Login() {
                 <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>
               </div>
               <div className="mt-1.5 text-right">
-                <button type="button" onClick={() => setShowForgotNotice((v) => !v)} className="text-xs font-semibold text-[#B42318] hover:underline">Forgot password?</button>
+                <button type="button" onClick={() => setShowForgotNotice((v) => !v)} className="text-xs font-semibold text-[#2563EB] hover:underline">Forgot password?</button>
               </div>
               {showForgotNotice && (
                 <p className="mt-1.5 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-600">
@@ -89,10 +94,11 @@ export default function Login() {
               )}
             </label>
             {error && <p role="alert" className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-xs text-red-700">{error}</p>}
-            <button type="submit" className="w-full rounded-lg bg-[#B42318] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#8F1D14] transition-colors"><LockKeyhole size={16} className="inline mr-2" />Sign in</button>
+            <button type="submit" className="w-full rounded-lg bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#1D4ED8] transition-colors"><LockKeyhole size={16} className="inline mr-2" />Sign in</button>
           </form>
         </div>
         </div>
+        <p className="vh-powered mt-auto pt-8" aria-label="Powered by VIDMΛR" />
       </section>
   </main>
 }
