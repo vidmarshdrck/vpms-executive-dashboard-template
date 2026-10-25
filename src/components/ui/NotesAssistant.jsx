@@ -111,7 +111,7 @@ export function NotesAssistant({ scrollContainerRef }) {
     <div className="fixed bottom-6 right-6 z-[70] flex flex-col items-end">
       {open && (
         <div className="mb-3 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden animate-fade-in">
-          <div className="flex items-center justify-between gap-2 px-4 py-3 bg-[#B42318] text-white">
+          <div className="flex items-center justify-between gap-2 px-4 py-3 bg-[#2563EB] text-white">
             <div className="flex items-center gap-2 min-w-0">
               <Bot size={18} />
               <span className="text-sm font-bold truncate">Notes Assistant</span>
@@ -137,7 +137,7 @@ export function NotesAssistant({ scrollContainerRef }) {
               onChange={handleNotesChange}
               rows={6}
               placeholder="Jot down anything you want to follow up on..."
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 resize-none focus:outline-none focus:ring-2 focus:ring-[#B42318]/30 focus:border-[#B42318]"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 resize-none focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB]"
             />
 
             {status === 'ready' && (
@@ -161,7 +161,7 @@ export function NotesAssistant({ scrollContainerRef }) {
         onMouseLeave={() => setPointerNear(false)}
         aria-label={open ? 'Close Notes Assistant' : 'Open Notes Assistant'}
         title="Notes Assistant"
-        className={`relative w-12 h-12 rounded-full bg-[#B42318] text-white flex items-center justify-center transition-all duration-300 ease-out hover:-translate-y-0.5 shadow-[0_8px_24px_rgba(180,35,24,0.45)] hover:shadow-[0_12px_28px_rgba(180,35,24,0.55)] ${tucked ? 'translate-x-[42%] opacity-70' : 'translate-x-0 opacity-100'}`}
+        className={`relative w-12 h-12 rounded-full bg-[#2563EB] text-white flex items-center justify-center transition-all duration-300 ease-out hover:-translate-y-0.5 shadow-[0_8px_24px_rgba(37,99,235,0.45)] hover:shadow-[0_12px_28px_rgba(37,99,235,0.55)] ${tucked ? 'translate-x-[42%] opacity-70' : 'translate-x-0 opacity-100'}`}
       >
         <Bot size={22} />
       </button>

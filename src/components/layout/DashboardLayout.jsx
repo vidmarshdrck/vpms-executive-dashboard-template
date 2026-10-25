@@ -80,11 +80,18 @@ export default function DashboardLayout() {
           aria-expanded={!collapsed}
           className="flex items-center gap-3 px-4 py-5 border-b border-slate-200 hover:bg-slate-50 transition-colors text-left"
         >
-          <img src={`${import.meta.env.BASE_URL}vpms-logo.svg`} alt="VPMS" className="w-10 h-10 rounded object-contain flex-shrink-0 border border-slate-200 p-1" />
+          {/* Collapsed: 40×40 app-icon only. Expanded: same mark + VIDMAR/HOLDINGS, no tagline. Hiram φ. */}
+          <img
+            src={`${import.meta.env.BASE_URL}vh-app-icon.svg`}
+            alt="Vidmar Holdings"
+            className="vh-logo-mark w-10 h-10 rounded-[10px] object-contain flex-shrink-0"
+            width={40}
+            height={40}
+          />
           {!collapsed && (
-            <span className="min-w-0">
-              <span className="brand-mark block text-sm font-bold tracking-tight text-slate-900 leading-tight truncate">VPMS</span>
-              <span className="block text-[11px] uppercase tracking-[0.12em] text-slate-500">Vidmar Performance Management System</span>
+            <span className="vh-logo-wordmark min-w-0" aria-hidden="false">
+              <span className="vh-word-primary truncate">VIDMAR</span>
+              <span className="vh-word-secondary truncate">HOLDINGS</span>
             </span>
           )}
         </button>
@@ -97,7 +104,7 @@ export default function DashboardLayout() {
               to={path}
               title={collapsed ? label : undefined}
               onClick={() => setMobileOpen(false)}
-              className={({ isActive }) => `relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${collapsed ? 'justify-center' : ''} ${isActive ? 'bg-[#FDECEC] text-[#B42318]' : 'text-slate-600 hover:bg-slate-100'}`}
+              className={({ isActive }) => `relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${collapsed ? 'justify-center' : ''} ${isActive ? 'bg-[#EEF2FF] text-[#2563EB]' : 'text-slate-600 hover:bg-slate-100'}`}
             >
               <Icon size={18} strokeWidth={1.8} />
               {!collapsed && label}
@@ -112,7 +119,7 @@ export default function DashboardLayout() {
             title={collapsed ? `${user?.name} · ${user?.role}` : undefined}
             className={`w-full flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-slate-100 transition-colors ${collapsed ? 'justify-center' : ''}`}
           >
-            <div className="w-8 h-8 rounded-full bg-[#FDECEC] text-[#B42318] flex items-center justify-center text-[10px] font-bold flex-shrink-0">{initials(user?.name)}</div>
+            <div className="w-8 h-8 rounded-full bg-[#EEF2FF] text-[#2563EB] flex items-center justify-center text-[10px] font-bold flex-shrink-0">{initials(user?.name)}</div>
             {!collapsed && (
               <span className="min-w-0 text-left">
                 <span className="block text-xs font-semibold text-slate-800 truncate">{user?.name}</span>
@@ -120,6 +127,10 @@ export default function DashboardLayout() {
               </span>
             )}
           </button>
+        </div>
+
+        <div className="px-3 pb-3">
+          {!collapsed && <p className="vh-powered px-2" aria-label="Powered by VIDMΛR" />}
         </div>
       </aside>
 
@@ -135,7 +146,7 @@ export default function DashboardLayout() {
               {mobileOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
             <div className="min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#B42318]">VPMS executive dashboard</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#2563EB]">VPMS executive dashboard</div>
               <h1 className="font-bold text-slate-900 text-lg leading-tight truncate">{currentPage}</h1>
             </div>
             <div className="ml-auto flex-shrink-0">

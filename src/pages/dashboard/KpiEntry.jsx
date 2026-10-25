@@ -171,7 +171,7 @@ function KpiEntryPeriod({ user, department, period }) {
               <button type="button" onClick={handleSave} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                 Save draft
               </button>
-              <button type="button" onClick={handleSubmit} className="rounded-lg bg-[#B42318] px-4 py-2 text-sm font-semibold text-white hover:bg-[#9a1d13]">
+              <button type="button" onClick={handleSubmit} className="rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1D4ED8]">
                 Submit for GM review
               </button>
             </div>

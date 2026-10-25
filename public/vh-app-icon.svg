@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Vidmar">
+  <!-- RECONSTRUCTION from raster sheet — replace when original vectors exist. -->
+  <rect width="64" height="64" rx="14" fill="#0B1220"/>
+  <path d="M14 16 L30 50 L26 50 L10 16 Z" fill="#2563EB"/>
+  <path d="M50 16 L34 50 L30 50 L44 18 L50 16 Z" fill="#F8FAFC"/>
+</svg>
