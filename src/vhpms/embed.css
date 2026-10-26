@@ -28,4 +28,7 @@
 .vh-bsg-table th{background:var(--surface-subtle);color:var(--text-muted);font-size:10px;text-align:left;text-transform:uppercase;letter-spacing:.06em;font-weight:700;padding:10px 12px}
 .vh-bsg-table td{border-top:1px solid var(--border);padding:12px;color:var(--text-secondary);font-variant-numeric:tabular-nums}
 .vh-pos{color:var(--positive)}.vh-neg{color:var(--negative)}
+.vh-embed .vh-fin-total{color:#0B1220;font-variant-numeric:tabular-nums}
+html.dark .vh-embed .vh-fin-total{color:var(--text-primary)}
+.vh-embed details>summary{cursor:pointer;font-weight:650;margin-bottom:8px}
 .vh-bsg-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
