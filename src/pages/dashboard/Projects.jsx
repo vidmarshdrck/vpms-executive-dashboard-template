@@ -5,6 +5,7 @@ import { TargetProgress } from '../../components/ui/KPIComparison.jsx'
 import { projects, issues } from '../../data/kpiData.js'
 import { getPriorityFromDeadline } from '../../lib/dashboardMetrics.js'
 import { AlertTriangle, CheckCircle2, Clock, RotateCcw } from 'lucide-react'
+import TaskLinkedProjects from './TaskLinkedProjects.jsx'
 
 const actionRows = [
   ['Unresolved issues', issues.unresolved, 'High', 'negative', AlertTriangle],
@@ -33,7 +34,8 @@ export default function Projects() {
     .sort((a, b) => b.count - a.count)
 
   return <div className="space-y-6 animate-fade-in">
-    <div><p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#1E4DFF]">Delivery control</p><h2 className="text-xl font-bold text-slate-900 mt-1">Projects & actions</h2><p className="text-sm text-slate-500 mt-1">Where each project stands, and what needs attention next.</p></div>
+    <TaskLinkedProjects embedded />
+    <div><p className="text-[10px] font-bold uppercase tracking-[.13em] text-[#1E4DFF]">Delivery control</p><h2 className="text-xl font-bold text-slate-900 mt-1">Projects</h2><p className="text-sm text-slate-500 mt-1">Where each project stands, and what needs attention next.</p></div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{[[AlertTriangle, issues.unresolved, 'Unresolved issues', 'negative'], [RotateCcw, issues.revisions, 'Revisions required', 'warning'], [Clock, issues.pendingActions, 'Pending actions', 'neutral'], [CheckCircle2, totalIssues, 'Open items', 'neutral']].map(([Icon, value, label, tone]) => <Card key={label}><CardContent className="pt-5"><Icon size={18} className={tone === 'negative' ? 'text-[#B91C1C]' : tone === 'warning' ? 'text-[#B45309]' : 'text-slate-500'} /><div className="text-2xl font-black tabular-nums text-slate-900 mt-2">{value}</div><div className="text-xs text-slate-500">{label}</div></CardContent></Card>)}</div>
     <div className="grid grid-cols-1 xl:grid-cols-[.75fr_1.25fr] gap-6">
       <Card>

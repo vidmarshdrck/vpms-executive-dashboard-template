@@ -50,7 +50,7 @@ h1,h2,h3,.card-title,.brand-mark { font-family:var(--font-display); letter-spaci
 .perspective-score-value { font-size:34px; line-height:38px; }
 .perspective-score::before { width:4px; }
 .perspective-score-head { font-size:12.5px; letter-spacing:.01em; }
-nav a[aria-current="page"] { background:var(--brand-red-tint); box-shadow:inset 3px 0 0 var(--brand-red); border-radius:0 8px 8px 0; }
+aside nav a[aria-current="page"] { background:var(--brand-red-tint); box-shadow:inset 3px 0 0 var(--brand-red); border-radius:0 8px 8px 0; }
 input:focus-visible,select:focus-visible { outline:none; border-color:var(--brand-red) !important; box-shadow:0 0 0 3px rgba(30,77,255,.18); }
 .dashboard-table th { background:transparent; border-bottom:1px solid var(--border); }
 .dashboard-table td { padding:11px 12px; }
@@ -81,8 +81,8 @@ h1,h2,h3,.card-title,.brand-mark { font-family:var(--font-sans); letter-spacing:
 /* Sidebar: no fill on the active item, a red marker and heavier weight instead */
 aside nav a { border-radius:6px; }
 aside nav a:hover { background:var(--surface-subtle); }
-nav a[aria-current="page"] { background:transparent; box-shadow:none; border-radius:6px; position:relative; color:var(--brand-red); font-weight:650; }
-nav a[aria-current="page"]::before { content:""; position:absolute; left:-12px; top:8px; bottom:8px; width:3px; border-radius:0 3px 3px 0; background:var(--brand-red); }
+aside nav a[aria-current="page"] { background:transparent; box-shadow:none; border-radius:6px; position:relative; color:var(--brand-red); font-weight:650; }
+aside nav a[aria-current="page"]::before { content:""; position:absolute; left:-12px; top:8px; bottom:8px; width:3px; border-radius:0 3px 3px 0; background:var(--brand-red); }
 header.border-b { background:rgba(255,255,255,.85); backdrop-filter:saturate(1.2) blur(8px); }
 
 /* Tables: quieter header, hover row */
@@ -100,3 +100,44 @@ main > div > :nth-child(2) .surface-card,main > div > :nth-child(2) .perspective
 main > div > :nth-child(3) .surface-card,main > div > :nth-child(3) .perspective-score,main > div > :nth-child(3) .perspective-link { animation-delay:.1s; }
 main > div > :nth-child(n+4) .surface-card,main > div > :nth-child(n+4) .perspective-score { animation-delay:.15s; }
 @media (prefers-reduced-motion: reduce) { main .surface-card,main .perspective-score,main .perspective-link { animation:none; } }
+
+/* Forum: rounder, softer surface scoped to the forum only (the rest of the app keeps its squared look). */
+.forum-ui .status-badge { border-radius:999px; padding:4px 10px; text-transform:none; letter-spacing:0; font-size:11px; font-weight:600; }
+.forum-ui textarea:focus, .forum-ui input:focus-visible, .forum-ui select:focus-visible { outline:none; box-shadow:none; }
+.forum-ui select:focus-visible, .forum-ui button:focus-visible, .forum-ui a:focus-visible { outline:2px solid #1E4DFF; outline-offset:2px; }
+.forum-press { transition:transform .25s cubic-bezier(.32,.72,0,1), background-color .2s ease, opacity .2s ease; }
+.forum-press:active:not(:disabled) { transform:scale(.96); }
+@keyframes forum-sheet-up { from { transform:translateY(100%); } to { transform:translateY(0); } }
+@keyframes forum-fade-in { from { opacity:0; } to { opacity:1; } }
+.forum-sheet { animation:forum-sheet-up .4s cubic-bezier(.32,.72,0,1); }
+.forum-fade { animation:forum-fade-in .3s ease-out; }
+@media (prefers-reduced-motion:reduce) { .forum-sheet, .forum-fade { animation:none; } .forum-press { transition:none; } }
+
+/* Branded Forum masthead and an unmistakable writing surface. */
+.forum-ui .forum-brand-header { background:var(--brand-red); color:#fff; backdrop-filter:none; }
+.forum-brand-header select { color-scheme:dark; }
+.forum-brand-header option { background:#1638CC; color:#fff; }
+.forum-ui .forum-brand-header :focus-visible { outline:2px solid white; outline-offset:3px; box-shadow:none; }
+.forum-ui .forum-composer-input { background:#F1F2F4; color:#1E293B; caret-color:var(--brand-red); padding:14px 16px; font-size:16px; line-height:24px; border-radius:12px; min-height:76px; margin-bottom:12px; }
+.forum-ui .forum-composer-input::placeholder { color:#586579; opacity:1; }
+.forum-ui .forum-composer-input:focus { outline:2px solid var(--brand-red); outline-offset:3px; }
+.forum-brand-header ::selection, .forum-composer-input::selection { background:#EEF2FF; color:#7A1810; }
+
+/* Dark mode: html.dark (toggle in header, persisted as localStorage 'vpms-theme'). Token swap + Tailwind neutral overrides. */
+html.dark { --canvas:#0B0B0F; --surface:#15161C; --surface-subtle:#1D1F27; --text-primary:#F1F5F9; --text-secondary:#CBD5E1; --text-muted:#94A3B8; --border:#2A2D38; --neutral-tint:#262A35; --brand-red-tint:#1A2350; --positive-tint:#12301F; --warning-tint:#33290B; --caution-tint:#3A2210; --negative-tint:#3A1517; --target:#64748B; --comparison:#CBD5E1; }
+html.dark body { background:var(--canvas); color:var(--text-primary); }
+html.dark :is(.bg-white,.bg-slate-50,.bg-gray-50,.bg-stone-50,.bg-stone-100,.bg-\[\#F3F2EE\],.bg-\[\#FAFCFE\],.bg-\[\#F8FAFC\]) { background-color:var(--surface) !important; }
+html.dark :is(.bg-slate-100,.bg-gray-100,.bg-slate-200) { background-color:var(--surface-subtle) !important; }
+html.dark :is(.text-slate-900,.text-slate-800,.text-gray-900,.text-gray-800,.text-stone-900,.text-\[\#0B0B0F\]) { color:var(--text-primary) !important; }
+html.dark :is(.text-slate-700,.text-slate-600,.text-gray-700,.text-gray-600) { color:var(--text-secondary) !important; }
+html.dark :is(.text-slate-500,.text-slate-400,.text-gray-500,.text-gray-400) { color:var(--text-muted) !important; }
+html.dark :is(.border-slate-100,.border-slate-200,.border-slate-300,.border-gray-200,.border-gray-100) { border-color:var(--border) !important; }
+html.dark :is(.divide-slate-100,.divide-slate-200) > * + * { border-color:var(--border) !important; }
+html.dark :is(.hover\:bg-slate-50,.hover\:bg-slate-100,.hover\:bg-gray-50):hover { background-color:var(--surface-subtle) !important; }
+html.dark :is(.bg-\[\#EEF2FF\],.bg-blue-50) { background-color:var(--brand-red-tint) !important; }
+html.dark :is(input,select,textarea) { background-color:var(--surface-subtle); color:var(--text-primary); border-color:var(--border); }
+html.dark .dashboard-table tr:hover td { background:var(--surface-subtle); }
+html.dark .recharts-cartesian-grid line { stroke:var(--border); }
+html.dark .recharts-text, html.dark .recharts-cartesian-axis-tick-value { fill:var(--text-muted); }
+html.dark .recharts-default-tooltip { background:var(--surface) !important; border-color:var(--border) !important; color:var(--text-primary); }
+html.dark .vh-embed button, html.dark .vh-embed input, html.dark .vh-embed select, html.dark .vh-embed textarea { background:var(--surface-subtle); color:var(--text-primary); }

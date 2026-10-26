@@ -1,0 +1,34 @@
+/* VHPMS modules rendered inside the TPPL layout: map vh-* classes onto the TPPL card/table look. */
+.vh-embed{color:var(--text-primary);font-size:14px}
+.vh-embed h2{font-family:var(--font-display);font-size:14.5px;line-height:20px;font-weight:600;color:var(--text-primary);margin:0 0 10px}
+.vh-embed h3{font-size:12px;font-weight:600;color:var(--text-secondary);margin:0 0 6px}
+.vh-embed p{margin:0 0 10px;color:var(--text-secondary);font-size:13px}
+.vh-embed .vh-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 2px 8px -4px rgba(15,23,42,.12);padding:18px 20px 20px;margin-bottom:24px;min-width:0}
+.vh-embed .vh-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.vh-embed .vh-muted{color:var(--text-muted);font-size:12px}
+.vh-embed .vh-badge{display:inline-flex;align-items:center;width:fit-content;border-radius:999px;padding:4px 8px;font-size:11px;line-height:14px;font-weight:650;background:var(--neutral-tint);color:var(--text-secondary);white-space:nowrap}
+.vh-embed .vh-badge.pending{background:var(--warning-tint);color:var(--warning)}
+.vh-embed .vh-list{list-style:none;margin:0;padding:0}.vh-embed .vh-list li{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-top:1px solid var(--border);padding:12px 0}
+.vh-embed .vh-list li div{display:flex;flex-direction:column;gap:2px;min-width:0}.vh-embed .vh-list small{color:var(--text-muted);font-size:12px}
+.vh-embed .vh-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
+.vh-embed button{border:1px solid var(--border);background:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer}
+.vh-embed button:hover{background:var(--surface-subtle)}.vh-embed button:disabled{opacity:.5;cursor:not-allowed}
+.vh-embed .vh-tabs button[aria-pressed=true]{background:var(--brand-red-tint);color:var(--brand-red);border-color:transparent}
+.vh-embed .vh-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:8px 0 18px}
+.vh-embed .vh-summary>div{border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:3px}
+.vh-embed .vh-summary span{color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.vh-embed .vh-summary strong{font-size:20px;font-variant-numeric:tabular-nums}.vh-embed .vh-summary small{color:var(--text-muted);font-size:11px}
+.vh-embed .vh-field,.vh-embed .vh-form label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:10px}
+.vh-embed .vh-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;align-items:end}
+.vh-embed input,.vh-embed select,.vh-embed textarea{border:1px solid var(--border);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;background:#fff}
+.vh-embed .vh-evidence{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.vh-embed .vh-evidence dt{font-size:10px;text-transform:uppercase;color:var(--text-muted);font-weight:700}.vh-embed .vh-evidence dd{margin:2px 0 0;font-weight:600}
+.vh-embed .vh-actions{display:flex;gap:8px;flex-wrap:wrap}
+.vh-bsg-fixture{position:sticky;top:0;z-index:20;background:#B91C1C;color:#fff;font-weight:700;text-align:center;padding:8px 12px;border-radius:8px;margin-bottom:16px;letter-spacing:.04em;font-size:13px}
+.vh-bsg-scroll{overflow-x:auto}.vh-bsg-table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
+.vh-bsg-table th{background:var(--surface-subtle);color:var(--text-muted);font-size:10px;text-align:left;text-transform:uppercase;letter-spacing:.06em;font-weight:700;padding:10px 12px}
+.vh-bsg-table td{border-top:1px solid var(--border);padding:12px;color:var(--text-secondary);font-variant-numeric:tabular-nums}
+.vh-pos{color:var(--positive)}.vh-neg{color:var(--negative)}
+.vh-embed .vh-fin-total{color:#0B1220;font-variant-numeric:tabular-nums}
+html.dark .vh-embed .vh-fin-total{color:var(--text-primary)}
+.vh-embed details>summary{cursor:pointer;font-weight:650;margin-bottom:8px}
+.vh-bsg-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}

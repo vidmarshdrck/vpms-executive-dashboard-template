@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
+import { EntryBookApprovals } from '../../components/ui/EntryBooks.jsx'
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card.jsx'
 import { StatusBadge } from '../../components/ui/StatusBadge.jsx'
 import { InlineMessage } from '../../components/ui/InlineMessage.jsx'
 import { useAuth } from '../../auth/AuthContext.jsx'
 import { departments } from '../../data/scorecardData.js'
 import { STATUS, listPendingForGM, listAllSubmissions, approveSubmission, returnSubmission } from '../../lib/kpiSubmissions.js'
+import { periodLabel } from '../../lib/kpiSetup.js'
 import { useKpiSubmissionsVersion } from '../../lib/useKpiSubmissionsVersion.js'
 
 const STATUS_TONE = {
@@ -41,12 +43,13 @@ export default function KpiApprovals() {
   )
 
   const selected = pending.find((s) => s.id === selectedId) ?? pending[0] ?? null
-  const department = selected ? departments.find((d) => d.id === selected.departmentId) : null
+  const baselineDepartment = selected ? departments.find((d) => d.id === selected.departmentId) : null
+  const department = baselineDepartment ? { ...baselineDepartment, kpis: selected.kpis || baselineDepartment.kpis } : null
 
   function handleApprove() {
     try {
       approveSubmission(selected.id, user, comment.trim() || null)
-      setMessage({ tone: 'positive', text: `${departmentName(selected.departmentId)} · ${selected.period} approved and published.` })
+      setMessage({ tone: 'positive', text: `${departmentName(selected.departmentId)} · ${periodLabel(selected.period)} approved and published.` })
       setComment('')
       setSelectedId(null)
     } catch (err) {
@@ -57,7 +60,7 @@ export default function KpiApprovals() {
   function handleReturn() {
     try {
       returnSubmission(selected.id, user, comment.trim())
-      setMessage({ tone: 'positive', text: `${departmentName(selected.departmentId)} · ${selected.period} returned for revision.` })
+      setMessage({ tone: 'positive', text: `${departmentName(selected.departmentId)} · ${periodLabel(selected.period)} returned for revision.` })
       setComment('')
       setSelectedId(null)
     } catch (err) {
@@ -74,6 +77,8 @@ export default function KpiApprovals() {
 
       {message && <InlineMessage tone={message.tone}>{message.text}</InlineMessage>}
 
+      <EntryBookApprovals />
+
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
         <Card>
           <CardHeader><CardTitle>Pending review</CardTitle></CardHeader>
@@ -87,7 +92,7 @@ export default function KpiApprovals() {
                 className={`w-full rounded-lg px-3 py-2 text-left text-sm ${selected?.id === s.id ? 'bg-[#EEF2FF] text-[#1E4DFF]' : 'hover:bg-slate-50 text-slate-700'}`}
               >
                 <div className="font-semibold">{departmentName(s.departmentId)}</div>
-                <div className="text-xs text-slate-500">{s.period} · submitted {new Date(s.updatedAt).toLocaleDateString()}</div>
+                <div className="text-xs text-slate-500">{periodLabel(s.period)} · submitted {new Date(s.updatedAt).toLocaleDateString()}</div>
               </button>
             ))}
           </CardContent>
@@ -96,7 +101,7 @@ export default function KpiApprovals() {
         {selected ? (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-3">
-              <CardTitle>{department?.name} · {selected.period}</CardTitle>
+              <CardTitle>{department?.name} · {periodLabel(selected.period)}</CardTitle>
               <StatusBadge label={STATUS_LABEL[selected.status]} tone={STATUS_TONE[selected.status]} />
             </CardHeader>
             <CardContent className="space-y-4">
@@ -130,12 +135,12 @@ export default function KpiApprovals() {
                   onChange={(e) => setComment(e.target.value)}
                   rows={3}
                   className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                  placeholder="Visible to the department as the GM's review comment — never a silent edit of their figures."
+                  placeholder="Visible to the department with the review decision."
                 />
               </label>
 
               <div className="flex items-center gap-3">
-                <button type="button" onClick={handleApprove} className="rounded-lg bg-[#1E4DFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#9a1d13]">
+                <button type="button" onClick={handleApprove} className="rounded-lg bg-[#1E4DFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1638CC]">
                   Approve & publish
                 </button>
                 <button type="button" onClick={handleReturn} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
@@ -177,7 +182,7 @@ export default function KpiApprovals() {
                   {recent.map((s) => (
                     <tr key={s.id}>
                       <td className="text-slate-800">{departmentName(s.departmentId)}</td>
-                      <td>{s.period}</td>
+                      <td>{periodLabel(s.period)}</td>
                       <td><StatusBadge label={STATUS_LABEL[s.status]} tone={STATUS_TONE[s.status]} /></td>
                       <td className="text-slate-500">{new Date(s.updatedAt).toLocaleString()}</td>
                     </tr>

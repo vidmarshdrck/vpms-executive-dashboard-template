@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
 import { isStale } from './live.js'
-const url=import.meta.env.VITE_SUPABASE_URL
-const publishable=import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-const client=url&&publishable ? createClient(url,publishable,{auth:{persistSession:false,autoRefreshToken:true,detectSessionInUrl:false}}) : null
+import { supabase as client } from './supabaseClient.js'
 const empty={businesses:[],projects:[],tasks:[]}
 export default function LiveWorkspace() {
  const [session,setSession]=useState(null), [data,setData]=useState(empty), [error,setError]=useState(''), [busy,setBusy]=useState(false), [business,setBusiness]=useState(''), [clock,setClock]=useState(()=>Date.now()), [ve,setVe]=useState(null)

@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
-import { Outlet, NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Gauge, Building2, Waypoints, Activity, TrendingUp, Grid3X3, FolderKanban, Headset, Menu, X, ShieldCheck, ClipboardList, ClipboardCheck } from 'lucide-react'
+import ThemeToggle from '../ui/ThemeToggle.jsx'
+import { Outlet, NavLink, Link, useLocation } from 'react-router-dom'
+import { LayoutDashboard, Gauge, Building2, Activity, TrendingUp, Menu, X, ShieldCheck, ClipboardList, MessagesSquare, ListChecks, Sparkles, Radio, CandlestickChart, Wallet } from 'lucide-react'
 import { companyInfo } from '../../data/kpiData.js'
 import { DataStatus } from '../ui/StatusBadge.jsx'
-import { ProfileMenu } from '../ui/ProfileMenu.jsx'
-import { NotesAssistant } from '../ui/NotesAssistant.jsx'
 import { HeaderTimeframePicker } from '../ui/HeaderTimeframePicker.jsx'
+import { ExportMenu } from '../ui/ExportMenu.jsx'
 import { useAuth } from '../../auth/AuthContext.jsx'
 import { hasPermission } from '../../auth/permissions.js'
 import { ReportingPeriodProvider } from '../../lib/ReportingPeriodContext.jsx'
+import { useProfilePhotos } from '../../lib/profilePhotos.js'
+import { useUserProfiles } from '../../lib/userProfiles.js'
 import { recordActivity } from '../../lib/activityLog.js'
+import { TazaiAssistant } from '../ui/TazaiAssistant.jsx'
 
 // Order follows how management actually uses it: the org-wide picture first
 // (Executive), then the two operating views day to day (Operations,
@@ -20,20 +23,24 @@ const navItems = [
   { path: '/operations', label: 'Operations', icon: Activity },
   { path: '/financial', label: 'Financial', icon: TrendingUp },
   { path: '/departments', label: 'Departments', icon: Building2 },
-  { path: '/heatmap', label: 'KPI register', icon: Grid3X3 },
-  { path: '/scorecard', label: 'Balanced scorecard', icon: Gauge },
-  { path: '/strategy', label: 'Strategy map', icon: Waypoints },
-  { path: '/projects', label: 'Projects & actions', icon: FolderKanban },
-  { path: '/support', label: 'Support', icon: Headset },
+  { path: '/kpi', label: 'KPI', icon: ClipboardList },
+  { path: '/scorecards', label: 'Scorecards', icon: Gauge },
+  { path: '/support-overview', label: 'Activities', icon: ListChecks },
+  { path: '/live-workspace', label: 'Live workspace', icon: Radio },
+  { path: '/finances', label: 'Finances', icon: Wallet },
+  { path: '/bsg', label: 'BSG trading', icon: CandlestickChart },
+  { path: '/tazai', label: 'Bagheera', icon: Sparkles },
+  { path: '/forum', label: 'Forum', icon: MessagesSquare },
 ]
 
 const adminNavItem = { path: '/admin', label: 'Administration', icon: ShieldCheck, permission: 'system.configure' }
-// GM-only: the approval queue for KPI submissions (kpi.approve — see permissions.js).
-const approvalsNavItem = { path: '/kpi-approvals', label: 'KPI approvals', icon: ClipboardCheck, permission: 'kpi.approve' }
 // Department Heads and Staff only ever see their own department (PMS guide, "Who's who").
 const departmentNavItems = [
   { path: '/my-department', label: 'My department', icon: Building2 },
-  { path: '/kpi-entry', label: 'KPI entry', icon: ClipboardList },
+  { path: '/kpi', label: 'KPI', icon: ClipboardList },
+  { path: '/activities', label: 'Activities', icon: ListChecks },
+  { path: '/tazai', label: 'Bagheera', icon: Sparkles },
+  { path: '/forum', label: 'Forum', icon: MessagesSquare },
 ]
 
 function initials(name = '') {
@@ -43,18 +50,20 @@ function initials(name = '') {
 export default function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
-  const [profileOpen, setProfileOpen] = useState(false)
   const mainRef = useRef(null)
   const location = useLocation()
   const { user } = useAuth()
+  const photos = useProfilePhotos()
+  const profiles = useUserProfiles()
+  const displayName = profiles[user.id]?.displayName || user.name
 
-  const orgNav = [
-    ...navItems,
-    ...(hasPermission(user, approvalsNavItem.permission) ? [approvalsNavItem] : []),
-    ...(hasPermission(user, adminNavItem.permission) ? [adminNavItem] : []),
-  ]
+  const orgNav = hasPermission(user, adminNavItem.permission) ? [...navItems, adminNavItem] : navItems
   const visibleNavItems = hasPermission(user, 'dashboard.org') ? orgNav : departmentNavItems
-  const currentPage = visibleNavItems.find((item) => item.path === location.pathname)?.label || 'Dashboard'
+  const isSocial = location.pathname.startsWith('/forum') || location.pathname === '/profile'
+  const isTazai = location.pathname === '/tazai'
+  const isFinances = location.pathname === '/finances' || location.pathname.startsWith('/finances/')
+  const mobileNav = [visibleNavItems[0], { path: '/kpi', label: 'KPI', icon: ClipboardList }, { path: '/tazai', label: 'Bagheera', icon: Sparkles }, { path: user.departmentId ? '/activities' : '/support-overview', label: 'Activities', icon: ListChecks }, { path: '/forum', label: 'Forum', icon: MessagesSquare }]
+  const currentPage = location.pathname === '/profile' ? 'Profile' : visibleNavItems.find((item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`))?.label || 'Dashboard'
 
   useEffect(() => {
     if (currentPage) recordActivity({ category: 'navigation', label: `Viewed ${currentPage}` })
@@ -80,11 +89,11 @@ export default function DashboardLayout() {
           aria-expanded={!collapsed}
           className="flex items-center gap-3 px-4 py-5 border-b border-slate-200 hover:bg-slate-50 transition-colors text-left"
         >
-          <img src={`${import.meta.env.BASE_URL}vpms-logo.svg`} alt="VPMS" className="w-10 h-10 rounded object-contain flex-shrink-0 border border-slate-200 p-1" />
+          <img src={`${import.meta.env.BASE_URL}vpms-logo.svg`} alt="Vidmar Holdings" className="w-10 h-10 rounded object-contain flex-shrink-0 border border-slate-200" />
           {!collapsed && (
             <span className="min-w-0">
-              <span className="brand-mark block text-sm font-bold tracking-tight text-slate-900 leading-tight truncate">VPMS</span>
-              <span className="block text-[11px] uppercase tracking-[0.12em] text-slate-500">Vidmar Performance Management System</span>
+              <span className="brand-mark block text-sm font-bold tracking-tight text-slate-900 leading-tight truncate">Vidmar Holdings</span>
+              <span className="block text-[11px] uppercase tracking-[0.12em] text-slate-500">Performance Management · VPMS</span>
             </span>
           )}
         </button>
@@ -106,20 +115,21 @@ export default function DashboardLayout() {
         </nav>
 
         <div className="border-t border-slate-200 px-3 py-3">
-          <button
-            type="button"
-            onClick={() => setProfileOpen(true)}
+          <Link
+            to="/profile"
+            aria-label="Open profile"
+            onClick={() => setMobileOpen(false)}
             title={collapsed ? `${user?.name} · ${user?.role}` : undefined}
             className={`w-full flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-slate-100 transition-colors ${collapsed ? 'justify-center' : ''}`}
           >
-            <div className="w-8 h-8 rounded-full bg-[#EEF2FF] text-[#1E4DFF] flex items-center justify-center text-[10px] font-bold flex-shrink-0">{initials(user?.name)}</div>
+            <div className="w-8 h-8 rounded-full bg-[#EEF2FF] text-[#1E4DFF] flex items-center justify-center text-[10px] font-bold flex-shrink-0">{photos[user.id] ? <img src={photos[user.id]} alt="" className="h-full w-full rounded-full object-cover" /> : initials(displayName)}</div>
             {!collapsed && (
               <span className="min-w-0 text-left">
-                <span className="block text-xs font-semibold text-slate-800 truncate">{user?.name}</span>
+                <span className="block text-xs font-semibold text-slate-800 truncate">{displayName}</span>
                 <span className="block text-[10px] text-slate-500 truncate">{user?.role}</span>
               </span>
             )}
-          </button>
+          </Link>
         </div>
       </aside>
 
@@ -138,24 +148,28 @@ export default function DashboardLayout() {
               <div className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#1E4DFF]">VPMS executive dashboard</div>
               <h1 className="font-bold text-slate-900 text-lg leading-tight truncate">{currentPage}</h1>
             </div>
-            <div className="ml-auto flex-shrink-0">
-              <HeaderTimeframePicker />
+            <div className="ml-auto flex flex-shrink-0 items-center gap-2">
+              {!isTazai && !isSocial && hasPermission(user, 'dashboard.org') && <ExportMenu />}
+              {!isTazai && !isSocial && <HeaderTimeframePicker />}
+              <ThemeToggle />
+              <Link to="/profile" aria-label="Open profile" className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-[#EEF2FF] text-sm font-semibold text-[#1E4DFF] lg:hidden">{photos[user.id] ? <img src={photos[user.id]} alt="" className="h-full w-full object-cover" /> : initials(displayName)}</Link>
             </div>
           </header>
-          <div className="px-4 sm:px-6 pt-4 flex-shrink-0">
+          {!isTazai && !isSocial && !isFinances && <div className="px-4 sm:px-6 pt-4 flex-shrink-0">
             <DataStatus source={companyInfo.dataSource} isProvisional={companyInfo.dataIsProvisional} />
-          </div>
-          <main ref={mainRef} className="flex-1 overflow-y-auto p-4 sm:p-6">
+          </div>}
+          <main ref={mainRef} className={isTazai ? "min-h-0 flex-1 overflow-hidden pb-[76px] md:pb-0" : "flex-1 overflow-y-auto p-4 pb-24 sm:p-6 md:pb-6"}>
             <Outlet />
           </main>
         </ReportingPeriodProvider>
       </div>
 
-      <ProfileMenu open={profileOpen} onClose={() => setProfileOpen(false)} />
-      {/* mainRef lets the Notes Assistant watch scroll position on the actual
-          scrolling element (<main>, not the window) to decide when to tuck
-          itself toward the edge — see NotesAssistant.jsx for the full heuristic. */}
-      <NotesAssistant scrollContainerRef={mainRef} />
+      <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-slate-200 bg-white px-1 pb-[env(safe-area-inset-bottom)] md:hidden">
+        {mobileNav.map(({ path, label, icon: Icon }, index) => <NavLink key={path} to={path} className={({ isActive }) => `flex min-h-[72px] flex-col items-center justify-center gap-1 text-[11px] ${isActive ? 'text-[#1E4DFF]' : 'text-slate-600'}`}>
+          <Icon size={21} /><span>{index === 0 ? (user.departmentId ? 'Department' : 'Overview') : label}</span>
+        </NavLink>)}
+      </nav>
+      {!isTazai && <TazaiAssistant scrollContainerRef={mainRef} currentPage={currentPage} social={isSocial} />}
     </div>
   )
 }
