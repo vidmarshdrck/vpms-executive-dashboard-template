@@ -5,7 +5,8 @@
 --   finance.vhpms_finances_entries
 -- This repository does not apply finance DDL.
 -- There is no second ledger and no SMSGate cash-out table.
--- Incomes total: inbound verification status verified only.
+-- summary.incomes follows payment_buffer.ledger_bucket (aaron009_finances_summary_ledger_incomes).
+-- verified_income is a side metric only. Do not seed payment_verifications.
 -- Outbound rows do not use claim_status.
 -- Rhoda cash-outs: ledger_bucket income, category rental_income, direction outbound.
 -- Airtel from Rhoda: rental_income, not subscription_payment.

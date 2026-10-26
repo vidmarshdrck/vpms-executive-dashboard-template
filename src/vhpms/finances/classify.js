@@ -1,7 +1,9 @@
 // Payment-buffer projection for Finances.
-// Incomes total counts inbound rows whose verification status is verified.
-// Unclaimed and claimed-not-verified stay pending. Outbound rows never keep a claim status.
-// Investments are summed only when a row arrives; this module does not invent any.
+// Primary totals follow ledger_bucket: income, expense, investment.
+// verified_income counts verified inbounds only and is a side metric, not totals.incomes.
+// Rhoda rental_income outbounds stay in the income bucket and in totals.incomes.
+// Outbound rows never keep a claim status. This module does not invent investment rows
+// and does not write payment_verifications.
 
 const BUCKETS = new Set(['income', 'expense', 'investment'])
 
@@ -101,10 +103,11 @@ export function project(raw = {}, query = {}) {
     as_of: raw.as_of || null,
     currency: 'ZMW',
     totals: {
-      incomes: money(filtered.filter(countsAsVerifiedIncome).reduce((sum, row) => sum + row.amount_zmw, 0)),
+      incomes: money(filtered.filter((row) => row.bucket === 'income').reduce((sum, row) => sum + row.amount_zmw, 0)),
       expenses: money(filtered.filter((row) => row.bucket === 'expense').reduce((sum, row) => sum + row.amount_zmw, 0)),
       investments: money(filtered.filter((row) => row.bucket === 'investment').reduce((sum, row) => sum + row.amount_zmw, 0)),
     },
+    verified_income: money(filtered.filter(countsAsVerifiedIncome).reduce((sum, row) => sum + row.amount_zmw, 0)),
     pending: {
       incomes: money(pending.reduce((sum, row) => sum + row.amount_zmw, 0)),
       count: pending.length,
@@ -160,6 +163,7 @@ function summaryFromAggregate(summary) {
       as_of: summary.as_of || null,
       currency: summary.currency || 'ZMW',
       totals,
+      verified_income: summary.verified_income == null && summary.totals?.verified_income == null ? null : money(summary.verified_income ?? summary.totals?.verified_income),
       pending: summary.pending || { incomes: 0, count: 0 },
       counts: summary.counts || { inbounds: 0, outflows: 0, unclassified: 0 },
       freshness: freshnessOf(summary),
@@ -169,19 +173,26 @@ function summaryFromAggregate(summary) {
   }
 }
 
-// Rows carry the line items. Totals are recomputed so only verified inbound
-// income is counted, even when an aggregate blob is also present.
-// An aggregate with no rows (the live buffer is empty today) is kept as returned.
+// Entry rows are listed as stored. When the summary RPC returns totals, those
+// ledger_bucket figures are kept. Outbound rental_income amounts are not added
+// on top of summary.incomes, and verified_income never replaces it.
 export function adaptRpc(summaryBody, entriesBody, query = {}) {
   const summary = extractSummary(summaryBody)
   const rows = extractRows(entriesBody)
   if (rows && rows.length) {
-    return project({
+    const projected = project({
       entries: rows,
       as_of: summary?.as_of,
       source: summary?.source || 'payment_buffer',
       freshness: summary?.freshness,
     }, query)
+    if (summary) {
+      const totals = numericTotals(summary)
+      if (totals) projected.summary.totals = totals
+      const side = summary.verified_income ?? summary.totals?.verified_income
+      if (side != null) projected.summary.verified_income = money(side)
+    }
+    return projected
   }
   if (summary) return summaryFromAggregate(summary)
   if (rows) return project({ entries: [], as_of: null, source: 'payment_buffer' }, query)

@@ -22,18 +22,25 @@ Boaz ingest PASS: `payment_buffer` has 928 rows, Rhoda `rental_income` count is 
 
 ## Totals
 
-- Incomes total = inbound rows whose verification status is `verified`.
-- Unclaimed and claimed-not-verified inbounds are pending candidates. They are listed and are not part of the incomes total.
-- Outbound rows never keep `claim_status`.
-- Rhoda cash-outs are rental **income**: `direction=outbound`, `ledger_bucket=income`, `category=rental_income`. Offline fixture TID `10900844301` (present in the live buffer). The fixture amount and timestamp are the offline shape, not a claim that this VM read that row.
+Bags override, certain: primary Finances totals come from `payment_buffer.ledger_bucket` via `finance.vhpms_finances_summary` (migration `aaron009_finances_summary_ledger_incomes`, already applied by Boaz, not by this repo).
+
+- `summary.incomes` = rows with `ledger_bucket=income`, including Rhoda `rental_income` outbounds.
+- `summary.expenses` = `ledger_bucket=expense`.
+- `summary.investments` = `ledger_bucket=investment`.
+- `verified_income` is a side metric only. The screen and the task-api wrapper do not use it as the income total.
+- This repo does not seed `payment_verifications` for Rhoda or anyone else.
+- Outbound rows still leave `claim_status` null. That does not remove them from `summary.incomes`.
 - Airtel money from Rhoda is `rental_income`, not `subscription_payment`.
-- Investments are empty until a later mapping. No investment rows are invented.
+- Investments stay empty until rows exist. None are invented.
+- Offline fixture TID `10900844301` is the Rhoda cash-out sample (present in the live buffer). Its fixture amount and timestamp are the offline shape.
+
+Live smoke targets from the ledger summary, not the fixture: incomes about **20117.99**, expenses about **201974.44**, investments **0**. This VM has no Supabase credentials, so those RPCs were not called here.
 
 ## Ask-list (Boaz)
 
 1. Is `finance` applied? **Yes.** Apply PASS and VERIFY PASS. This repo still does not run DDL.
 2. How are cash-outs typed? **Option A.** `ledger_bucket` on `finance.payment_buffer`, filled by CSV ingest. Not a new table.
-3. What counts as income? **Verified inbounds only.** Other inbound claim states stay pending.
+3. What counts as income? **`ledger_bucket=income`**, including rental outbounds. `verified_income` is a side metric only (`aaron009_finances_summary_ledger_incomes`).
 4. Investments? **Deferred.** Empty list.
 5. Rhoda rental? **Income**, including the outbound cash-out. Inbound Airtel from Rhoda is `rental_income`.
 6. Read API? **The two RPCs above**, wrapped by this task-api for the owner session. Responses do not include `raw_sms`.
@@ -46,6 +53,6 @@ VITE_FINANCES_FIXTURE=true npm run dev
 
 Sign in with the PMS account `admin` / `ChangeMe123!`, then open `/finances`. The flag is the switch. The screen does not label the rows.
 
-`npm test` covers bucket totals, the Rhoda cash-out under Incomes, verified-only income, empty investments, empty-RPC versus fallback, and the owner auth gate.
+`npm test` covers ledger-bucket totals, Rhoda rental income inside incomes, `verified_income` as a side metric, empty investments, and the owner auth gate.
 
 Leave `VITE_FINANCES_FIXTURE` unset to call the task-api. Without owner Supabase credentials that route returns 503 and the signed-in owner session falls back to the fixture. Live buffer smoke is allowed; it needs those credentials, which are not in this environment.

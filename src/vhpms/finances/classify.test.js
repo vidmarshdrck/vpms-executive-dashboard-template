@@ -5,9 +5,10 @@ import { adaptRpc, countsAsVerifiedIncome, normaliseEntry, project } from './cla
 
 const fixture = JSON.parse(await readFile(new URL('../../../server/fixtures/finances.json', import.meta.url), 'utf8'))
 
-test('verified inbound income is the incomes total; pending inbounds are excluded', () => {
+test('ledger incomes include rental outbounds; verified income is only a side metric', () => {
   const view = project(fixture, { scope: 'all', limit: 100 })
-  assert.equal(view.summary.totals.incomes, 1500)
+  assert.equal(view.summary.totals.incomes, 3650)
+  assert.equal(view.summary.verified_income, 1500)
   assert.equal(view.summary.pending.incomes, 650)
   assert.equal(view.summary.pending.count, 2)
   assert.equal(view.summary.totals.expenses, 0)
@@ -48,7 +49,8 @@ test('outbound claim status is cleared and cannot inflate verified income', () =
   assert.equal('raw_sms' in row, false)
   assert.equal(JSON.stringify(row).includes('260970000000'), false)
   const view = project({ entries: [row, { id: 'ok', ledger_bucket: 'income', direction: 'inbound', verification_status: 'verified', amount_zmw: 10 }] }, {})
-  assert.equal(view.summary.totals.incomes, 10)
+  assert.equal(view.summary.totals.incomes, 90)
+  assert.equal(view.summary.verified_income, 10)
 })
 
 test('expense and investment buckets sum without affecting verified income', () => {
@@ -77,8 +79,23 @@ test('RPC rows recompute verified income and drop raw sms', () => {
   }, {
     id: 'live-3', ledger_bucket: 'income', direction: 'outbound', category: 'rental_income', amount_zmw: 1500, transaction_id: '10900844301', raw_sms: 'hidden',
   }], {})
-  assert.equal(view.summary.totals.incomes, 30)
+  assert.equal(view.summary.totals.incomes, 1600)
+  assert.equal(view.summary.verified_income, 30)
   assert.equal(view.summary.pending.incomes, 70)
   assert.equal(view.entries.find((row) => row.transaction_id === '10900844301').bucket, 'income')
   assert.equal(JSON.stringify(view).includes('hidden'), false)
+})
+
+test('summary RPC ledger totals are kept and verified income does not replace them', () => {
+  const view = adaptRpc(
+    { totals: { incomes: 20117.99, expenses: 201974.44, investments: 0 }, verified_income: 100 },
+    [{ id: 'rhoda', ledger_bucket: 'income', direction: 'outbound', category: 'rental_income', amount_zmw: 1500, transaction_id: '10900844301' }],
+    {},
+  )
+  assert.equal(view.summary.totals.incomes, 20117.99)
+  assert.equal(view.summary.totals.expenses, 201974.44)
+  assert.equal(view.summary.totals.investments, 0)
+  assert.equal(view.summary.verified_income, 100)
+  assert.equal(view.entries[0].bucket, 'income')
+  assert.notEqual(view.summary.totals.incomes, view.summary.verified_income)
 })

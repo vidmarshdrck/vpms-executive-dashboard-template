@@ -95,7 +95,7 @@ export default function FinancesSection() {
   return <>
     <div className="vh-tabs" role="group" aria-label="Finance scope">{[['all', 'All'], ['personal', 'Personal'], ['business', 'Business']].map(([id, label]) => <button key={id} type="button" aria-pressed={scope === id} onClick={() => setScope(id)}>{label}</button>)}</div>
     <div className="vh-summary" aria-label="Finance totals">
-      <div data-testid="finances-income-total"><span>Incomes</span><strong className="vh-fin-total">{formatZmw(summary.totals.incomes)}</strong><small>Payments marked verified</small>{summary.pending?.count > 0 && <small>Awaiting verification {formatZmw(summary.pending.incomes)}</small>}</div>
+      <div data-testid="finances-income-total"><span>Incomes</span><strong className="vh-fin-total">{formatZmw(summary.totals.incomes)}</strong><small>This period</small>{Number.isFinite(summary.verified_income) && <small>Verified payments {formatZmw(summary.verified_income)}</small>}</div>
       <div data-testid="finances-expense-total"><span>Expenses</span><strong className="vh-fin-total">{formatZmw(summary.totals.expenses)}</strong><small>This period</small></div>
       <div data-testid="finances-investment-total"><span>Investments</span><strong className="vh-fin-total">{formatZmw(summary.totals.investments)}</strong><small>This period</small></div>
     </div>
