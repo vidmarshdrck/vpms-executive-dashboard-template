@@ -2,8 +2,8 @@
 // Primary totals follow ledger_bucket: income, expense, investment.
 // verified_income counts verified inbounds only and is a side metric, not totals.incomes.
 // Rhoda rental_income outbounds stay in the income bucket and in totals.incomes.
-// Outbound rows never keep a claim status. This module does not invent investment rows
-// and does not write payment_verifications.
+// Outbound rows keep claim_status and never count toward verified_income.
+// This module does not invent investment rows and does not write payment_verifications.
 
 const BUCKETS = new Set(['income', 'expense', 'investment'])
 
@@ -36,7 +36,7 @@ export function normaliseEntry(row) {
     network: row.network ?? null,
     transaction_id: transaction,
     category: row.category ?? null,
-    claim_status: outbound ? null : verification,
+    claim_status: outbound ? (row.claim_status ?? null) : verification,
     verification_status: outbound ? null : verification,
     business_id: row.business_id ?? null,
     scope: row.scope ?? null,

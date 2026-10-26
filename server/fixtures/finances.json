@@ -1,5 +1,5 @@
 {
-  "_comment": "Offline fallback for finance.payment_buffer rows. Served only when finance.vhpms_finances_summary / finance.vhpms_finances_entries cannot be called. Live classification (Shadrick via Bags, Boaz VERIFY PASS, ingest PASS): Rhoda cash-outs are rental income, not expenses — direction outbound, ledger_bucket income, category rental_income, claim_status null. Airtel money from Rhoda is rental_income, not subscription_payment. Incomes total counts verification_status=verified only. TID 10900844301 is present in the live buffer (928 rows, 9 Rhoda rental_income). This file's amount and occurred_at are the offline shape, not a live read. Pending TIDs exist so unverified inbounds can be tested. No phone numbers. No raw_sms. Investments are intentionally absent. Do not invent a second ledger.",
+  "_comment": "Offline rows shaped like finance.payment_buffer. Totals follow ledger_bucket (income, expense, investment). verified_income is a side metric only, not the income total. Served when FINANCES_FIXTURE or VITE_FINANCES_FIXTURE is set, or when no RPC client is configured. A configured RPC that fails returns 503 and does not use these rows. Rhoda cash-outs are rental income, not expenses: direction outbound, ledger_bucket income, category rental_income, claim_status ignored. Airtel money from Rhoda is rental_income, not subscription_payment. TID 10900844301 amount 3000 matches live. occurred_at in this file is the offline shape. Pending inbound TIDs exist so unverified inbounds can be tested. No phone numbers. No raw_sms. Investments are intentionally absent. Do not invent a second ledger. Do not seed payment_verifications.",
   "source": "payment_buffer+momo_airtel_csv",
   "as_of": "2026-10-26T00:00:00Z",
   "currency": "ZMW",
@@ -10,17 +10,17 @@
   },
   "entries": [
     {
-      "_comment": "Rhoda cash-out. Boaz: ledger_bucket income, category rental_income, direction outbound. Claim status stays null. Not an expense.",
+      "_comment": "Rhoda cash-out. ledger_bucket income, category rental_income, direction outbound, claim_status ignored. Amount 3000 matches live. Not an expense.",
       "id": "rhoda-cashout-10900844301",
       "ledger_bucket": "income",
       "direction": "outbound",
-      "amount_zmw": 1500,
+      "amount_zmw": 3000,
       "occurred_at": "2026-10-01T08:00:00Z",
       "counterparty": "Rhoda Chitukutuku",
       "network": "MTN",
       "transaction_id": "10900844301",
       "category": "rental_income",
-      "claim_status": null,
+      "claim_status": "ignored",
       "verification_status": null,
       "business_id": null,
       "scope": "personal",
@@ -30,7 +30,7 @@
       "description": "Family Fund rental"
     },
     {
-      "_comment": "Airtel inbound previously mis-tagged subscription_payment. Category is rental_income. verification_status verified, so it counts in the incomes total.",
+      "_comment": "Airtel inbound. Category is rental_income, not subscription_payment. ledger_bucket income includes it in totals.incomes. verification_status verified feeds the verified_income side metric only.",
       "id": "rhoda-airtel-verified",
       "ledger_bucket": "income",
       "direction": "inbound",

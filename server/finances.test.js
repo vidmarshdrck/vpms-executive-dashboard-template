@@ -20,7 +20,7 @@ test('owner read returns Rhoda rental income, verified total, and empty investme
     const summaryRes = await fetch(`${base}/api/finances/summary`, { headers: { authorization: 'Bearer owner' } })
     const summary = await summaryRes.json()
     assert.equal(summaryRes.status, 200)
-    assert.equal(summary.totals.incomes, 3650)
+    assert.equal(summary.totals.incomes, 5150)
     assert.equal(summary.verified_income, 1500)
     assert.equal(summary.pending.incomes, 650)
     assert.equal(summary.totals.expenses, 0)
@@ -30,7 +30,8 @@ test('owner read returns Rhoda rental income, verified total, and empty investme
     assert.equal(cashOut.bucket, 'income')
     assert.equal(cashOut.category, 'rental_income')
     assert.equal(cashOut.direction, 'outbound')
-    assert.equal(cashOut.claim_status, null)
+    assert.equal(cashOut.amount_zmw, 3000)
+    assert.equal(cashOut.claim_status, 'ignored')
     assert.equal((await (await fetch(`${base}/api/finances/entries?bucket=expense`, { headers: { authorization: 'Bearer owner' } })).json()).entries.length, 0)
     assert.equal((await (await fetch(`${base}/api/finances/entries?bucket=investment`, { headers: { authorization: 'Bearer owner' } })).json()).entries.length, 0)
     const body = JSON.stringify(entries)
@@ -52,7 +53,7 @@ test('manual income does not count as verified; manual expense does count', asyn
     assert.equal(expense.status, 201)
     assert.equal((await fetch(`${base}/api/finances`, { method: 'POST', headers, body: JSON.stringify({ kind: 'investment', amount_zmw: 5, occurred_at: '2026-10-02T00:00:00Z', counterparty: 'Fund', description: 'No' }) })).status, 400)
     const summary = await (await fetch(`${base}/api/finances/summary`, { headers })).json()
-    assert.equal(summary.totals.incomes, 3690)
+    assert.equal(summary.totals.incomes, 5190)
     assert.equal(summary.verified_income, 1500)
     assert.equal(summary.totals.expenses, 15)
     assert.equal(summary.totals.investments, 0)
@@ -75,12 +76,35 @@ test('a live empty RPC is not replaced by the Rhoda rows', async () => {
   } finally { await close() }
 })
 
-test('RPC failure falls back to rental-income rows', async () => {
-  const rpc = { async summary() { return { ok: false, status: 503 } }, async entries() { throw new Error('down') } }
-  const { base, close } = await withHandler(createFinancesHandler({ authenticate: auth, rpc }))
+test('configured RPC failure returns 503 and does not serve fixture rows', async () => {
+  const cases = [
+    { async summary() { return { ok: false, status: 503 } }, async entries() { throw new Error('down') } },
+    { async summary() { return { ok: true, body: { totals: { incomes: 1, expenses: 0, investments: 0 } } } }, async entries() { throw new Error('down') } },
+    { async summary() { return { ok: true, body: { nope: true } } }, async entries() { return { ok: true, body: [] } } },
+    { async summary() { return { ok: true, body: { totals: { incomes: 1, expenses: 0, investments: 0 } } } }, async entries() { return { ok: true, body: { nope: true } } } },
+  ]
+  for (const rpc of cases) {
+    const { base, close } = await withHandler(createFinancesHandler({ authenticate: auth, rpc }))
+    try {
+      const response = await fetch(`${base}/api/finances/entries?bucket=income`, { headers: { authorization: 'Bearer owner' } })
+      const body = await response.json()
+      assert.equal(response.status, 503)
+      assert.equal(body.error, 'finances_unavailable')
+      assert.equal(JSON.stringify(body).includes('10900844301'), false)
+      assert.equal((await fetch(`${base}/api/finances`, { method: 'POST', headers: { authorization: 'Bearer owner', 'content-type': 'application/json' }, body: '{}' })).status, 405)
+    } finally { await close() }
+  }
+})
+
+test('explicit fixture flag still serves ledger rows when an RPC client is set', async () => {
+  const rpc = { async summary() { throw new Error('down') }, async entries() { throw new Error('down') } }
+  const { base, close } = await withHandler(createFinancesHandler({ authenticate: auth, rpc, forceFixture: true }))
   try {
     const body = await (await fetch(`${base}/api/finances/entries?bucket=income`, { headers: { authorization: 'Bearer owner' } })).json()
-    assert.ok(body.entries.some((row) => row.transaction_id === '10900844301' && row.category === 'rental_income' && row.bucket === 'income'))
+    const cashOut = body.entries.find((row) => row.transaction_id === '10900844301')
+    assert.equal(cashOut.amount_zmw, 3000)
+    assert.equal(cashOut.claim_status, 'ignored')
+    assert.equal(cashOut.bucket, 'income')
   } finally { await close() }
 })
 

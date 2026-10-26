@@ -7,7 +7,7 @@ const fixture = JSON.parse(await readFile(new URL('../../../server/fixtures/fina
 
 test('ledger incomes include rental outbounds; verified income is only a side metric', () => {
   const view = project(fixture, { scope: 'all', limit: 100 })
-  assert.equal(view.summary.totals.incomes, 3650)
+  assert.equal(view.summary.totals.incomes, 5150)
   assert.equal(view.summary.verified_income, 1500)
   assert.equal(view.summary.pending.incomes, 650)
   assert.equal(view.summary.pending.count, 2)
@@ -26,7 +26,8 @@ test('Rhoda cash-out is rental income, outbound, and not an expense', () => {
   assert.equal(cashOut.ledger_bucket, 'income')
   assert.equal(cashOut.direction, 'outbound')
   assert.equal(cashOut.category, 'rental_income')
-  assert.equal(cashOut.claim_status, null)
+  assert.equal(cashOut.amount_zmw, 3000)
+  assert.equal(cashOut.claim_status, 'ignored')
   assert.equal(cashOut.verification_status, null)
   assert.equal(cashOut.counterparty, 'Rhoda Chitukutuku')
   assert.equal(countsAsVerifiedIncome(cashOut), false)
@@ -39,12 +40,12 @@ test('Rhoda cash-out is rental income, outbound, and not an expense', () => {
   assert.equal(JSON.stringify(view).includes('_comment'), false)
 })
 
-test('outbound claim status is cleared and cannot inflate verified income', () => {
+test('outbound claim status is kept and cannot inflate verified income', () => {
   const row = normaliseEntry({
     id: 'forced', ledger_bucket: 'income', direction: 'outbound', amount_zmw: 80,
     verification_status: 'verified', claim_status: 'verified', category: 'rental_income', raw_sms: 'do not keep', phone: '260970000000',
   })
-  assert.equal(row.claim_status, null)
+  assert.equal(row.claim_status, 'verified')
   assert.equal(row.verification_status, null)
   assert.equal('raw_sms' in row, false)
   assert.equal(JSON.stringify(row).includes('260970000000'), false)

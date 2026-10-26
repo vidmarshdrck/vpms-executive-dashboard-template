@@ -55,13 +55,20 @@ function useFinances() {
           setState({ error: 'Sign in on the Live workspace page first.' })
           return
         }
-        const summaryBody = summaryRes.ok ? await summaryRes.json().catch(() => null) : null
-        const entriesBody = entriesRes.ok ? await entriesRes.json().catch(() => null) : null
+        if (!summaryRes.ok || !entriesRes.ok) {
+          setState({ error: 'Finances are unavailable right now.' })
+          return
+        }
+        const summaryBody = await summaryRes.json().catch(() => null)
+        const entriesBody = await entriesRes.json().catch(() => null)
         const adapted = adaptRpc(summaryBody, entriesBody, { scope: 'all', limit: 100 })
-        if (!adapted) setState({ ready: true, ...fixtureView() })
-        else setState({ ready: true, summary: adapted.summary, entries: adapted.entries })
+        if (!adapted) {
+          setState({ error: 'Finances are unavailable right now.' })
+          return
+        }
+        setState({ ready: true, summary: adapted.summary, entries: adapted.entries })
       } catch {
-        if (live) setState({ ready: true, ...fixtureView() })
+        if (live) setState({ error: 'Finances are unavailable right now.' })
       }
     }
     load()
@@ -84,7 +91,7 @@ function Bucket({ title, rows, empty, testId }) {
 export default function FinancesSection() {
   const [scope, setScope] = useState('all')
   const state = useFinances()
-  if (!state.ready) return <section className="vh-panel"><h2>Finances</h2><p>{state.loading ? 'Loading finances…' : state.error}</p></section>
+  if (!state.ready) return <section className="vh-panel"><h2>Finances</h2><p role={state.error ? 'alert' : undefined}>{state.loading ? 'Loading finances…' : state.error}</p></section>
   const scoped = scope === 'all' ? state.entries : state.entries.filter((row) => row.scope === scope)
   const view = scope === 'all' ? state : project({ entries: scoped, as_of: state.summary.as_of, source: state.summary.source, freshness: state.summary.freshness }, { scope: 'all', limit: 100 })
   const summary = scope === 'all' ? state.summary : view.summary

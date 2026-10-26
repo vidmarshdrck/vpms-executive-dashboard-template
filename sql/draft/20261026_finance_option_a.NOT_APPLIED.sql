@@ -7,7 +7,7 @@
 -- There is no second ledger and no SMSGate cash-out table.
 -- summary.incomes follows payment_buffer.ledger_bucket (aaron009_finances_summary_ledger_incomes).
 -- verified_income is a side metric only. Do not seed payment_verifications.
--- Outbound rows do not use claim_status.
+-- Rhoda outbound claim_status is ignored. It does not replace ledger_bucket totals.
 -- Rhoda cash-outs: ledger_bucket income, category rental_income, direction outbound.
 -- Airtel from Rhoda: rental_income, not subscription_payment.
 -- Investments: no rows until a later mapping.

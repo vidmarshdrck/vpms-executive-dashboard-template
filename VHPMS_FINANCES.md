@@ -16,9 +16,11 @@ Boaz ingest PASS: `payment_buffer` has 928 rows, Rhoda `rental_income` count is 
 
 ## Read path
 
-`GET /api/finances`, `GET /api/finances/summary` and `GET /api/finances/entries` require the same owner JWT as the BSG summary. When `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_KEY` and `VHPMS_OWNER_UUID` are set, the handler calls the two finance RPCs with that owner token (finance schema profile, then a narrower retry). If those calls fail, the handler serves `server/fixtures/finances.json`.
+`GET /api/finances`, `GET /api/finances/summary` and `GET /api/finances/entries` require the same owner JWT as the BSG summary. When `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_KEY` and `VHPMS_OWNER_UUID` are set, the handler calls the two finance RPCs with that owner token (finance schema profile, then a narrower retry). If either call fails, or the bodies cannot be adapted, the handler returns **503** `finances_unavailable`. It does not serve `server/fixtures/finances.json`.
 
-`POST /api/finances` accepts a manual income or expense only while the RPC client is not in use. It does not write to Supabase. Investment rows are rejected. Verification stays with Boaz.
+The fixture is used only when `FINANCES_FIXTURE=true`, when the screen is started with `VITE_FINANCES_FIXTURE=true`, or when no RPC client is configured.
+
+`POST /api/finances` accepts a manual income or expense only in that fixture mode. It does not write to Supabase. While an RPC client is configured the same route returns 405. Investment rows are rejected. Verification stays with Boaz.
 
 ## Totals
 
@@ -29,10 +31,10 @@ Bags override, certain: primary Finances totals come from `payment_buffer.ledger
 - `summary.investments` = `ledger_bucket=investment`.
 - `verified_income` is a side metric only. The screen and the task-api wrapper do not use it as the income total.
 - This repo does not seed `payment_verifications` for Rhoda or anyone else.
-- Outbound rows still leave `claim_status` null. That does not remove them from `summary.incomes`.
+- The Rhoda cash-out sample uses `claim_status` `ignored`, matching live. That status does not remove the row from `summary.incomes`.
 - Airtel money from Rhoda is `rental_income`, not `subscription_payment`.
 - Investments stay empty until rows exist. None are invented.
-- Offline fixture TID `10900844301` is the Rhoda cash-out sample (present in the live buffer). Its fixture amount and timestamp are the offline shape.
+- Offline fixture TID `10900844301` is the Rhoda cash-out sample. Amount **3000** matches live. `occurred_at` in the fixture is still the offline shape.
 
 Live smoke targets from the ledger summary, not the fixture: incomes about **20117.99**, expenses about **201974.44**, investments **0**. This VM has no Supabase credentials, so those RPCs were not called here.
 
@@ -51,8 +53,8 @@ Live smoke targets from the ledger summary, not the fixture: incomes about **201
 VITE_FINANCES_FIXTURE=true npm run dev
 ```
 
-Sign in with the PMS account `admin` / `ChangeMe123!`, then open `/finances`. The flag is the switch. The screen does not label the rows.
+Sign in as the owner, then open `/finances`. The flag is the switch. The screen does not label the rows.
 
 `npm test` covers ledger-bucket totals, Rhoda rental income inside incomes, `verified_income` as a side metric, empty investments, and the owner auth gate.
 
-Leave `VITE_FINANCES_FIXTURE` unset to call the task-api. Without owner Supabase credentials that route returns 503 and the signed-in owner session falls back to the fixture. Live buffer smoke is allowed; it needs those credentials, which are not in this environment.
+Leave `VITE_FINANCES_FIXTURE` unset to call the task-api. Without owner Supabase credentials that route returns 503 `prerequisites_missing`. A configured RPC that fails returns 503 `finances_unavailable`. In both cases the screen shows an error and does not fill the page from the fixture. The server fixture flag still authenticates the owner session; it does not skip that check. Live buffer smoke is allowed; it needs those credentials, which are not in this environment.

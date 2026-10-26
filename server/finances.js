@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { ApiError } from './task-api.js'
-import { adaptRpc, normaliseEntry, project } from '../src/vhpms/finances/classify.js'
+import { adaptRpc, extractRows, extractSummary, normaliseEntry, project } from '../src/vhpms/finances/classify.js'
 
 const SCOPES = new Set(['personal', 'business', 'all'])
 const BUCKETS = new Set(['income', 'expense', 'investment', 'all'])
@@ -158,6 +158,25 @@ function manualEntry(body) {
   })
 }
 
+async function liveView(rpc, token, filters) {
+  if (!token) throw new ApiError(503, 'finances_unavailable')
+  let summary
+  let entries
+  try {
+    ;[summary, entries] = await Promise.all([
+      rpc.summary(token, filters),
+      rpc.entries(token, filters),
+    ])
+  } catch {
+    throw new ApiError(503, 'finances_unavailable')
+  }
+  if (!summary?.ok || !entries?.ok) throw new ApiError(503, 'finances_unavailable')
+  if (!extractSummary(summary.body) || extractRows(entries.body) == null) throw new ApiError(503, 'finances_unavailable')
+  const view = adaptRpc(summary.body, entries.body, filters)
+  if (!view) throw new ApiError(503, 'finances_unavailable')
+  return view
+}
+
 export function createFinancesHandler({ authenticate, rpc = null, forceFixture = false, fixturePath = new URL('./fixtures/finances.json', import.meta.url) } = {}) {
   const manual = []
   const base = () => {
@@ -180,19 +199,9 @@ export function createFinancesHandler({ authenticate, rpc = null, forceFixture =
       if (req.method === 'POST' && path !== '/api/finances') throw new ApiError(405, 'method_not_allowed')
       const filters = readFilters(url)
       const listFilters = path === '/api/finances/summary' ? { ...filters, bucket: 'all' } : filters
-      let view = null
-      if (rpc && !forceFixture && actor.token) {
-        try {
-          const [summary, entries] = await Promise.all([
-            rpc.summary(actor.token, listFilters),
-            rpc.entries(actor.token, listFilters),
-          ])
-          view = adaptRpc(summary?.ok ? summary.body : null, entries?.ok ? entries.body : null, listFilters)
-        } catch { view = null }
-      }
-      if (!view) view = project(base(), listFilters)
+      const fixtureMode = forceFixture || !rpc
       if (req.method === 'POST') {
-        if (rpc && !forceFixture) throw new ApiError(405, 'manual_unavailable')
+        if (!fixtureMode) throw new ApiError(405, 'manual_unavailable')
         const entry = manualEntry(await readBody(req))
         if (!entry) throw new ApiError(400, 'invalid_body')
         const existing = project(base(), { scope: 'all', limit: 100 }).entries
@@ -200,6 +209,7 @@ export function createFinancesHandler({ authenticate, rpc = null, forceFixture =
         manual.push(entry)
         return send(201, { entry })
       }
+      const view = fixtureMode ? project(base(), listFilters) : await liveView(rpc, actor.token, listFilters)
       if (path === '/api/finances/summary') return send(200, view.summary)
       if (path === '/api/finances/entries') return send(200, { entries: view.entries, next_cursor: view.next_cursor })
       return send(200, { ...view.summary, entries: view.entries, next_cursor: view.next_cursor })
