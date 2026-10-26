@@ -37,6 +37,34 @@ test('normalises trades: VOID kept for display but excluded from metrics; paper 
   const priced = applyRisk(t, 'paper'); assert.deepEqual(priced.map(x => x.signal_id), ['SYN-1', 'SYN-2']); assert.deepEqual(priced.map(x => x.pnl), [2, -1.02])
   const s = stats(t, 'paper'); assert.equal(s.closed, 2); assert.equal(s.balance, 100.98)
   assert.equal(tradeStatus({ status: 'VOID_X', exit_ts: 'x' }), 'VOID')
+  assert.equal(tradeStatus({ status: 'VOID_DATA_BUG' }), 'VOID')
+})
+test('live statuses: CLOSED_SL and CLOSED_TP stay CLOSED without exit_ts; dollar_pnl fills pnl; CAT open_ts parses', () => {
+  const rows = normaliseTrades([
+    { trade_id: 'SL-1', symbol: 'frxEURUSD', direction: 'SELL', entry: 1.1, stop: 1.11, target: 1.08, status: 'CLOSED_SL', open_ts: '2026-10-23 15:45 CAT', result_r: -1, dollar_pnl: -1.02 },
+    { trade_id: 'TP-1', symbol: 'frxUSDJPY', direction: 'BUY', entry: 150, stop: 149.5, target: 151, status: 'CLOSED_TP', open_ts: '2026-10-23 15:45:00 CAT', exit_ts: '2026-10-23 17:45 CAT', r_multiple: 2, dollar_pnl: 2.04 },
+    { trade_id: 'PNL-1', symbol: 'frxGBPUSD', direction: 'BUY', entry: 1.3, stop: 1.29, target: 1.32, status: 'closed_sl', exit_ts: '2026-10-24T10:00:00Z', pnl: 0, dollar_pnl: 9 },
+    { trade_id: 'VOID-1', symbol: 'frxXAUUSD', direction: 'BUY', entry: 2400, stop: 2390, target: 2420, status: 'VOID_DATA_BUG', open_ts: 'not-a-date', dollar_pnl: 50, original_r_multiple: 2, void_reason: 'bad candle feed' },
+  ])
+  assert.deepEqual(rows.map(x => x.status), ['CLOSED', 'CLOSED', 'CLOSED', 'VOID'])
+  assert.equal(rows[0].close_time, null)
+  assert.equal(rows[0].pnl, -1.02)
+  assert.equal(rows[0].r_multiple, -1)
+  assert.equal(rows[0].signal_time, '2026-10-23T13:45:00.000Z')
+  assert.equal(rows[1].pnl, 2.04)
+  assert.equal(rows[1].r_multiple, 2)
+  assert.equal(rows[1].signal_time, '2026-10-23T13:45:00.000Z')
+  assert.equal(rows[1].close_time, '2026-10-23T15:45:00.000Z')
+  assert.equal(rows[2].pnl, 0)
+  assert.equal(rows[3].pnl, null)
+  assert.equal(rows[3].r_multiple, null)
+  assert.equal(rows[3].signal_time, null)
+  assert.equal(rows[3].void_reason, 'bad candle feed')
+  assert.equal(rows[3].original_r_multiple, 2)
+  assert.equal(tradeStatus({ status: 'CLOSED_SL' }), 'CLOSED')
+  assert.equal(tradeStatus({ status: 'CLOSED_TP' }), 'CLOSED')
+  assert.equal(tradeStatus({ status: 'VOID_DATA_BUG' }), 'VOID')
+  assert.equal(tradeStatus({ status: 'OPEN' }), 'OPEN')
 })
 test('pending signals, account headline and header parsing', () => {
   const p = pendingSignals(SCAN); assert.equal(p.length, 1); assert.equal(p[0].status, 'PENDING'); assert.equal(p[0].sl, 150.9); assert.equal(p[0].symbol, 'frxUSDJPY')
