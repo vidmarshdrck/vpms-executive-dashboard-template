@@ -5,13 +5,14 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { createServer } from 'vite'
-import { aggregatePlCalendar, parsePaperTradesCsv } from '../src/vhpms/bsg/plCalendar.js'
+import { aggregatePlCalendar, parsePaperTradesCsv, voidExitsOnDay } from '../src/vhpms/bsg/plCalendar.js'
 import { bsgPlConfig } from '../src/vhpms/bsg/plConfig.js'
 
 const csv = readFileSync(new URL('../server/fixtures/bsg_paper_trades.csv', import.meta.url), 'utf8')
-const data = aggregatePlCalendar(parsePaperTradesCsv(csv), {
-  month: '2026-10', mode: 'PAPER', riskUsdPerR: bsgPlConfig.riskUsdPerR,
-})
+const trades = parsePaperTradesCsv(csv)
+const monthOpts = { month: '2026-10', mode: 'PAPER', riskUsdPerR: bsgPlConfig.riskUsdPerR }
+const data = aggregatePlCalendar(trades, monthOpts)
+const negative = aggregatePlCalendar(voidExitsOnDay(trades, '2026-10-06'), monthOpts)
 const outDir = '/opt/cursor/artifacts'
 mkdirSync(outDir, { recursive: true })
 
@@ -22,9 +23,10 @@ const vite = await createServer({
     name: 'bsg-pl-shot-data',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (req.url?.split('?')[0] === '/pl-data.json') {
+        const url = new URL(req.url || '/', 'http://localhost')
+        if (url.pathname === '/pl-data.json') {
           res.setHeader('content-type', 'application/json')
-          res.end(JSON.stringify(data))
+          res.end(JSON.stringify(url.searchParams.get('variant') === 'negative' ? negative : data))
           return
         }
         next()
@@ -79,7 +81,7 @@ function cdp(ws) {
   }
 }
 
-async function shoot(client, { width, file, shot }) {
+async function shoot(client, { width, file, shot, cropFooter = false }) {
   await client.send('Emulation.setDeviceMetricsOverride', {
     width, height: 900, deviceScaleFactor: 1, mobile: width < 500,
   })
@@ -112,6 +114,49 @@ async function shoot(client, { width, file, shot }) {
   const target = path.join(outDir, file)
   writeFileSync(target, Buffer.from(image.data, 'base64'))
   console.log(`${target} ${ready.result.value} ${width}x${height.result.value}`)
+  if (!cropFooter) return
+  const mark = await client.send('Runtime.evaluate', {
+    expression: `document.fonts.load('700 48px "Open Sans"').then(() => {
+      const el = document.querySelector('.vh-pl-wordmark')
+      const foot = document.querySelector('.vh-pl-foot')
+      const r = foot.getBoundingClientRect()
+      const pad = 18
+      const canvas = document.createElement('canvas')
+      canvas.width = 180
+      canvas.height = 96
+      const g = canvas.getContext('2d')
+      g.font = '700 64px "Open Sans", "Noto Sans", "DejaVu Sans", system-ui, sans-serif'
+      g.fillStyle = '#000'
+      function ink(ch) {
+        g.clearRect(0, 0, canvas.width, canvas.height)
+        g.fillText(ch, 8, 72)
+        return [...g.getImageData(0, 0, canvas.width, canvas.height).data]
+      }
+      const latin = ink('A')
+      const lambda = ink('\\u039B')
+      let diff = 0
+      for (let i = 3; i < latin.length; i += 4) if (latin[i] !== lambda[i]) diff += 1
+      return {
+        x: Math.max(0, r.x - pad), y: Math.max(0, r.y - pad), width: r.width + pad * 2, height: r.height + pad * 2,
+        text: el.textContent, codes: [...el.textContent].map((ch) => ch.codePointAt(0).toString(16)).join(' '),
+        font: getComputedStyle(el).fontFamily, loaded: document.fonts.check('700 32px "Open Sans"'), diff,
+      }
+    })`,
+    awaitPromise: true,
+    returnByValue: true,
+  })
+  const info = mark.result.value
+  if (info.text !== 'VIDM\u039BR' || info.codes !== '56 49 44 4d 39b 52' || !info.loaded || info.diff < 30) {
+    throw new Error(`wordmark_mismatch ${JSON.stringify(info)}`)
+  }
+  const crop = await client.send('Page.captureScreenshot', {
+    format: 'png',
+    captureBeyondViewport: true,
+    clip: { x: info.x, y: info.y, width: info.width, height: info.height, scale: 4 },
+  })
+  const cropPath = path.join(outDir, 'bsg-pl-footer-1440.png')
+  writeFileSync(cropPath, Buffer.from(crop.data, 'base64'))
+  console.log(`${cropPath} ${info.font} diff=${info.diff}`)
 }
 
 try {
@@ -120,9 +165,10 @@ try {
   const client = cdp(ws)
   await client.send('Page.enable')
   await client.send('Runtime.enable')
-  await shoot(client, { width: 1440, file: 'bsg-pl-calendar-1440.png', shot: 'data' })
+  await shoot(client, { width: 1440, file: 'bsg-pl-calendar-1440.png', shot: 'data', cropFooter: true })
   await shoot(client, { width: 390, file: 'bsg-pl-calendar-390.png', shot: 'data' })
   await shoot(client, { width: 1440, file: 'bsg-pl-calendar-empty.png', shot: 'empty' })
+  await shoot(client, { width: 1440, file: 'bsg-pl-calendar-negative.png', shot: 'negative' })
   ws.close()
 } finally {
   chrome.kill('SIGKILL')

@@ -23,6 +23,15 @@ export function catDateIso(ms) {
   }).format(ms)
 }
 
+// Test and screenshot harness only. Closed trades that exit on this CAT day drop out of the month.
+export function voidExitsOnDay(trades, day) {
+  return (Array.isArray(trades) ? trades : []).map((trade) => {
+    const exit = parseTradeTimestamp(trade?.exit_ts)
+    if (exit != null && catDateIso(exit) === day && String(trade?.status || '').startsWith('CLOSED_')) return { ...trade, status: 'VOID_EXCLUDED' }
+    return trade
+  })
+}
+
 export function catMonth(now = new Date()) {
   const ms = now instanceof Date ? now.getTime() : Number(now)
   return catDateIso(ms).slice(0, 7)
@@ -53,6 +62,20 @@ export function formatPl(value, unit) {
   const abs = Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   const sign = n > 0 ? '+' : n < 0 ? '-' : ''
   return unit === 'r' ? `${sign}${abs}R` : `${sign}$${abs}`
+}
+
+// Best day is a winning day. A null best_day, a losing month, or a non-finite figure is no tile value.
+export function bestDayFigure(data, unit) {
+  const best = data?.summary?.best_day
+  const pl = Number(best?.pl_r)
+  if (!best || best.day == null || !Number.isFinite(pl) || pl <= 0) return null
+  const key = String(best.day).slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return null
+  const row = Array.isArray(data.days) ? data.days.find((day) => String(day?.day).slice(0, 10) === key) : null
+  let value = unit === 'r' ? pl : Number(row?.pl_usd)
+  if (unit !== 'r' && !Number.isFinite(value) && Number.isFinite(Number(data?.risk_usd_per_r))) value = Number((pl * Number(data.risk_usd_per_r)).toFixed(2))
+  if (!Number.isFinite(value)) return null
+  return { day: key, value }
 }
 
 export function plSign(value) {

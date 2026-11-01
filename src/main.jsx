@@ -5,6 +5,7 @@ import App from './App.jsx'
 import { AuthProvider } from './auth/AuthContext.jsx'
 import '@fontsource-variable/outfit'
 import '@fontsource-variable/inter-tight'
+import '@fontsource/open-sans/700.css'
 import './index.css'
 import { applyTheme, storedTheme } from './lib/theme.js'
 

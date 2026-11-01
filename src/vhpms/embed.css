@@ -93,7 +93,8 @@ html.dark .vh-embed .vh-fin-total{color:var(--text-primary)}
 .vh-pl-weekpl{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;text-align:right;gap:3px;padding:0 2px;min-width:0}
 .vh-pl-weekpl strong{font-family:var(--font-display);font-size:20px;font-weight:560;letter-spacing:-.03em;line-height:1}
 .vh-pl-foot{margin:20px 0 4px;font-size:14px;font-weight:650;color:#d5ddd8}
-.vh-pl-foot b{color:var(--pl-green);font-weight:750}
+.vh-pl-foot b{color:var(--pl-green)}
+.vh-pl-foot .vh-pl-wordmark{font-family:"Open Sans","Noto Sans","DejaVu Sans","Segoe UI",system-ui,sans-serif;font-weight:700;font-synthesis:none}
 @media (max-width:720px){
   .vh-pl{padding:16px 12px 12px;border-radius:22px}
   .vh-pl-top{flex-direction:column;align-items:flex-start;gap:14px}

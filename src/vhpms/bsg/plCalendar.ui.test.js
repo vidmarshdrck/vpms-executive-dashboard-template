@@ -7,7 +7,7 @@ import esbuild from 'esbuild'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { bsgPlConfig } from './plConfig.js'
-import { aggregatePlCalendar, parsePaperTradesCsv } from './plCalendar.js'
+import { aggregatePlCalendar, parsePaperTradesCsv, voidExitsOnDay } from './plCalendar.js'
 
 const entry = new URL('./BsgPlCalendar.jsx', import.meta.url)
 
@@ -48,7 +48,9 @@ test('card renders dollars by default, the mode tag, and a finished empty state'
   assert.match(html, /data-testid="bsg-pl-mode-tag">Paper</)
   assert.match(html, /data-testid="bsg-pl-mode-switch"/)
   assert.match(html, />Demo</)
-  assert.match(html, />Powered by <b>VIDΛR</)
+  assert.match(html, /aria-label="VIDMAR"/)
+  assert.match(html, />VIDMΛR</)
+  assert.equal(html.includes('>VIDΛR<'), false)
   assert.equal(html.includes('Vidmar Holdings'), false)
   assert.equal(/fixture|placeholder|sample|preview|Trade Echo/i.test(html), false)
   const rUnit = renderToStaticMarkup(createElement(BsgPlCalendar, { data, phase: 'ready', month: '2026-10', mode: 'PAPER', unit: 'r' }))
@@ -70,12 +72,41 @@ test('card renders dollars by default, the mode tag, and a finished empty state'
   assert.equal(hidden.includes('bsg-pl-mode-switch'), false)
   const source = await readFile(entry, 'utf8')
   const section = await readFile(new URL('./BsgSection.jsx', import.meta.url), 'utf8')
-  assert.ok(source.includes('VID\u039BR'))
+  assert.ok(source.includes('VIDM\u039BR'))
+  assert.ok(source.includes('aria-label="VIDMAR"'))
+  const css = await readFile(new URL('../embed.css', import.meta.url), 'utf8')
+  assert.match(css, /\.vh-pl-wordmark\{font-family:"Open Sans"/)
   for (const text of [source, section]) {
     assert.equal(text.includes('Vidmar Holdings'), false)
     assert.equal(text.includes('bsg_paper_trades'), false)
     assert.equal(text.includes('fixture.js'), false)
     assert.equal(/\b(placeholder|sample data|preview data)\b/i.test(text), false)
   }
+  const negative = aggregatePlCalendar(voidExitsOnDay(trades, '2026-10-06'), { month: '2026-10', mode: 'PAPER', riskUsdPerR: bsgPlConfig.riskUsdPerR })
+  const down = renderToStaticMarkup(createElement(BsgPlCalendar, { data: negative, phase: 'ready', month: '2026-10', mode: 'PAPER' }))
+  assert.match(down, /vh-pl-hero is-neg/)
+  assert.match(down, /data-testid="bsg-pl-total">-\$1\.44</)
+  assert.match(down, /vh-pl-weekpl is-neg[\s\S]*?>-\$9\.43</)
+  assert.match(down, />114</)
+  assert.match(down, />0\.98</)
+  assert.match(down, />VIDMΛR</)
+  const downR = renderToStaticMarkup(createElement(BsgPlCalendar, { data: negative, phase: 'ready', month: '2026-10', mode: 'PAPER', unit: 'r' }))
+  assert.match(downR, /data-testid="bsg-pl-total">-1\.44R</)
+  assert.match(downR, />-9\.43R</)
+  const losses = aggregatePlCalendar([
+    { status: 'CLOSED_SL', mode: 'PAPER', r_multiple: '-1.5', open_ts: '2026-10-12 10:00 CAT', exit_ts: '2026-10-12 11:00 CAT' },
+    { status: 'CLOSED_SL', mode: 'PAPER', r_multiple: '-0.5', open_ts: '2026-10-13 10:00 CAT', exit_ts: '2026-10-13 12:00 CAT' },
+  ], { month: '2026-10', mode: 'PAPER', riskUsdPerR: bsgPlConfig.riskUsdPerR })
+  const blankBest = renderToStaticMarkup(createElement(BsgPlCalendar, { data: losses, phase: 'ready', month: '2026-10', mode: 'PAPER' }))
+  assert.match(blankBest, /data-testid="bsg-pl-best">—</)
+  assert.equal(blankBest.includes('NaN'), false)
+  assert.equal(blankBest.includes('undefined'), false)
+  assert.equal(/OCT 1[23]/.test(blankBest), false)
+  const noBest = { ...losses, summary: { ...losses.summary, best_day: null, profit_factor: undefined } }
+  const dashed = renderToStaticMarkup(createElement(BsgPlCalendar, { data: noBest, phase: 'ready', month: '2026-10', mode: 'PAPER' }))
+  assert.match(dashed, /data-testid="bsg-pl-best">—</)
+  assert.match(dashed, /Profit factor<\/span><strong>—</)
+  assert.equal(dashed.includes('NaN'), false)
+  assert.equal(dashed.includes('undefined'), false)
   } finally { await rm(dir, { recursive: true, force: true }) }
 })

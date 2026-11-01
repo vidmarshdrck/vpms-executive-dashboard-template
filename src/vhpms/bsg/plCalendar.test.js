@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { bsgPlConfig } from './plConfig.js'
 import {
-  aggregatePlCalendar, buildMonthGrid, catMonth, formatPl, mondayOf, parsePaperTradesCsv, parseTradeTimestamp,
+  aggregatePlCalendar, bestDayFigure, buildMonthGrid, catMonth, formatPl, mondayOf, parsePaperTradesCsv, parseTradeTimestamp, voidExitsOnDay,
 } from './plCalendar.js'
 
 const csvUrl = new URL('../../../server/fixtures/bsg_paper_trades.csv', import.meta.url)
@@ -103,5 +103,33 @@ test('CAT exit date, closed trades only, and the pnl column is not the dollar fi
   assert.equal(formatPl(42.56, 'usd'), '+$42.56')
   assert.equal(formatPl(42.56, 'r'), '+42.56R')
   assert.equal(formatPl(-4.51, 'usd'), '-$4.51')
+  assert.equal(formatPl(-1.44, 'usd'), '-$1.44')
+  assert.equal(formatPl(-1.44, 'r'), '-1.44R')
+  assert.equal(formatPl(-9.43, 'usd'), '-$9.43')
   assert.equal(formatPl(0, 'usd'), '$0.00')
+})
+
+test('dropping 6 Oct is a negative month, and a losing month has no best-day figure', async () => {
+  const trades = voidExitsOnDay(parsePaperTradesCsv(await readFile(csvUrl, 'utf8')), '2026-10-06')
+  const calendar = aggregatePlCalendar(trades, opts())
+  assert.equal(calendar.summary.trades, 114)
+  assert.equal(Number(calendar.summary.pl_r).toFixed(2), '-1.44')
+  assert.equal(Number(calendar.summary.pl_usd).toFixed(2), '-1.44')
+  assert.equal(calendar.summary.profit_factor, 0.98)
+  assert.equal(calendar.summary.win_rate, 33.3)
+  const week = calendar.weeks.find((row) => row.week_start === '2026-10-05')
+  assert.equal(Number(week.pl_r).toFixed(2), '-9.43')
+  assert.equal(Number(week.pl_usd).toFixed(2), '-9.43')
+  assert.ok(calendar.summary.best_day.pl_r > 0)
+  assert.equal(bestDayFigure(calendar, 'usd').day, calendar.summary.best_day.day)
+  const losses = aggregatePlCalendar([
+    { status: 'CLOSED_SL', mode: 'PAPER', r_multiple: '-1.5', open_ts: '2026-10-12 10:00 CAT', exit_ts: '2026-10-12 11:00 CAT' },
+    { status: 'CLOSED_SL', mode: 'PAPER', r_multiple: '-0.5', open_ts: '2026-10-13 10:00 CAT', exit_ts: '2026-10-13 12:00 CAT' },
+  ], opts())
+  assert.ok(losses.summary.best_day.pl_r < 0)
+  assert.equal(bestDayFigure(losses, 'usd'), null)
+  assert.equal(bestDayFigure(losses, 'r'), null)
+  assert.equal(bestDayFigure(aggregatePlCalendar([], opts()), 'usd'), null)
+  assert.equal(bestDayFigure({ summary: { best_day: null }, days: [] }, 'r'), null)
+  assert.equal(bestDayFigure({ summary: { best_day: { day: '2026-10-12' } }, days: [] }, 'r'), null)
 })

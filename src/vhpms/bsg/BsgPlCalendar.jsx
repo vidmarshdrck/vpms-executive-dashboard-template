@@ -1,5 +1,5 @@
 import { bsgPlConfig } from './plConfig.js'
-import { MODE_LABEL, PL_MODES, buildMonthGrid, formatDayLabel, formatPl, isPlCalendar, monthTitle, plSign, shiftMonth } from './plCalendar.js'
+import { MODE_LABEL, PL_MODES, bestDayFigure, buildMonthGrid, formatDayLabel, formatPl, isPlCalendar, monthTitle, plSign, shiftMonth } from './plCalendar.js'
 
 function Chevron({ dir }) {
   return <svg viewBox="0 0 16 16" aria-hidden="true"><path d={dir === 'prev' ? 'M10 3 L5 8 L10 13' : 'M6 3 L11 8 L6 13'} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -21,8 +21,7 @@ export function BsgPlCalendar({
   const grid = buildMonthGrid(month, ready ? data.days : [], ready ? data.weeks : [])
   const summary = ready ? data.summary : null
   const total = ready ? (unit === 'r' ? summary.pl_r : summary.pl_usd) : null
-  const best = ready && summary.best_day?.day ? data.days.find((day) => String(day.day).slice(0, 10) === String(summary.best_day.day).slice(0, 10)) : null
-  const bestValue = best ? (unit === 'r' ? best.pl_r : best.pl_usd) : null
+  const shownBest = ready ? bestDayFigure(data, unit) : null
   const note = phase === 'signin'
     ? 'Sign in on the Live workspace page first.'
     : phase === 'unavailable'
@@ -61,8 +60,8 @@ export function BsgPlCalendar({
     <div className="vh-pl-kpis">
       <div><span>Trades</span><strong>{ready ? summary.trades : '—'}</strong></div>
       <div><span>Avg hold</span><strong>{ready && summary.avg_hold_minutes != null ? `${Math.round(Number(summary.avg_hold_minutes))}m` : '—'}</strong></div>
-      <div><span>Profit factor</span><strong>{ready && summary.profit_factor != null ? Number(summary.profit_factor).toFixed(2) : '—'}</strong></div>
-      <div><span>Best day</span><strong data-testid="bsg-pl-best">{ready && best ? formatPl(bestValue, unit) : '—'}</strong>{ready && best ? <small>{formatDayLabel(best.day)}</small> : null}</div>
+      <div><span>Profit factor</span><strong>{ready && Number.isFinite(Number(summary.profit_factor)) ? Number(summary.profit_factor).toFixed(2) : '—'}</strong></div>
+      <div><span>Best day</span><strong data-testid="bsg-pl-best">{shownBest ? formatPl(shownBest.value, unit) : '—'}</strong>{shownBest ? <small>{formatDayLabel(shownBest.day)}</small> : null}</div>
     </div>
     <div className="vh-pl-cal" role="grid" aria-label="Monday to Friday P/L">
       {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((label) => <div key={label} className="vh-pl-dow" role="columnheader">{label}</div>)}
@@ -83,6 +82,6 @@ export function BsgPlCalendar({
         </div>
       </div>)}
     </div>
-    <footer className="vh-pl-foot">Powered by <b>VIDΛR</b></footer>
+    <footer className="vh-pl-foot">Powered by <b className="vh-pl-wordmark" aria-label="VIDMAR">VIDMΛR</b></footer>
   </article>
 }
