@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { bsgPlConfig } from './plConfig.js'
 import {
-  aggregatePlCalendar, bestDayFigure, buildMonthGrid, catMonth, formatPl, formatSyncedAgo, mondayOf, parsePaperTradesCsv, parseTradeTimestamp, syncStatus, voidExitsOnDay,
+  aggregatePlCalendar, bestDayFigure, buildMonthGrid, catMonth, formatPl, formatSyncedAgo, mondayOf, parsePaperTradesCsv, parseTradeTimestamp, resolveOpeningMonth, shiftMonth, syncStatus, voidExitsOnDay,
 } from './plCalendar.js'
 
 const csvUrl = new URL('../../../server/fixtures/bsg_paper_trades.csv', import.meta.url)
@@ -117,6 +117,49 @@ test('CAT exit date, closed trades only, and the pnl column is not the dollar fi
   assert.deepEqual(syncStatus({ phase: 'signin', asOf: '2026-11-01T15:00:00Z', now }), { tone: 'stale', label: 'Not synced' })
   assert.equal(syncStatus({ phase: 'ready' }).label.startsWith('Synced'), true)
   assert.equal(syncStatus({ phase: 'unavailable' }).label.includes('LIVE'), false)
+})
+
+test('opening month follows the current CAT month, then the latest earlier month, and stops after 12', async () => {
+  const now = new Date('2026-11-01T08:00:00Z')
+  assert.equal(catMonth(now), '2026-11')
+  const book = (tradesByMonth) => {
+    const calls = []
+    const read = async (month) => {
+      calls.push(month)
+      const trades = tradesByMonth[month] ?? 0
+      return { month, summary: { trades, pl_r: trades, pl_usd: trades }, days: [], weeks: [] }
+    }
+    return { calls, read }
+  }
+  const current = book({ '2026-11': 4 })
+  const opened = await resolveOpeningMonth({ now, mode: 'PAPER', read: current.read })
+  assert.equal(opened.month, '2026-11')
+  assert.equal(opened.data.summary.trades, 4)
+  assert.deepEqual(current.calls, ['2026-11'])
+
+  const earlier = book({ '2026-10': 142, '2026-08': 9 })
+  const found = await resolveOpeningMonth({ now, mode: 'DEMO', read: earlier.read })
+  assert.equal(found.month, '2026-10')
+  assert.equal(found.data.summary.trades, 142)
+  assert.deepEqual(earlier.calls, ['2026-11', '2026-10'])
+
+  const none = book({})
+  const blank = await resolveOpeningMonth({ now, mode: 'all', read: none.read })
+  assert.equal(blank.month, '2026-11')
+  assert.equal(blank.data.summary.trades, 0)
+  assert.equal(none.calls.length, 13)
+  assert.equal(none.calls.at(-1), '2025-11')
+
+  const beyond = book({ '2025-10': 6 })
+  const bounded = await resolveOpeningMonth({ now, mode: 'PAPER', read: beyond.read })
+  assert.equal(shiftMonth('2026-11', -12), '2025-11')
+  assert.equal(shiftMonth('2026-11', -13), '2025-10')
+  assert.equal(bounded.month, '2026-11')
+  assert.equal(bounded.data.summary.trades, 0)
+  assert.equal(beyond.calls.length, 13)
+  assert.equal(beyond.calls.at(-1), '2025-11')
+  assert.equal(beyond.calls.includes('2025-10'), false)
+  await assert.rejects(resolveOpeningMonth({ now, read: async () => { throw new Error('503') } }), /503|calendar_unavailable/)
 })
 
 test('dropping 6 Oct is a negative month, and a losing month has no best-day figure', async () => {

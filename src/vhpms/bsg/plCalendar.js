@@ -43,6 +43,25 @@ export function shiftMonth(month, delta) {
   return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
+// How far an opening search may walk before the current month. Each step is one existing RPC call.
+export const OPENING_LOOKBACK = 12
+
+// No month chosen yet: current CAT month if it has trades, else the latest earlier month within the lookback.
+// A month with no trades is not an error. A failed read rejects so the card stays on the empty state.
+export async function resolveOpeningMonth({ now = new Date(), mode = 'PAPER', read, lookback = OPENING_LOOKBACK } = {}) {
+  if (typeof read !== 'function') throw new Error('calendar_unavailable')
+  const current = catMonth(now)
+  let currentBody = null
+  for (let step = 0; step <= lookback; step++) {
+    const month = step === 0 ? current : shiftMonth(current, -step)
+    const body = await read(month, mode)
+    if (!isPlCalendar(body)) throw new Error('calendar_unavailable')
+    if (step === 0) currentBody = body
+    if (Number(body.summary?.trades) >= 1) return { month, data: body }
+  }
+  return { month: current, data: currentBody }
+}
+
 export function monthTitle(month) {
   const [year, mon] = month.split('-').map(Number)
   const name = new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(year, mon - 1, 1)))

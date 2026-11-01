@@ -27,7 +27,16 @@ const vite = await createServer({
         const url = new URL(req.url || '/', 'http://localhost')
         if (url.pathname === '/pl-data.json') {
           res.setHeader('content-type', 'application/json')
-          res.end(JSON.stringify(url.searchParams.get('variant') === 'negative' ? negative : data))
+          const variant = url.searchParams.get('variant')
+          if (variant === 'month') {
+            const month = url.searchParams.get('month')
+            const body = month === '2026-10'
+              ? data
+              : { ...aggregatePlCalendar([], { month, mode: 'PAPER', riskUsdPerR: bsgPlConfig.riskUsdPerR }), as_of: syncedAt }
+            res.end(JSON.stringify(body))
+            return
+          }
+          res.end(JSON.stringify(variant === 'negative' ? negative : data))
           return
         }
         next()
@@ -82,7 +91,7 @@ function cdp(ws) {
   }
 }
 
-async function shoot(client, { width, file, shot, cropFooter = false }) {
+async function shoot(client, { width, file, shot, cropFooter = false, expectHeading = null }) {
   await client.send('Emulation.setDeviceMetricsOverride', {
     width, height: 900, deviceScaleFactor: 1, mobile: width < 500,
   })
@@ -102,6 +111,15 @@ async function shoot(client, { width, file, shot, cropFooter = false }) {
     returnByValue: true,
   })
   if (ready.result.value === 'timeout') throw new Error(`shot_timeout_${file}`)
+  if (expectHeading) {
+    const heading = await client.send('Runtime.evaluate', {
+      expression: `({ month: document.querySelector('.vh-pl-month')?.textContent, year: document.querySelector('.vh-pl-year')?.textContent })`,
+      returnByValue: true,
+    })
+    if (heading.result.value.month !== expectHeading.month || heading.result.value.year !== expectHeading.year) {
+      throw new Error(`opening_month ${JSON.stringify(heading.result.value)}`)
+    }
+  }
   await client.send('Runtime.evaluate', { expression: 'document.fonts.ready', awaitPromise: true })
   const height = await client.send('Runtime.evaluate', {
     expression: 'Math.ceil(document.documentElement.scrollHeight)',
@@ -170,6 +188,7 @@ try {
   await shoot(client, { width: 390, file: 'bsg-pl-calendar-390.png', shot: 'data' })
   await shoot(client, { width: 1440, file: 'bsg-pl-calendar-empty.png', shot: 'empty' })
   await shoot(client, { width: 1440, file: 'bsg-pl-calendar-negative.png', shot: 'negative' })
+  await shoot(client, { width: 1440, file: 'bsg-pl-opening-1440.png', shot: 'opening', expectHeading: { month: 'October', year: '2026' } })
   ws.close()
 } finally {
   chrome.kill('SIGKILL')
