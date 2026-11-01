@@ -22,7 +22,7 @@ export default function BsgSection() {
       try {
         const token = (await supabase?.auth?.getSession())?.data?.session?.access_token
         if (!token) {
-          if (live) setState({ phase: 'signin' })
+          if (live) setState((prev) => ({ phase: 'signin', syncedAt: prev.syncedAt }))
           return
         }
         const response = await fetch(bsgPlUrl(import.meta.env, month, mode), {
@@ -32,10 +32,10 @@ export default function BsgSection() {
         })
         const body = await response.json().catch(() => null)
         if (!live) return
-        if (response.ok && isPlCalendar(body)) setState({ phase: 'ready', data: body })
-        else setState({ phase: response.status === 401 ? 'signin' : 'unavailable' })
+        if (response.ok && isPlCalendar(body)) setState({ phase: 'ready', data: body, syncedAt: new Date().toISOString() })
+        else setState((prev) => ({ phase: response.status === 401 ? 'signin' : 'unavailable', syncedAt: prev.syncedAt }))
       } catch {
-        if (live) setState({ phase: 'unavailable' })
+        if (live) setState((prev) => ({ phase: 'unavailable', syncedAt: prev.syncedAt }))
       }
     }
     load()
@@ -47,8 +47,9 @@ export default function BsgSection() {
     month={month}
     mode={mode}
     unit={unit}
-    onMonth={(next) => { setState({ phase: 'loading' }); setMonth(next) }}
-    onMode={(next) => { setState({ phase: 'loading' }); setMode(next) }}
+    onMonth={(next) => { setState((prev) => ({ phase: 'loading', syncedAt: prev.syncedAt })); setMonth(next) }}
+    onMode={(next) => { setState((prev) => ({ phase: 'loading', syncedAt: prev.syncedAt })); setMode(next) }}
+    syncedAt={state.syncedAt}
     onUnit={setUnit}
   />
 }

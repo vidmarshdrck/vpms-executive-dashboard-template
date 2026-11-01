@@ -11,8 +11,9 @@ import { bsgPlConfig } from '../src/vhpms/bsg/plConfig.js'
 const csv = readFileSync(new URL('../server/fixtures/bsg_paper_trades.csv', import.meta.url), 'utf8')
 const trades = parsePaperTradesCsv(csv)
 const monthOpts = { month: '2026-10', mode: 'PAPER', riskUsdPerR: bsgPlConfig.riskUsdPerR }
-const data = aggregatePlCalendar(trades, monthOpts)
-const negative = aggregatePlCalendar(voidExitsOnDay(trades, '2026-10-06'), monthOpts)
+const syncedAt = new Date(Date.now() - 3 * 60 * 1000).toISOString()
+const data = { ...aggregatePlCalendar(trades, monthOpts), as_of: syncedAt }
+const negative = { ...aggregatePlCalendar(voidExitsOnDay(trades, '2026-10-06'), monthOpts), as_of: syncedAt }
 const outDir = '/opt/cursor/artifacts'
 mkdirSync(outDir, { recursive: true })
 

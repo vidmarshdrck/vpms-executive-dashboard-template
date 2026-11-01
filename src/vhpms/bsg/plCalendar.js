@@ -64,6 +64,25 @@ export function formatPl(value, unit) {
   return unit === 'r' ? `${sign}${abs}R` : `${sign}$${abs}`
 }
 
+export function formatSyncedAgo(stamp, now = Date.now()) {
+  const t = typeof stamp === 'number' ? stamp : Date.parse(stamp)
+  if (!Number.isFinite(t)) return null
+  const seconds = Math.max(0, Math.floor((now - t) / 1000))
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}
+
+// Grey "Synced …" after a read. Amber "Not synced" when the read failed. Never a green live mark.
+export function syncStatus({ phase, asOf, syncedAt, now = Date.now() } = {}) {
+  if (phase === 'unavailable' || phase === 'signin') return { tone: 'stale', label: 'Not synced' }
+  const ago = formatSyncedAgo(asOf || syncedAt, now)
+  return { tone: 'ok', label: ago ? `Synced ${ago}` : 'Synced' }
+}
+
 // Best day is a winning day. A null best_day, a losing month, or a non-finite figure is no tile value.
 export function bestDayFigure(data, unit) {
   const best = data?.summary?.best_day

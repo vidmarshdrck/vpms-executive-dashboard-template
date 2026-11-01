@@ -1,5 +1,5 @@
 import { bsgPlConfig } from './plConfig.js'
-import { MODE_LABEL, PL_MODES, bestDayFigure, buildMonthGrid, formatDayLabel, formatPl, isPlCalendar, monthTitle, plSign, shiftMonth } from './plCalendar.js'
+import { MODE_LABEL, PL_MODES, bestDayFigure, buildMonthGrid, formatDayLabel, formatPl, isPlCalendar, monthTitle, plSign, shiftMonth, syncStatus } from './plCalendar.js'
 
 function Chevron({ dir }) {
   return <svg viewBox="0 0 16 16" aria-hidden="true"><path d={dir === 'prev' ? 'M10 3 L5 8 L10 13' : 'M6 3 L11 8 L6 13'} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -11,6 +11,8 @@ export function BsgPlCalendar({
   month,
   mode = 'PAPER',
   unit = bsgPlConfig.defaultUnit,
+  syncedAt = null,
+  now,
   onMonth = () => {},
   onMode = () => {},
   onUnit = () => {},
@@ -27,10 +29,11 @@ export function BsgPlCalendar({
     : phase === 'unavailable'
       ? 'Monthly P/L is unavailable.'
       : null
+  const sync = syncStatus({ phase, asOf: ready ? data.as_of : null, syncedAt, now })
   return <article className="vh-pl" data-testid="bsg-pl-card" data-state={ready ? 'ready' : phase} data-unit={unit}>
     <header className="vh-pl-bar">
       <div className="vh-pl-bar-lead">
-        <span className="vh-pl-live"><i />LIVE</span>
+        <span className={`vh-pl-sync is-${sync.tone}`} data-testid="bsg-pl-sync"><i />{sync.label}</span>
         {config.showModeTag ? <span className="vh-pl-tag" data-testid="bsg-pl-mode-tag">{MODE_LABEL[mode] || mode}</span> : null}
       </div>
       <div className="vh-pl-bar-controls">
@@ -53,10 +56,10 @@ export function BsgPlCalendar({
       </div>
       <div className={`vh-pl-hero is-${ready ? plSign(total) : 'zero'}`}>
         <span>Monthly P/L</span>
-        <strong data-testid="bsg-pl-total">{ready ? formatPl(total, unit) : '—'}</strong>
+        <strong data-testid="bsg-pl-total">{ready && Number.isFinite(Number(total)) ? formatPl(total, unit) : '—'}</strong>
+        {note ? <p className="vh-pl-note" role="status">{note}</p> : null}
       </div>
     </div>
-    {note ? <p className="vh-pl-note" role="status">{note}</p> : null}
     <div className="vh-pl-kpis">
       <div><span>Trades</span><strong>{ready ? summary.trades : '—'}</strong></div>
       <div><span>Avg hold</span><strong>{ready && summary.avg_hold_minutes != null ? `${Math.round(Number(summary.avg_hold_minutes))}m` : '—'}</strong></div>
@@ -65,7 +68,7 @@ export function BsgPlCalendar({
     </div>
     <div className="vh-pl-cal" role="grid" aria-label="Monday to Friday P/L">
       {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((label) => <div key={label} className="vh-pl-dow" role="columnheader">{label}</div>)}
-      <div className="vh-pl-dow vh-pl-dow-week" role="columnheader">Weekly P/L</div>
+      <div className="vh-pl-dow vh-pl-dow-week" role="columnheader"><span className="vh-pl-week-full">Weekly P/L</span><span className="vh-pl-week-short">Week</span></div>
       {grid.map((week) => <div className="vh-pl-week" key={week.weekStart} role="row">
         {week.cells.map((cell, index) => {
           if (!cell) return <div key={`${week.weekStart}-out-${index}`} className="vh-pl-cell is-out" role="gridcell" />

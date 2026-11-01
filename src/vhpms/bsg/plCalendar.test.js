@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { bsgPlConfig } from './plConfig.js'
 import {
-  aggregatePlCalendar, bestDayFigure, buildMonthGrid, catMonth, formatPl, mondayOf, parsePaperTradesCsv, parseTradeTimestamp, voidExitsOnDay,
+  aggregatePlCalendar, bestDayFigure, buildMonthGrid, catMonth, formatPl, formatSyncedAgo, mondayOf, parsePaperTradesCsv, parseTradeTimestamp, syncStatus, voidExitsOnDay,
 } from './plCalendar.js'
 
 const csvUrl = new URL('../../../server/fixtures/bsg_paper_trades.csv', import.meta.url)
@@ -107,6 +107,16 @@ test('CAT exit date, closed trades only, and the pnl column is not the dollar fi
   assert.equal(formatPl(-1.44, 'r'), '-1.44R')
   assert.equal(formatPl(-9.43, 'usd'), '-$9.43')
   assert.equal(formatPl(0, 'usd'), '$0.00')
+  const now = Date.parse('2026-11-01T15:03:00Z')
+  assert.equal(formatSyncedAgo('2026-11-01T15:00:00Z', now), '3m ago')
+  assert.equal(formatSyncedAgo('2026-11-01T15:02:30Z', now), 'just now')
+  assert.equal(formatSyncedAgo('2026-11-01T13:03:00Z', now), '2h ago')
+  assert.deepEqual(syncStatus({ phase: 'ready', asOf: '2026-11-01T15:00:00Z', now }), { tone: 'ok', label: 'Synced 3m ago' })
+  assert.deepEqual(syncStatus({ phase: 'ready', syncedAt: '2026-11-01T15:00:00Z', now }), { tone: 'ok', label: 'Synced 3m ago' })
+  assert.deepEqual(syncStatus({ phase: 'unavailable', now }), { tone: 'stale', label: 'Not synced' })
+  assert.deepEqual(syncStatus({ phase: 'signin', asOf: '2026-11-01T15:00:00Z', now }), { tone: 'stale', label: 'Not synced' })
+  assert.equal(syncStatus({ phase: 'ready' }).label.startsWith('Synced'), true)
+  assert.equal(syncStatus({ phase: 'unavailable' }).label.includes('LIVE'), false)
 })
 
 test('dropping 6 Oct is a negative month, and a losing month has no best-day figure', async () => {
