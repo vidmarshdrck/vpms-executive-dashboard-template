@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
-import { findAccount, isActiveAccount } from './directory.js'
+import { OWNER_USERNAME, accountList, accountRoles, findAccount, isActiveAccount, withCurrentRole } from './directory.js'
 
 const SESSION_KEY = 'vhpms-session'
 
 export function emailFor(username, env = {}) {
   const key = String(username || '').trim().toLowerCase()
-  if (key === 'shadrickvidmar') {
+  if (key === OWNER_USERNAME) {
     const email = String(env.VITE_VHPMS_ADMIN_EMAIL || '').trim()
     return email || null
   }
@@ -17,6 +17,14 @@ export function emailFor(username, env = {}) {
   return null
 }
 
+export function accountForSignIn(username, directory, env = {}) {
+  const direct = findAccount(username, directory)
+  if (direct) return direct
+  const key = String(username || '').trim().toLowerCase()
+  if (!key.includes('@')) return null
+  return accountList(directory).find((account) => String(emailFor(account.username, env) || '').toLowerCase() === key) || null
+}
+
 export function readSession(directory) {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY)
@@ -24,7 +32,8 @@ export function readSession(directory) {
     const parsed = JSON.parse(raw)
     const account = findAccount(parsed?.username, directory)
     if (!isActiveAccount(account, directory)) return null
-    return parsed.token ? { ...account, token: parsed.token } : account
+    const sessionUser = withCurrentRole(account, parsed?.currentRole)
+    return parsed.token ? { ...sessionUser, token: parsed.token } : sessionUser
   } catch {
     return null
   }
@@ -32,7 +41,10 @@ export function readSession(directory) {
 
 export function saveSession(user, token) {
   const payload = { username: user.username }
-  if (typeof token === 'string' && token) payload.token = token
+  const sessionToken = typeof token === 'string' && token ? token : (typeof user.token === 'string' && user.token ? user.token : '')
+  if (sessionToken) payload.token = sessionToken
+  const currentRole = accountRoles(user).includes(user.currentRole) ? user.currentRole : null
+  if (currentRole) payload.currentRole = currentRole
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(payload))
 }
 
@@ -47,7 +59,7 @@ export async function signIn(username, password, options = {}) {
   const pass = String(password ?? '')
   if (!name || !pass) return { ok: false, error: 'Enter both username and password.' }
   const directory = options.directory
-  const account = findAccount(name, directory)
+  const account = accountForSignIn(name, directory, env)
   if (!account || !isActiveAccount(account, directory)) return { ok: false, error: 'Incorrect username or password.' }
 
   const authUrl = String(env.VITE_VHPMS_AUTH_URL || '').trim()
@@ -87,7 +99,7 @@ export async function signIn(username, password, options = {}) {
       if (result?.error || typeof session?.access_token !== 'string' || session.access_token === '' || typeof signedIn?.id !== 'string' || signedIn.id === '') {
         return { ok: false, error: 'Incorrect username or password.' }
       }
-      return { ok: true, user: account }
+      return { ok: true, user: account, token: session.access_token }
     } catch {
       return { ok: false, error: 'Sign-in service is unreachable.' }
     }

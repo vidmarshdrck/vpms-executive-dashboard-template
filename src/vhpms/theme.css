@@ -95,7 +95,10 @@
   display: grid; place-items: center; font-size: 10px; font-weight: 700;
 }
 .vh-app .side-user-name { display: block; font-size: 12px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.vh-app .side-user-role { display: block; font-size: 10px; color: var(--text-muted); text-transform: capitalize; }
+.vh-app .side-user-role { display: block; font-size: 10px; color: var(--text-muted); }
+.vh-app .role-switch { display: block; margin: 8px 8px 0; }
+.vh-app .role-switch span { display: block; margin-bottom: 4px; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+.vh-app .role-switch select { min-height: 34px; padding: 6px 8px; }
 .vh-app .side-user button.logout {
   display: block; margin: 6px 8px 0; padding: 0; border: 0; background: none; cursor: pointer;
   font-size: 12px; font-weight: 600; color: var(--text-muted);
@@ -163,7 +166,11 @@
 .vh-app .chip.amber { color: var(--rag-amber); background: var(--rag-amber-bg); }
 .vh-app .chip.red { color: var(--rag-red); background: var(--rag-red-bg); }
 .vh-app .chip.na { color: var(--rag-na); background: var(--rag-na-bg); }
-.vh-app .chip.role { color: var(--brand); background: var(--brand-tint); }
+.vh-app .chip.role { color: var(--brand); background: var(--brand-tint); text-transform: none; letter-spacing: 0; font-size: 11px; }
+.vh-app .role-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.vh-app .role-legend { display: block; font: 600 12px/1 var(--font-sans); color: var(--text-secondary); margin: 0 0 8px; }
+.vh-app .role-choices { display: flex; flex-direction: column; gap: 8px; }
+.vh-app .role-choices .vh-check { font-weight: 500; color: var(--text-primary); }
 .vh-app .badge-dept { display: inline-flex; align-items: center; font: 700 10.5px/1 var(--font-sans); text-transform: uppercase; letter-spacing: .05em; padding: 4px 8px; border-radius: 4px; background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--border); }
 .vh-app .weighting-tag { font: 600 11px/1 var(--font-sans); font-variant-numeric: tabular-nums; color: var(--text-muted); }
 .vh-app .stat-num { font: 500 40px/1 var(--font-display); letter-spacing: -.035em; font-variant-numeric: tabular-nums; color: var(--text-primary); }

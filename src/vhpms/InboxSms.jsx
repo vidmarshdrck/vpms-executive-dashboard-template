@@ -49,7 +49,7 @@ export function SmsDashboard({ user, books, rows, loadError, labels, onLabelled,
     try {
       const next = labelTransaction(labels, row.id, fields.businessId, fields.purpose)
       const saved = await pushSmsLabel({ env: import.meta.env, token: user.token || '', id: row.id, businessId: fields.businessId, purpose: fields.purpose })
-      if (!saved.ok) { setMessage('The SMS service did not confirm the label.'); return }
+      if (!saved.ok) { setMessage('The label was not saved. The item is still in the Inbox.'); return }
       onLabelled(next)
       setMessage('Saved.')
     } catch (error) { setMessage(error.message) }

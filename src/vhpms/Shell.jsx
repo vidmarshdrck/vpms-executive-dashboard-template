@@ -1,6 +1,6 @@
 import { NavIcon, MenuIcon } from './icons.jsx'
 import { VidmarCredit } from './Donut.jsx'
-import { initials, roleLine, managementLinks, adminLinks, WORKSPACE_LINKS } from './directory.js'
+import { accountRoles, initials, roleLabel, roleLine, managementLinks, adminLinks, WORKSPACE_LINKS } from './directory.js'
 import { activeBusinesses } from './books.js'
 
 export function LoginScreen({ error, busy, onSubmit }) {
@@ -38,7 +38,7 @@ const LIVE_LINKS = [
   { id: 'sms', label: 'SMS Transactions', icon: 'activity' },
 ]
 
-export default function Shell({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onHome, onLogout, title, children }) {
+export default function Shell({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onHome, onLogout, onRole, title, children }) {
   const businesses = activeBusinesses(books)
   return (
     <div className="vh-app">
@@ -76,6 +76,15 @@ export default function Shell({ user, view, menu, setMenu, mode, books, business
               <span className="side-user-role">{roleLine(user)}</span>
             </span>
           </div>
+          {accountRoles(user).length > 1 && (
+            <label className="role-switch">
+              <span>Current role</span>
+              <select aria-label="Current role" value={user.currentRole || 'all'} onChange={(event) => onRole(event.target.value)}>
+                <option value="all">All roles</option>
+                {accountRoles(user).map((role) => <option key={role} value={role}>{roleLabel(role)}</option>)}
+              </select>
+            </label>
+          )}
           <button type="button" className="logout" onClick={onLogout}>Log out</button>
         </div>
       </aside>

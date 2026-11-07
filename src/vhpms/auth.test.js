@@ -1,12 +1,15 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { signIn, emailFor } from './auth.js'
+import { signIn, emailFor, accountForSignIn, readSession, saveSession, clearSession } from './auth.js'
 
 test('sign-in checks a remote service and never ships a password', async () => {
   const source = readFileSync(new URL('./auth.js', import.meta.url), 'utf8')
   assert.equal(source.includes('ChangeMe123'), false)
+  assert.equal(source.includes('body.ok !== true'), true)
+  assert.equal(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(source), false)
   assert.equal(emailFor('shadrickvidmar', { VITE_VHPMS_ADMIN_EMAIL: 'owner@vidmar.tech' }), 'owner@vidmar.tech')
+  assert.equal(emailFor('shadrickvidmar', {}), null)
   assert.equal(emailFor('nehemiah', { VITE_VHPMS_USER_EMAILS: 'nehemiah:nehemiah@vidmar.tech' }), 'nehemiah@vidmar.tech')
 
   let called = false
@@ -33,6 +36,7 @@ test('sign-in checks a remote service and never ships a password', async () => {
   })
   assert.equal(allowed.ok, true)
   assert.equal(allowed.user.role, 'admin')
+  assert.deepEqual(allowed.user.roles, ['admin', 'gm', 'hrd'])
   assert.equal(body.username, 'shadrickvidmar')
   assert.equal(body.password, 'not-stored')
 })
@@ -72,7 +76,40 @@ test('supabase sign-in fails closed unless a session and user come back', async 
     assert.equal(result.user, undefined)
   }
   assert.equal(offline.error, 'Sign-in service is unreachable.')
-  const accepted = await signIn('shadrickvidmar', 'not-stored', { env, createClient: client({ data: { session: { access_token: 'token' }, user: { id: '1' } }, error: null }) })
+  const seen = {}
+  const accepted = await signIn('shadrickvidmar', 'not-stored', {
+    env,
+    createClient: () => ({ auth: { signInWithPassword: async ({ email }) => { seen.email = email; return { data: { session: { access_token: 'token' }, user: { id: '1' } }, error: null } } } }),
+  })
   assert.equal(accepted.ok, true)
   assert.equal(accepted.user.username, 'shadrickvidmar')
+  assert.deepEqual(accepted.user.roles, ['admin', 'gm', 'hrd'])
+  assert.equal(accepted.token, 'token')
+  assert.equal(seen.email, 'owner@vidmar.tech')
+
+  const byEmail = await signIn(' Owner@vidmar.tech ', 'not-stored', {
+    env,
+    createClient: client({ data: { session: { access_token: 'token' }, user: { id: '1' } }, error: null }),
+  })
+  assert.equal(byEmail.ok, true)
+  assert.equal(byEmail.user.username, 'shadrickvidmar')
+  assert.equal(accountForSignIn('owner@vidmar.tech', undefined, env).username, 'shadrickvidmar')
+})
+
+test('owner session keeps the access token and the selected role', () => {
+  const memory = new Map()
+  globalThis.sessionStorage = {
+    getItem: (key) => (memory.has(key) ? memory.get(key) : null),
+    setItem: (key, value) => memory.set(key, String(value)),
+    removeItem: (key) => memory.delete(key),
+  }
+  const owner = accountForSignIn('shadrickvidmar')
+  saveSession({ ...owner, currentRole: 'hrd' }, 'supabase-access')
+  const restored = readSession()
+  assert.equal(restored.username, 'shadrickvidmar')
+  assert.equal(restored.currentRole, 'hrd')
+  assert.equal(restored.token, 'supabase-access')
+  assert.deepEqual(restored.roles, ['admin', 'gm', 'hrd'])
+  clearSession()
+  assert.equal(readSession(), null)
 })

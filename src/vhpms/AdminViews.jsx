@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { operatingDepartments, formatWeight, addDepartment, updateDepartment, deleteDepartment, addKpi, toggleKpi, deleteKpi } from './score.js'
-import { accountList, ROLES, addAccount, setAccountActive, isActiveAccount } from './directory.js'
+import { accountList, ROLES, roleLabel, addAccount, setAccountActive, isActiveAccount, canDisable } from './directory.js'
 import { setBusinessActive } from './books.js'
 import { PageFooter } from './Donut.jsx'
 
@@ -124,22 +124,25 @@ export function AdminUsers({ directory, onChange }) {
   const [error, setError] = useState('')
   const departments = ['engineering', 'ict', 'operations', 'finance', 'hr', 'procurement', 'safety', 'security', 'pm']
   function run(mutate) {
-    try { onChange(mutate(directory)); setMessage('Saved.'); setError('') } catch (err) { setError(err.message); setMessage('') }
+    try { onChange(mutate(directory)); setMessage('Saved.'); setError(''); return true } catch (err) { setError(err.message); setMessage(''); return false }
   }
   return (
     <div className="wrap">
-      <div className="topbar"><div><p className="brand-eyebrow">Admin</p><h1>Users</h1><p className="sub">Roles: admin, gm, board (view only), dept head, and staff. Sign-in is checked by the authentication service.</p></div></div>
+      <div className="topbar"><div><p className="brand-eyebrow">Admin</p><h1>Users</h1><p className="sub">An account can hold more than one role. Administrator, General Manager, and HRD (Human Resources Director) can be combined. Board is view only. Department head and staff work inside one department. Sign-in is checked by the authentication service.</p></div></div>
       <Note message={message} error={error} />
       <section className="card" style={{ maxWidth: 640, marginBottom: 24 }}>
         <div className="card-head"><h2>Add user</h2></div>
         <div className="card-body">
-          <form onSubmit={(event) => { event.preventDefault(); const fields = Object.fromEntries(new FormData(event.currentTarget)); run((current) => addAccount(current, { username: fields.username, name: fields.full_name, role: fields.role, dept: fields.department || null, agent: fields.agent === 'yes' })); event.currentTarget.reset() }}>
+          <form onSubmit={(event) => { event.preventDefault(); const data = new FormData(event.currentTarget); const saved = run((current) => addAccount(current, { username: data.get('username'), name: data.get('full_name'), roles: data.getAll('roles'), dept: data.get('department') || null, agent: data.get('agent') === 'yes' })); if (saved) event.currentTarget.reset() }}>
             <div className="field-row">
               <div className="field"><label htmlFor="username">Username</label><input id="username" name="username" type="text" required /></div>
               <div className="field"><label htmlFor="full_name">Full name</label><input id="full_name" name="full_name" type="text" required /></div>
             </div>
+            <div className="field">
+              <span className="role-legend">Roles</span>
+              <div className="role-choices">{ROLES.map((role) => <label key={role} className="vh-check"><input type="checkbox" name="roles" value={role} /> <span>{role === 'hrd' ? 'HRD — Human Resources Director' : roleLabel(role)}</span></label>)}</div>
+            </div>
             <div className="field-row">
-              <div className="field"><label htmlFor="role">Role</label><select id="role" name="role" required>{ROLES.map((role) => <option key={role} value={role}>{role.replace('_', ' ')}</option>)}</select></div>
               <div className="field"><label htmlFor="department">Department</label><select id="department" name="department"><option value="">—</option>{departments.map((code) => <option key={code} value={code}>{code}</option>)}</select></div>
             </div>
             <div className="field"><label htmlFor="agent">AI agent</label><select id="agent" name="agent"><option value="no">No</option><option value="yes">Yes</option></select></div>
@@ -148,7 +151,7 @@ export function AdminUsers({ directory, onChange }) {
         </div>
       </section>
       <section className="card"><div className="card-body pad-0"><div className="tbl-scroll"><table className="data">
-        <thead><tr><th>Username</th><th>Full name</th><th>Role</th><th>Department</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Username</th><th>Full name</th><th>Roles</th><th>Department</th><th>Status</th><th></th></tr></thead>
         <tbody>
           {accountList(directory).map((account) => {
             const active = isActiveAccount(account, directory)
@@ -156,10 +159,10 @@ export function AdminUsers({ directory, onChange }) {
               <tr key={account.username}>
                 <td>{account.username}</td>
                 <td>{account.name}{account.agent && <> <span className="chip role">AI agent</span></>}</td>
-                <td><span className="chip role">{account.role.replaceAll('_', ' ')}</span></td>
+                <td><span className="role-list">{account.roles.map((role) => <span key={role} className="chip role" title={role === 'hrd' ? 'Human Resources Director' : roleLabel(role)}>{roleLabel(role)}</span>)}</span></td>
                 <td>{account.dept || '—'}</td>
                 <td><span className={`chip ${active ? 'green' : 'na'}`}>{active ? 'Active' : 'Disabled'}</span></td>
-                <td>{account.username !== 'shadrickvidmar' && <button className="btn btn-ghost btn-sm" type="button" onClick={() => run((current) => setAccountActive(current, account.username, !active))}>{active ? 'Disable' : 'Enable'}</button>}</td>
+                <td>{canDisable(account.username) && <button className="btn btn-ghost btn-sm" type="button" onClick={() => run((current) => setAccountActive(current, account.username, !active))}>{active ? 'Disable' : 'Enable'}</button>}</td>
               </tr>
             )
           })}

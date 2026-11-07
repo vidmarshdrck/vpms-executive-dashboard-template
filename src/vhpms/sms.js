@@ -1,6 +1,10 @@
 import { BLUE_PALETTE, formatZmw } from './books.js'
 
 export const SMS_LABELS_KEY = 'vhpms-sms-labels-v1'
+
+export function clearPrivateSms(storage) {
+  try { storage.removeItem(SMS_LABELS_KEY) } catch { /* private mode */ }
+}
 const SENDERS = ['MTN', 'Airtel', 'other']
 
 export function emptyLabels() {
