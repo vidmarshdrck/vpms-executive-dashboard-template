@@ -5,7 +5,7 @@ const SESSION_KEY = 'vhpms-session'
 
 export function emailFor(username, env = {}) {
   const key = String(username || '').trim().toLowerCase()
-  if (key === 'administrator') {
+  if (key === 'shadrickvidmar') {
     const email = String(env.VITE_VHPMS_ADMIN_EMAIL || '').trim()
     return email || null
   }
@@ -24,14 +24,16 @@ export function readSession(directory) {
     const parsed = JSON.parse(raw)
     const account = findAccount(parsed?.username, directory)
     if (!isActiveAccount(account, directory)) return null
-    return account
+    return parsed.token ? { ...account, token: parsed.token } : account
   } catch {
     return null
   }
 }
 
-export function saveSession(user) {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ username: user.username }))
+export function saveSession(user, token) {
+  const payload = { username: user.username }
+  if (typeof token === 'string' && token) payload.token = token
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(payload))
 }
 
 export function clearSession() {
@@ -68,7 +70,8 @@ export async function signIn(username, password, options = {}) {
       return { ok: false, error: 'Incorrect username or password.' }
     }
     if (!body || body.ok !== true) return { ok: false, error: 'Incorrect username or password.' }
-    return { ok: true, user: account }
+    const token = typeof body.token === 'string' && body.token ? body.token : null
+    return { ok: true, user: account, token }
   }
 
   const email = emailFor(account.username, env)

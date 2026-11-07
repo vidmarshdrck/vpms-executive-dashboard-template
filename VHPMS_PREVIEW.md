@@ -8,7 +8,9 @@ This extends the owner's existing VPMS React/Vite executive dashboard template. 
 
 ## Sign-in
 
-The username `administrator` is the admin role (Shadrick Vidmar). The password is never stored in this repository. Set either `VITE_VHPMS_AUTH_URL` (POST `{username, password}`, `200 {ok:true}`) or Supabase (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_VHPMS_ADMIN_EMAIL`). See `.env.example`. The GitHub Pages workflow forwards those repository variables. Other roster usernames sign in only when the same service accepts them, or when `VITE_VHPMS_USER_EMAILS` maps them to Supabase emails.
+The username `shadrickvidmar` is the admin role (Shadrick Vidmar). The credential is checked only by `VITE_VHPMS_AUTH_URL` (POST `{username, password}`, and only `200` with `{ok:true}` is accepted) or by Supabase (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_VHPMS_ADMIN_EMAIL`). Nothing secret is stored in this repository. See `.env.example`. The GitHub Pages workflow forwards those repository variables. Other roster usernames sign in only when the same service accepts them, or when `VITE_VHPMS_USER_EMAILS` maps them to Supabase emails.
+
+SMS rows are read from `VITE_VHPMS_SMS_URL` with the session bearer token, or from Supabase table `vhpms_sms_transactions` after `auth.getSession()` returns an access token. The client does not query that table without a session. Expected columns: `id`, `received_at`, `sender` (`MTN`, `Airtel`, or `other`), `transaction_id`, `amount`, `direction` (`in` or `out`), `counterparty`, `raw_message`, `business_id`, `purpose`. A label is saved with PATCH `{id, business_id, purpose}` and is kept only when the response is `200` and `{ok:true}`. Row level security must restrict the table to authenticated sessions. No messages are included in the site bundle.
 
 ## Functional slice
 

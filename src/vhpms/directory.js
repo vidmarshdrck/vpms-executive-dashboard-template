@@ -1,5 +1,5 @@
 export const ACCOUNTS = [
-  { username: 'administrator', name: 'Shadrick Vidmar', role: 'admin' },
+  { username: 'shadrickvidmar', name: 'Shadrick Vidmar', role: 'admin' },
   { username: 'nehemiah', name: 'Nehemiah', role: 'gm' },
   { username: 'barnabas', name: 'Barnabas', role: 'dept_head', dept: 'engineering', unit: 'VE' },
   { username: 'joseph', name: 'Joseph', role: 'dept_head', dept: 'ict', unit: 'VAI' },
@@ -27,7 +27,7 @@ export function findAccount(username, directory = emptyDirectory()) {
 
 export function isActiveAccount(account, directory = emptyDirectory()) {
   if (!account) return false
-  if (account.username === 'administrator') return true
+  if (account.username === 'shadrickvidmar') return true
   return !(directory.inactive || []).includes(account.username)
 }
 
@@ -98,7 +98,7 @@ export function addAccount(directory, account) {
 }
 
 export function setAccountActive(directory, username, active) {
-  if (username === 'administrator') return directory
+  if (username === 'shadrickvidmar') return directory
   const inactive = directory.inactive.filter((item) => item !== username)
   if (!active) inactive.push(username)
   return { ...directory, inactive }

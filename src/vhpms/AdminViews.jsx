@@ -159,7 +159,7 @@ export function AdminUsers({ directory, onChange }) {
                 <td><span className="chip role">{account.role.replaceAll('_', ' ')}</span></td>
                 <td>{account.dept || '—'}</td>
                 <td><span className={`chip ${active ? 'green' : 'na'}`}>{active ? 'Active' : 'Disabled'}</span></td>
-                <td>{account.username !== 'administrator' && <button className="btn btn-ghost btn-sm" type="button" onClick={() => run((current) => setAccountActive(current, account.username, !active))}>{active ? 'Disable' : 'Enable'}</button>}</td>
+                <td>{account.username !== 'shadrickvidmar' && <button className="btn btn-ghost btn-sm" type="button" onClick={() => run((current) => setAccountActive(current, account.username, !active))}>{active ? 'Disable' : 'Enable'}</button>}</td>
               </tr>
             )
           })}

@@ -2,8 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { findAccount, homeView, managementLinks, adminLinks, roleLine, addAccount, emptyDirectory, setAccountActive, isActiveAccount } from './directory.js'
 
-test('administrator is the owner admin and staff carry the AI agent tag', () => {
-  const admin = findAccount('administrator')
+test('shadrickvidmar is the owner admin and staff carry the AI agent tag', () => {
+  const admin = findAccount('shadrickvidmar')
   assert.equal(admin.role, 'admin')
   assert.equal(admin.name, 'Shadrick Vidmar')
   assert.equal(homeView(admin), 'gm')
@@ -16,12 +16,12 @@ test('administrator is the owner admin and staff carry the AI agent tag', () => 
   assert.equal(adminLinks(findAccount('nehemiah')).length, 0)
 })
 
-test('directory edits do not deactivate the administrator', () => {
+test('directory edits do not deactivate the shadrickvidmar', () => {
   let directory = emptyDirectory()
   directory = addAccount(directory, { username: 'board', name: 'Board of Directors', role: 'board' })
   assert.equal(findAccount('board', directory).role, 'board')
-  directory = setAccountActive(directory, 'administrator', false)
-  assert.equal(isActiveAccount(findAccount('administrator', directory), directory), true)
+  directory = setAccountActive(directory, 'shadrickvidmar', false)
+  assert.equal(isActiveAccount(findAccount('shadrickvidmar', directory), directory), true)
   directory = setAccountActive(directory, 'board', false)
   assert.equal(isActiveAccount(findAccount('board', directory), directory), false)
   assert.throws(() => addAccount(directory, { username: 'board', name: 'Again', role: 'board' }))

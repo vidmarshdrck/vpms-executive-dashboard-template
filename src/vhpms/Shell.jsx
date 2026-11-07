@@ -31,7 +31,13 @@ function NavButton({ item, current, onOpen }) {
   return <button type="button" aria-current={current === item.id ? 'page' : undefined} onClick={() => onOpen(item.id)}><NavIcon name={item.icon} />{item.label}</button>
 }
 
-export default function Shell({ user, view, menu, setMenu, mode, books, businessId, onOpen, onLive, onBack, onBusiness, onHome, onLogout, title, children }) {
+const LIVE_LINKS = [
+  { id: 'activities', label: 'Activities', icon: 'clipboard' },
+  { id: 'inbox', label: 'Inbox', icon: 'inbox' },
+  { id: 'sms', label: 'SMS Transactions', icon: 'activity' },
+]
+
+export default function Shell({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onHome, onLogout, title, children }) {
   const businesses = activeBusinesses(books)
   return (
     <div className="vh-app">
@@ -43,10 +49,11 @@ export default function Shell({ user, view, menu, setMenu, mode, books, business
         <nav className="side-nav" aria-label="Primary navigation">
           {mode === 'businesses' ? (
             <>
-              <button type="button" className="back-management" onClick={onBack}><NavIcon name="dashboard" />Back to management</button>
-              <div className="side-label">Businesses</div>
+              {LIVE_LINKS.map((item) => <button type="button" key={item.id} aria-current={view === item.id ? 'page' : undefined} onClick={() => onOpen(item.id)}><NavIcon name={item.icon} />{item.label}{item.id === 'inbox' && inboxCount > 0 ? ` (${inboxCount})` : ''}</button>)}
+              <div className="side-label spaced">Businesses</div>
               {businesses.map((business) => <button type="button" key={business.id} aria-current={view === 'business' && businessId === business.id ? 'page' : undefined} onClick={() => onBusiness(business.id)}><NavIcon name="building" />{business.name}</button>)}
               {!businesses.length && <p className="side-label">No active businesses</p>}
+              <button type="button" className="back-management" onClick={onBack}><NavIcon name="dashboard" />Back to management</button>
             </>
           ) : (
             <>

@@ -263,6 +263,16 @@
   border-color: var(--brand) !important;
   box-shadow: 0 0 0 3px rgba(20, 84, 192, .18) !important;
 }
+.vh-app .slide-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+.vh-app .slide-tabs button { margin: 0 0 -1px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; padding: 8px 16px; font-size: 14px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; }
+.vh-app .slide-tabs button.is-active { border-bottom-color: var(--brand); color: var(--brand); font-weight: 600; }
+.vh-app .slide-tabs button:hover { color: var(--text-primary); background: transparent; }
+.vh-app .slide-viewport { overflow: hidden; }
+.vh-app .slide-track { display: flex; transition: transform .7s cubic-bezier(.22, .7, .2, 1); }
+.vh-app .slide-page { min-width: 0; }
+.vh-app tr.needs-label td { background: var(--rag-amber-bg); }
+.vh-app .card.needs-label { border-color: var(--rag-amber); }
+@media (prefers-reduced-motion: reduce) { .vh-app .slide-track { transition: none; } }
 @media print {
   .vh-app .sidebar, .vh-app .app-header, .vh-app .scrim, .vh-app .live-btn, .vh-app .btn { display: none !important; }
   .vh-app .app-main { margin-left: 0; }
