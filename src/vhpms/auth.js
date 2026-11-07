@@ -50,19 +50,25 @@ export async function signIn(username, password, options = {}) {
 
   const authUrl = String(env.VITE_VHPMS_AUTH_URL || '').trim()
   if (authUrl) {
+    let response
     try {
-      const response = await fetchImpl(authUrl, {
+      response = await fetchImpl(authUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ username: account.username, password: pass }),
       })
-      if (!response.ok) return { ok: false, error: 'Incorrect username or password.' }
-      const body = await response.json().catch(() => ({}))
-      if (body?.ok === false) return { ok: false, error: 'Incorrect username or password.' }
-      return { ok: true, user: account }
     } catch {
       return { ok: false, error: 'Sign-in service is unreachable.' }
     }
+    if (response?.status !== 200) return { ok: false, error: 'Incorrect username or password.' }
+    let body
+    try {
+      body = await response.json()
+    } catch {
+      return { ok: false, error: 'Incorrect username or password.' }
+    }
+    if (!body || body.ok !== true) return { ok: false, error: 'Incorrect username or password.' }
+    return { ok: true, user: account }
   }
 
   const email = emailFor(account.username, env)
@@ -70,9 +76,14 @@ export async function signIn(username, password, options = {}) {
   const key = String(env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim()
   if (url && key && email) {
     try {
-      const client = createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } })
-      const { error } = await client.auth.signInWithPassword({ email, password: pass })
-      if (error) return { ok: false, error: 'Incorrect username or password.' }
+      const factory = options.createClient || createClient
+      const client = factory(url, key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } })
+      const result = await client.auth.signInWithPassword({ email, password: pass })
+      const session = result?.data?.session
+      const signedIn = result?.data?.user
+      if (result?.error || typeof session?.access_token !== 'string' || session.access_token === '' || typeof signedIn?.id !== 'string' || signedIn.id === '') {
+        return { ok: false, error: 'Incorrect username or password.' }
+      }
       return { ok: true, user: account }
     } catch {
       return { ok: false, error: 'Sign-in service is unreachable.' }
