@@ -18,7 +18,7 @@ export default function LiveWorkspace() {
   e.preventDefault();setBusy(true);setError('')
   const form=e.currentTarget, fields=new FormData(form)
   try {const {error}=await client.auth.signInWithPassword({email:String(fields.get('email')),password:String(fields.get('password'))});if(error)throw error;form.reset()}
-  catch {setError('Supabase sign-in failed. Check your existing account credentials; no local or demo login is accepted.')}
+  catch {setError('Supabase sign-in failed. Check the account email and password.')}
   finally{setBusy(false)}
  }
  async function refresh(){
@@ -30,7 +30,7 @@ export default function LiveWorkspace() {
    const failed=result.find(r=>r.error);if(failed)throw failed.error
    if(result.some(r=>r.data.length>=1000))throw new Error('LIMIT')
    setData({businesses:result[0].data,projects:result[1].data,tasks:result[2].data});setClock(Date.now())
-  } catch(error){setError(error.message==='LIMIT'?'Result limit reached. No partial dashboard is displayed; a paginated adapter is required.':'Live read unavailable. Migration, business membership or API access is not provisioned. No local preview data was substituted.')}
+  } catch(error){setError(error.message==='LIMIT'?'Result limit reached. No partial dashboard is displayed; a paginated adapter is required.':'Live read unavailable. Migration, business membership or API access is not provisioned. No substitute records were loaded.')}
   finally{setBusy(false)}
  }
  async function logout(){generation.current++;setData(empty);setVe(null);setSession(null);await client.auth.signOut({scope:'local'})}
@@ -49,6 +49,6 @@ export default function LiveWorkspace() {
  {session&&<><section className="vh-panel"><h2>Source projects</h2>{projects.length?<ul className="vh-list">{projects.map(p=><li key={`${p.business_id}:${p.external_id}`}><div><strong>{p.title}</strong><small>{p.business_id} · source status: {p.source_status} · {isStale(p.synced_at,clock)?'Stale':'Recent sync'} · {p.synced_at}</small></div></li>)}</ul>:<p>No authorised project records loaded. This does not mean no projects exist.</p>}</section>
  <section className="vh-panel"><h2>Tasks & automatic priority</h2><p>Approved business + category rule → source priority fallback. Audited manual overrides take precedence. Owner identity never affects priority; severity is not financial focus.</p>{tasks.length?<ul className="vh-list">{tasks.map(t=><li key={`${t.business_id}:${t.external_id}`}><div><strong>{t.identifier} · {t.title}</strong><small>{t.business_id} · {t.owner_name||'Unassigned'} · source status: {t.source_status} (not proof of execution)</small><small>Priority: {t.effective_priority||'Unspecified'} · {t.priority_source} · {t.priority_rationale}</small><small>Due: {t.due_at||'Unspecified'} · {isStale(t.synced_at,clock)?'Stale / do not rely on current state':'Recent sync'} · last sync {t.synced_at}</small></div></li>)}</ul>:<p>No authorised task records loaded. Unprovisioned membership never falls back to public records.</p>}</section></>}
  <section className="vh-panel"><h2>VE operations · existing integration</h2><p>Existing source: VE’s running local FastAPI dashboard and Supabase public family_accounts / customer_account_dashboard. Keep renewal operations here; do not embed an administrative dashboard or expose customer contact data.</p><p><strong>{ve?'Authorised aggregate received.':'Not connected.'}</strong> Existing VE source tables are reused, not copied. Google consent is a separate dependency.</p>{session&&<button disabled={busy} onClick={readVe}>Read authorised VE summary</button>}{ve&&<><dl className="vh-evidence"><div><dt>Family account rows</dt><dd>{ve.family_accounts}</dd></div><div><dt>Due date within 7 days</dt><dd>{ve.due_within_7_days}</dd></div><div><dt>Past due date</dt><dd>{ve.past_due_date}</dd></div><div><dt>Missing due date</dt><dd>{ve.missing_due_date}</dd></div></dl><p>Source: {ve.source} · queried {ve.queried_at}. Source last updated: unavailable. Due-date counts are not verified renewal failures, active subscriptions or revenue.</p></>}</section>
- <section className="vh-panel"><h2>AI chat</h2><p><strong>Not connected.</strong> Chat is retained as an integration module, but no authenticated, scoped AI endpoint has been verified. TPPL’s quick-reply helper is scripted; it is not reused as an AI claim. No provider requests or task writes are sent from this module.</p><label className="vh-field">Message<textarea aria-label="AI chat message" disabled placeholder="AI endpoint not connected"/></label><button disabled>Send · not connected</button></section>
+ <section className="vh-panel"><h2>AI chat</h2><p><strong>Not connected.</strong> Chat stays in the workspace, and no authenticated AI endpoint is connected. No provider requests or task writes are sent from this module.</p><label className="vh-field">Message<textarea aria-label="AI chat message" disabled placeholder="AI endpoint not connected"/></label><button disabled>Send · not connected</button></section>
  </>
 }

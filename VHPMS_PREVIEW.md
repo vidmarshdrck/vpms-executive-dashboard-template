@@ -1,10 +1,16 @@
 # VHPMS incremental workspace preview
 
-Phone-accessible preview: https://vidmarshdrck.github.io/vpms-executive-dashboard-template/?preview=vhpms
+The site root opens the VHPMS sign-in. On GitHub Pages that is `/?preview=vhpms` as well as `/`. Template dashboards stay on their existing paths, starting at `/login`. Set `VITE_BASE_PATH=/` when the app is served at a domain root such as vidmar.tech.
 
 Source: https://github.com/vidmarshdrck/vpms-executive-dashboard-template
 
 This extends the owner's existing VPMS React/Vite executive dashboard template. The existing login, authorization guards, and template routes are unchanged. It uses the template's self-hosted Inter Tight/Outfit fonts, sidebar/operating layout, and semantic status treatments; the owner's `tppl_pms` source was inspected as a related design reference. No new repository or infrastructure was created.
+
+## Sign-in
+
+The username `shadrickvidmar` is Shadrick Vidmar, with the Administrator, General Manager, and HRD (Human Resources Director) roles. Signing in with that username or with `VITE_VHPMS_ADMIN_EMAIL` uses the same account. The credential is checked only by `VITE_VHPMS_AUTH_URL` (POST `{username, password}`, and only `200` with `{ok:true}` is accepted) or by Supabase (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_VHPMS_ADMIN_EMAIL`). Nothing secret is stored in this repository. See `.env.example`. The GitHub Pages workflow forwards those repository variables. Other roster usernames sign in only when the same service accepts them, or when `VITE_VHPMS_USER_EMAILS` maps them to Supabase emails. An account can hold several roles. All roles shows every section those roles grant. The current-role control narrows the shell to one role.
+
+SMS rows load only after sign-in. They are read from `VITE_VHPMS_SMS_URL` with the session bearer token, or from Supabase table `vhpms_sms_transactions` with the signed-in access token. The client does not query that table without a session, and sign-in starts the read immediately. Expected columns: `id`, `received_at`, `sender` (`MTN`, `Airtel`, or `other`), `transaction_id`, `amount`, `direction` (`in` or `out`), `counterparty`, `raw_message`, `business_id`, `purpose`. With `VITE_VHPMS_SMS_URL`, a label is saved with PATCH `{id, business_id, purpose}` and is kept only when the response is `200` and `{ok:true}`. In a Supabase-only setup, the same label is an update of `vhpms_sms_transactions` and is kept only when the updated row is returned with that id, business, and purpose. A failed save leaves the Inbox item in place. Row level security must allow authenticated select and update, including returning the updated row, and must deny the publishable key on its own. Logout clears the cached messages and signs out of Supabase. No messages are included in the site bundle.
 
 ## Functional slice
 

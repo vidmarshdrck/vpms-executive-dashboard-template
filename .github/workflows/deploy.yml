@@ -37,6 +37,10 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_VHPMS_AUTH_URL: ${{ vars.VITE_VHPMS_AUTH_URL }}
+          VITE_VHPMS_ADMIN_EMAIL: ${{ vars.VITE_VHPMS_ADMIN_EMAIL }}
+          VITE_VHPMS_USER_EMAILS: ${{ vars.VITE_VHPMS_USER_EMAILS }}
+          VITE_VHPMS_SMS_URL: ${{ vars.VITE_VHPMS_SMS_URL }}
         run: npm run build
 
       - name: Setup Pages

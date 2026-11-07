@@ -42,10 +42,15 @@ function LoginRoute() {
 
 import Vhpms from './vhpms/Vhpms.jsx'
 
+const TEMPLATE_PATHS = ['/login', '/executive', '/scorecard', '/departments', '/strategy', '/operations', '/financial', '/heatmap', '/projects', '/support', '/admin', '/my-department', '/kpi-entry', '/kpi-approvals']
+
 export default function App() {
-  // Public, isolated local-only preview. Existing template auth/routes remain intact.
+  // The site root is the VHPMS sign-in. Template dashboards stay on their existing paths.
   const location = useLocation()
-  if (import.meta.env.VITE_VHPMS_ONLY === 'true' || new URLSearchParams(location.search).get('preview') === 'vhpms') return <Vhpms />
+  const path = location.pathname.replace(/\/+$/, '') || '/'
+  const forceVhpms = import.meta.env.VITE_VHPMS_ONLY === 'true' || new URLSearchParams(location.search).get('preview') === 'vhpms'
+  const templatePath = TEMPLATE_PATHS.some((route) => path === route || path.startsWith(`${route}/`))
+  if (forceVhpms || !templatePath) return <Vhpms />
   return <Routes>
     <Route path="/login" element={<LoginRoute />} />
     <Route element={<ProtectedRoute />}>
