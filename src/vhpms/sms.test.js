@@ -21,6 +21,13 @@ test('unlabelled SMS stays in the inbox until both labels are set', () => {
   assert.throws(() => labelTransaction(labels, row.id, '', 'Fuel'))
 })
 
+test('an unconfigured SMS feed adds nothing to the inbox', async () => {
+  const result = await fetchSms({ env: {}, token: '' })
+  assert.equal(result.ok, true)
+  assert.deepEqual(result.rows, [])
+  assert.equal(inboxFromSms(result.rows).length, 0)
+})
+
 test('SMS reads do not query Supabase without a session', async () => {
   let queried = false
   const result = await fetchSms({

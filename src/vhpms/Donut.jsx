@@ -43,6 +43,12 @@ export function ScoreGauge({ pct, caption }) {
   )
 }
 
+const VIDMAR = 'VIDM\u039BR'
+
+export function VidmarCredit() {
+  return <span className="vidmar-credit">Powered by <span className="vidmar-word">{VIDMAR}</span></span>
+}
+
 export function PageFooter({ children }) {
-  return <footer className="page-footer">{children} <span>Powered by VIDMΛR</span></footer>
+  return <footer className="page-footer">{children} <VidmarCredit /></footer>
 }

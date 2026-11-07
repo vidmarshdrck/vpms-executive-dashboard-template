@@ -1,4 +1,5 @@
 import { NavIcon, MenuIcon } from './icons.jsx'
+import { VidmarCredit } from './Donut.jsx'
 import { initials, roleLine, managementLinks, adminLinks, WORKSPACE_LINKS } from './directory.js'
 import { activeBusinesses } from './books.js'
 
@@ -20,7 +21,7 @@ export function LoginScreen({ error, busy, onSubmit }) {
             <div className="field"><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="current-password" required /></div>
             <button className="btn btn-primary" type="submit" style={{ width: '100%', justifyContent: 'center' }} disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
           </form>
-          <p className="login-foot">Powered by VIDMΛR</p>
+          <p className="login-foot"><VidmarCredit /></p>
         </div>
       </div>
     </div>

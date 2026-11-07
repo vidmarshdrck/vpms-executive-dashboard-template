@@ -263,6 +263,7 @@
   border-color: var(--brand) !important;
   box-shadow: 0 0 0 3px rgba(20, 84, 192, .18) !important;
 }
+.vh-app .vidmar-word { font-family: "Noto Sans", "DejaVu Sans", "Segoe UI", "Liberation Sans", sans-serif; letter-spacing: .06em; }
 .vh-app .slide-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
 .vh-app .slide-tabs button { margin: 0 0 -1px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; padding: 8px 16px; font-size: 14px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; }
 .vh-app .slide-tabs button.is-active { border-bottom-color: var(--brand); color: var(--brand); font-weight: 600; }
