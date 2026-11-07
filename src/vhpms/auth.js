@@ -1,0 +1,83 @@
+import { createClient } from '@supabase/supabase-js'
+import { findAccount, isActiveAccount } from './directory.js'
+
+const SESSION_KEY = 'vhpms-session'
+
+export function emailFor(username, env = {}) {
+  const key = String(username || '').trim().toLowerCase()
+  if (key === 'administrator') {
+    const email = String(env.VITE_VHPMS_ADMIN_EMAIL || '').trim()
+    return email || null
+  }
+  const map = String(env.VITE_VHPMS_USER_EMAILS || '')
+  for (const part of map.split(',')) {
+    const [name, email] = part.split(':').map((item) => String(item || '').trim())
+    if (name.toLowerCase() === key && email.includes('@')) return email
+  }
+  return null
+}
+
+export function readSession(directory) {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    const account = findAccount(parsed?.username, directory)
+    if (!isActiveAccount(account, directory)) return null
+    return account
+  } catch {
+    return null
+  }
+}
+
+export function saveSession(user) {
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ username: user.username }))
+}
+
+export function clearSession() {
+  try { sessionStorage.removeItem(SESSION_KEY) } catch { /* private mode */ }
+}
+
+export async function signIn(username, password, options = {}) {
+  const env = options.env || import.meta.env
+  const fetchImpl = options.fetch || fetch
+  const name = String(username || '').trim()
+  const pass = String(password ?? '')
+  if (!name || !pass) return { ok: false, error: 'Enter both username and password.' }
+  const directory = options.directory
+  const account = findAccount(name, directory)
+  if (!account || !isActiveAccount(account, directory)) return { ok: false, error: 'Incorrect username or password.' }
+
+  const authUrl = String(env.VITE_VHPMS_AUTH_URL || '').trim()
+  if (authUrl) {
+    try {
+      const response = await fetchImpl(authUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username: account.username, password: pass }),
+      })
+      if (!response.ok) return { ok: false, error: 'Incorrect username or password.' }
+      const body = await response.json().catch(() => ({}))
+      if (body?.ok === false) return { ok: false, error: 'Incorrect username or password.' }
+      return { ok: true, user: account }
+    } catch {
+      return { ok: false, error: 'Sign-in service is unreachable.' }
+    }
+  }
+
+  const email = emailFor(account.username, env)
+  const url = String(env.VITE_SUPABASE_URL || '').trim()
+  const key = String(env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim()
+  if (url && key && email) {
+    try {
+      const client = createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } })
+      const { error } = await client.auth.signInWithPassword({ email, password: pass })
+      if (error) return { ok: false, error: 'Incorrect username or password.' }
+      return { ok: true, user: account }
+    } catch {
+      return { ok: false, error: 'Sign-in service is unreachable.' }
+    }
+  }
+
+  return { ok: false, error: 'Sign-in is not configured for this account.' }
+}

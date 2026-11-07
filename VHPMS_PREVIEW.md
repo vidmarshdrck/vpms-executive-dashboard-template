@@ -1,10 +1,14 @@
 # VHPMS incremental workspace preview
 
-Phone-accessible preview: https://vidmarshdrck.github.io/vpms-executive-dashboard-template/?preview=vhpms
+The site root opens the VHPMS sign-in. On GitHub Pages that is `/?preview=vhpms` as well as `/`. Template dashboards stay on their existing paths, starting at `/login`. Set `VITE_BASE_PATH=/` when the app is served at a domain root such as vidmar.tech.
 
 Source: https://github.com/vidmarshdrck/vpms-executive-dashboard-template
 
 This extends the owner's existing VPMS React/Vite executive dashboard template. The existing login, authorization guards, and template routes are unchanged. It uses the template's self-hosted Inter Tight/Outfit fonts, sidebar/operating layout, and semantic status treatments; the owner's `tppl_pms` source was inspected as a related design reference. No new repository or infrastructure was created.
+
+## Sign-in
+
+The username `administrator` is the admin role (Shadrick Vidmar). The password is never stored in this repository. Set either `VITE_VHPMS_AUTH_URL` (POST `{username, password}`, `200 {ok:true}`) or Supabase (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_VHPMS_ADMIN_EMAIL`). See `.env.example`. The GitHub Pages workflow forwards those repository variables. Other roster usernames sign in only when the same service accepts them, or when `VITE_VHPMS_USER_EMAILS` maps them to Supabase emails.
 
 ## Functional slice
 
