@@ -53,7 +53,7 @@
 .vh-app .sidebar {
   position: fixed; inset: 0 auto 0 0; width: var(--sidebar-w); height: 100vh; z-index: 50;
   background: #fff; border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; transition: transform .3s ease;
+  display: flex; flex-direction: column; transition: transform .3s ease, width .2s ease;
 }
 .vh-app .sidebar-brand {
   display: flex; align-items: center; gap: 12px; padding: 20px 16px; border: 0; border-bottom: 1px solid var(--border);
@@ -104,7 +104,24 @@
   font-size: 12px; font-weight: 600; color: var(--text-muted);
 }
 .vh-app .side-user button.logout:hover { color: var(--rag-red); }
-.vh-app .app-main { margin-left: var(--sidebar-w); min-height: 100vh; display: flex; flex-direction: column; }
+.vh-app .app-main { margin-left: var(--sidebar-w); min-height: 100vh; display: flex; flex-direction: column; transition: margin-left .2s ease; }
+@media (min-width: 1024px) {
+  .vh-app.sidebar-retracted { --sidebar-w: 76px; }
+  .vh-app.sidebar-retracted .brand-text,
+  .vh-app.sidebar-retracted .nav-label,
+  .vh-app.sidebar-retracted .side-label,
+  .vh-app.sidebar-retracted .side-user-name,
+  .vh-app.sidebar-retracted .side-user-role {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+  .vh-app.sidebar-retracted .role-switch { display: none; }
+  .vh-app.sidebar-retracted .side-nav button,
+  .vh-app.sidebar-retracted .sidebar-brand,
+  .vh-app.sidebar-retracted .logout { justify-content: center; }
+  .vh-app.sidebar-retracted .live-btn { margin: 0 8px 12px; padding: 10px 6px; }
+  .vh-app.sidebar-retracted .side-user-row { justify-content: center; padding: 8px 0; }
+}
 .vh-app .app-header {
   position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 16px; padding: 16px 24px;
   background: rgba(255, 255, 255, .88); backdrop-filter: saturate(1.2) blur(8px); border-bottom: 1px solid var(--border);
@@ -280,7 +297,9 @@
 .vh-app .slide-page { min-width: 0; }
 .vh-app tr.needs-label td { background: var(--rag-amber-bg); }
 .vh-app .card.needs-label { border-color: var(--rag-amber); }
-@media (prefers-reduced-motion: reduce) { .vh-app .slide-track { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .vh-app .slide-track, .vh-app .sidebar, .vh-app .app-main { transition: none; }
+}
 @media print {
   .vh-app .sidebar, .vh-app .app-header, .vh-app .scrim, .vh-app .live-btn, .vh-app .btn { display: none !important; }
   .vh-app .app-main { margin-left: 0; }
