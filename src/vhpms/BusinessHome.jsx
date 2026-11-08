@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { activeBusinesses, entriesFor, addEntry, removeEntry, moneyTotal, formatZmw, slicesBy, statusSlices, sharedUnit, countTotals } from './books.js'
 import { Donut, PageFooter } from './Donut.jsx'
 import SlideTabs from './SlideTabs.jsx'
+import VeWorkspace from './VeWorkspace.jsx'
 
 function MoneySection({ title, empty, entries, groupLabel, groupKey, onAdd, onRemove }) {
   const slices = slicesBy(entries, 'group')
@@ -72,10 +73,11 @@ export function BusinessList({ books, onOpen }) {
   )
 }
 
-export function BusinessHome({ books, businessId, onChange }) {
+export function BusinessHome({ books, businessId, onChange, token = '' }) {
   const [message, setMessage] = useState('')
   const business = books.businesses.find((item) => item.id === businessId)
   if (!business) return <BusinessList books={books} onOpen={() => {}} />
+  if (business.id === 've') return <VeWorkspace business={business} token={token} />
   const expenses = entriesFor(books, business.id, 'expense')
   const income = entriesFor(books, business.id, 'income')
   const counts = entriesFor(books, business.id, 'count')

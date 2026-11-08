@@ -150,7 +150,6 @@ export default function Vhpms() {
       inboxCount={inboxFromSms(smsRows).length}
       title={title}
       onOpen={open}
-      onHome={() => { setMode('management'); open(homeView(sessionUser)) }}
       onLive={() => { setReturnView(displayView); setMode('businesses'); setView('activities'); setMenu(false) }}
       onBack={() => { setMode('management'); setView(returnView || homeView(sessionUser)); setMenu(false) }}
       onBusiness={(id) => { setBusinessId(id); setView('business'); setMenu(false) }}
@@ -167,7 +166,7 @@ export default function Vhpms() {
       {displayView === 'admin-users' && <AdminUsers directory={directory} onChange={(next) => persist(DIR_KEY, next, setDirectory)} />}
       {displayView === 'admin-businesses' && <AdminBusinesses books={books} onChange={(next) => persist(BOOKS_KEY, next, setBooks)} />}
       {displayView === 'business-list' && <BusinessList books={books} onOpen={(id) => { setBusinessId(id); setView('business') }} />}
-      {displayView === 'business' && <BusinessHome books={books} businessId={businessId} onChange={(next) => persist(BOOKS_KEY, next, setBooks)} />}
+      {displayView === 'business' && <BusinessHome books={books} businessId={businessId} token={sessionUser.token || ''} onChange={(next) => persist(BOOKS_KEY, next, setBooks)} />}
       {displayView === 'activities' && <ActivitiesBoard state={activities} onChange={(next) => persist(ACTIVITY_KEY, next, setActivities)} />}
       {displayView === 'inbox' && <InboxView rows={smsRows} books={books} onLabel={labelSms} onOpenSms={(id) => { setSmsFocus(id); open('sms') }} />}
       {displayView === 'sms' && <SmsDashboard user={sessionUser} books={books} rows={smsRows} loadError={!smsRemote.ok} labels={labels} focusId={smsFocus} onLabelled={rememberLabel} />}

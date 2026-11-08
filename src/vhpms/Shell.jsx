@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { NavIcon, MenuIcon } from './icons.jsx'
 import { VidmarCredit } from './Donut.jsx'
 import { accountRoles, initials, roleLabel, roleLine, managementLinks, adminLinks, WORKSPACE_LINKS } from './directory.js'
 import { activeBusinesses } from './books.js'
+import { readSidebarRetracted, writeSidebarRetracted } from './sidebar.js'
 
 export function LoginScreen({ error, busy, onSubmit }) {
   return (
@@ -29,7 +31,7 @@ export function LoginScreen({ error, busy, onSubmit }) {
 }
 
 function NavButton({ item, current, onOpen }) {
-  return <button type="button" aria-current={current === item.id ? 'page' : undefined} onClick={() => onOpen(item.id)}><NavIcon name={item.icon} />{item.label}</button>
+  return <button type="button" aria-current={current === item.id ? 'page' : undefined} onClick={() => onOpen(item.id)}><NavIcon name={item.icon} /><span className="nav-label">{item.label}</span></button>
 }
 
 const LIVE_LINKS = [
@@ -38,23 +40,33 @@ const LIVE_LINKS = [
   { id: 'sms', label: 'SMS Transactions', icon: 'activity' },
 ]
 
-export default function Shell({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onHome, onLogout, onRole, title, children }) {
+export default function Shell({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onLogout, onRole, title, children }) {
   const businesses = activeBusinesses(books)
+  const [retracted, setRetracted] = useState(() => (typeof localStorage === 'undefined' ? false : readSidebarRetracted(localStorage)))
+  useEffect(() => {
+    if (typeof localStorage === 'undefined') return
+    writeSidebarRetracted(localStorage, retracted)
+  }, [retracted])
+  function toggleSidebar() {
+    const mobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches
+    if (mobile) { setMenu(false); return }
+    setRetracted((current) => !current)
+  }
   return (
-    <div className="vh-app">
+    <div className={`vh-app${retracted ? ' sidebar-retracted' : ''}`}>
       <aside className={`sidebar ${menu ? 'open' : ''}`} id="sidebar">
-        <button type="button" className="sidebar-brand" onClick={onHome}>
+        <button type="button" className="sidebar-brand" aria-controls="sidebar" aria-expanded={menu || !retracted} aria-label={retracted && !menu ? 'Expand sidebar' : 'Collapse sidebar'} onClick={toggleSidebar}>
           <span className="brand-logo">VH</span>
           <span className="brand-text"><span className="brand-name">Vidmar Holdings</span><span className="brand-sub">VHPMS</span></span>
         </button>
         <nav className="side-nav" aria-label="Primary navigation">
           {mode === 'businesses' ? (
             <>
-              {LIVE_LINKS.map((item) => <button type="button" key={item.id} aria-current={view === item.id ? 'page' : undefined} onClick={() => onOpen(item.id)}><NavIcon name={item.icon} />{item.label}{item.id === 'inbox' && inboxCount > 0 ? ` (${inboxCount})` : ''}</button>)}
+              {LIVE_LINKS.map((item) => <button type="button" key={item.id} aria-current={view === item.id ? 'page' : undefined} onClick={() => onOpen(item.id)}><NavIcon name={item.icon} /><span className="nav-label">{item.label}{item.id === 'inbox' && inboxCount > 0 ? ` (${inboxCount})` : ''}</span></button>)}
               <div className="side-label spaced">Businesses</div>
-              {businesses.map((business) => <button type="button" key={business.id} aria-current={view === 'business' && businessId === business.id ? 'page' : undefined} onClick={() => onBusiness(business.id)}><NavIcon name="building" />{business.name}</button>)}
+              {businesses.map((business) => <button type="button" key={business.id} aria-current={view === 'business' && businessId === business.id ? 'page' : undefined} onClick={() => onBusiness(business.id)}><NavIcon name="building" /><span className="nav-label">{business.name}</span></button>)}
               {!businesses.length && <p className="side-label">No active businesses</p>}
-              <button type="button" className="back-management" onClick={onBack}><NavIcon name="dashboard" />Back to management</button>
+              <button type="button" className="back-management" onClick={onBack}><NavIcon name="dashboard" /><span className="nav-label">Back to management</span></button>
             </>
           ) : (
             <>
@@ -67,7 +79,7 @@ export default function Shell({ user, view, menu, setMenu, mode, books, business
             </>
           )}
         </nav>
-        {mode === 'management' && <button type="button" className="live-btn" onClick={onLive}>Live workspace</button>}
+        {mode === 'management' && <button type="button" className="live-btn" onClick={onLive}><span className="nav-label">Live workspace</span></button>}
         <div className="side-user">
           <div className="side-user-row">
             <span className="avatar">{initials(user.name)}</span>

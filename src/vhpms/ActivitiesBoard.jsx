@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { STATUSES, PRIORITIES, statusCounts, addActivity, setActivityStatus, addInitiative, initiativeProgress, addForceItem, setForceStatus } from './activities.js'
 import SlideTabs from './SlideTabs.jsx'
 import { PageFooter } from './Donut.jsx'
@@ -16,6 +16,11 @@ function Counts({ items }) {
 
 export default function ActivitiesBoard({ state, onChange }) {
   const [message, setMessage] = useState('')
+  const [adding, setAdding] = useState(false)
+  const formRef = useRef(null)
+  useEffect(() => {
+    if (adding) formRef.current?.querySelector('[name="title"]')?.focus()
+  }, [adding])
   function run(mutate) {
     try { onChange(mutate(state)); setMessage('Saved.') } catch (error) { setMessage(error.message) }
   }
@@ -25,8 +30,9 @@ export default function ActivitiesBoard({ state, onChange }) {
       {message && <p className="vh-status" role="status">{message}</p>}
       <SlideTabs label="Activities sections" tabs={['Activities', 'Initiatives', 'Task Force']}>
         <div>
+          <div className="vh-actions" style={{ marginBottom: 16 }}><button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>Add task</button></div>
           <Counts items={state.tasks} />
-          <section className="card" style={{ marginBottom: 16 }}><div className="card-head"><h2>New activity</h2></div><div className="card-body">
+          <section className="card" id="new-activity" ref={formRef} hidden={!adding} style={{ marginBottom: 16 }}><div className="card-head"><h2>New activity</h2></div><div className="card-body">
             <form className="vh-form" onSubmit={(event) => { event.preventDefault(); const fields = Object.fromEntries(new FormData(event.currentTarget)); run((current) => addActivity(current, fields)); event.currentTarget.reset() }}>
               <div className="field"><label>Title<input name="title" type="text" required /></label></div>
               <div className="field"><label>Status<select name="status">{STATUSES.map((status) => <option key={status}>{status}</option>)}</select></label></div>
