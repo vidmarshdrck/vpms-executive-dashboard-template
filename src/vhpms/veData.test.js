@@ -1,8 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  COPY, CUSTOMER_COLUMNS, EXPENSE_COLUMNS, FAMILY_COLUMNS, MARKETING_COLUMNS, ORDER_COLUMNS, PRODUCT_COLUMNS, SPEND_COLUMNS,
-  buildWorkspace, classifyResult, createVeClient, fetchVeWorkspace, filterFunds, fundsByMonth, passwordLabel, weekStart, weeklyBudget,
+  CUSTOMER_COLUMNS, EXPENSE_COLUMNS, FAMILY_COLUMNS, MARKETING_COLUMNS, ORDER_COLUMNS, PRODUCT_COLUMNS, SPEND_COLUMNS,
+  buildWorkspace, classifyResult, createVeClient, fetchVeWorkspace, filterCustomers, filterFunds, financeSummary, fundsByMonth, weekStart, weeklyBudget, whatsappHref, whatsappNumber,
 } from './veData.js'
 
 const TODAY = '2026-11-08'
@@ -32,7 +32,7 @@ const accounts = [
   { fid: 9, product: 'Apple Music', due_date: null, paid_status: 'Unpaid', slots_total: 5, slots_taken: 0 },
 ]
 
-test('family accounts map slots, active term, and a masked password', () => {
+test('family accounts map connected names and leave email blank when none is stored', () => {
   const model = buildWorkspace(sources({
     familyAccounts: { access: 'ok', rows: accounts, message: '' },
     customers: { access: 'ok', rows: customers, message: '' },
@@ -40,16 +40,15 @@ test('family accounts map slots, active term, and a masked password', () => {
   assert.equal(model.activeAccounts.length, 1)
   assert.equal(model.inactiveAccounts.length, 2)
   assert.equal(model.activeAccounts[0].plan, 'Netflix')
-  assert.deepEqual(model.activeAccounts[0].members.map((member) => member.name), ['Amara Banda', 'Lombe Phiri'])
+  assert.equal(model.activeAccounts[0].names, 'Amara Banda, Lombe Phiri')
+  assert.equal(model.activeAccounts[0].email, '')
   assert.equal(model.inactiveAccounts.find((account) => account.id === '8').members[0].unmatched, true)
-  assert.equal(model.activeAccounts[0].passwordStored, true)
-  assert.equal(model.activeAccounts[0].passwordLabel, COPY.passwordStored)
-  assert.equal(model.inactiveAccounts.find((account) => account.id === '9').passwordLabel, passwordLabel(false))
   assert.equal(model.overview.connected, 3)
   const packed = JSON.stringify(model)
   assert.equal(packed.includes(SECRET), false)
   assert.equal(packed.includes(OTHER_SECRET), false)
-  assert.equal(packed.includes('260970000000'), false)
+  assert.equal(packed.includes('password'), false)
+  assert.equal(model.customers.find((row) => row.id === 'C1').phone, '260970000000')
 })
 
 test('customers, orders, and expenses keep the fields the pages show', () => {
@@ -67,6 +66,8 @@ test('customers, orders, and expenses keep the fields the pages show', () => {
   assert.equal(model.income[0].title, 'Amara Banda')
   assert.equal(model.income[0].amount, 120.5)
   assert.equal(model.income[0].kind, 'income')
+  assert.deepEqual(financeSummary(model.income, model.expenses, { orders: 'ok', expenses: 'ok' }), { expenses: 110, income: 120.5, balance: 10.5, profit: 10.5 })
+  assert.equal(financeSummary([], [], { orders: 'blocked', expenses: 'ok' }).balance, null)
   assert.deepEqual(model.incomeCategories.map((row) => row.name), ['Netflix'])
   assert.equal(weekStart('2026-11-04'), '2026-11-02')
   assert.equal(weekStart('2026-11-11'), '2026-11-09')
@@ -112,6 +113,25 @@ test('empty marketing and blocked reads stay distinct', () => {
   assert.equal(classifyResult({ data: [], error: null }).access, 'empty')
 })
 
+test('customer search and WhatsApp links use the stored phone', () => {
+  const rows = [
+    { id: 'C1', name: 'Amara Banda', phone: '0977000111', products: 'Netflix', status: 'CONNECTED', dueDate: '2026-12-05' },
+    { id: 'C2', name: 'Lombe Phiri', phone: '', products: 'Spotify', status: 'DISCONNECTED', dueDate: 'Not dated' },
+    { id: 'V200', name: 'Chipo Mwale', phone: '+260 97 700 0222', products: 'Prime Video', status: 'CONNECTED', dueDate: '2026-11-01' },
+  ]
+  assert.deepEqual(filterCustomers(rows, { status: 'CONNECTED', query: 'netflix, V200' }).map((row) => row.id), ['C1', 'V200'])
+  assert.deepEqual(filterCustomers(rows, { query: '0977000111' }).map((row) => row.id), ['C1'])
+  assert.equal(whatsappNumber('0977000111'), '260977000111')
+  assert.equal(whatsappNumber('+260 97 700 0222'), '260977000222')
+  assert.equal(whatsappNumber(''), '')
+  const href = whatsappHref(rows[0])
+  assert.match(href, /^https:\/\/wa\.me\/260977000111\?text=/)
+  assert.match(decodeURIComponent(href), /Amara Banda/)
+  assert.match(decodeURIComponent(href), /Netflix/)
+  assert.match(decodeURIComponent(href), /2026-12-05/)
+  assert.equal(whatsappHref(rows[1]), '')
+})
+
 test('the authenticated read lists safe columns and drops a secret if one is returned', async () => {
   const seen = []
   function from(table) {
@@ -142,12 +162,15 @@ test('the authenticated read lists safe columns and drops a secret if one is ret
   assert.equal(options.next.global.headers.Authorization, 'Bearer owner-token')
   assert.deepEqual(seen.map((item) => item.columns), [FAMILY_COLUMNS, CUSTOMER_COLUMNS, ORDER_COLUMNS, EXPENSE_COLUMNS, MARKETING_COLUMNS, SPEND_COLUMNS, PRODUCT_COLUMNS])
   for (const columns of seen.map((item) => item.columns)) {
-    assert.equal(/\b(password|phone|receipt|notes|fnb_transaction_ref)\b/i.test(columns), false)
+    assert.equal(/\b(password|receipt|notes|fnb_transaction_ref)\b/i.test(columns), false)
   }
+  assert.match(CUSTOMER_COLUMNS, /\bphone\b/)
   assert.equal(model.access.customers, 'blocked')
   assert.equal(model.access.familyAccounts, 'ok')
-  assert.equal(model.accounts[0].passwordLabel, COPY.passwordStored)
+  assert.equal(model.accounts[0].email, '')
+  assert.equal(model.accounts[0].names, '')
   assert.equal(JSON.stringify(model).includes(SECRET), false)
+  assert.equal(JSON.stringify(model).includes('password'), false)
   assert.equal(model.products[0].price, null)
   assert.equal(createVeClient({}, 'token'), null)
 })

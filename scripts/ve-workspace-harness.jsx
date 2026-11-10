@@ -22,12 +22,12 @@ const model = buildWorkspace({
   customers: {
     access: 'ok',
     rows: [
-      { cid: 'C1', name: 'Amara Banda', products: ['Netflix'], status: 'CONNECTED', total_spent: 1860, due_date: '2026-12-05' },
-      { cid: 'C2', name: 'Lombe Phiri', products: ['Netflix', 'Spotify'], status: 'CONNECTED', total_spent: 940, due_date: '2026-12-05' },
-      { cid: 'C3', name: 'Chipo Mwale', products: ['Netflix'], status: 'DISCONNECTED', total_spent: 220, due_date: '2026-09-01' },
-      { cid: 'C4', name: 'Thabo Zulu', products: ['Apple Music'], status: 'CONNECTED', total_spent: 480, due_date: '2027-01-15' },
-      { cid: 'C5', name: 'Natasha Bwalya', products: ['Spotify'], status: 'CONNECTED', total_spent: 360, due_date: '2026-11-20' },
-      { cid: 'C6', name: 'Kelvin Sakala', products: ['Prime Video'], status: 'DISCONNECTED', total_spent: 150, due_date: null },
+      { cid: 'C1', name: 'Amara Banda', phone: '0977000111', products: ['Netflix'], status: 'CONNECTED', total_spent: 1860, due_date: '2026-12-05' },
+      { cid: 'C2', name: 'Lombe Phiri', phone: '0977000222', products: ['Netflix', 'Spotify'], status: 'CONNECTED', total_spent: 940, due_date: '2026-12-05' },
+      { cid: 'C3', name: 'Chipo Mwale', phone: '', products: ['Netflix'], status: 'DISCONNECTED', total_spent: 220, due_date: '2026-09-01' },
+      { cid: 'C4', name: 'Thabo Zulu', phone: '+260977000333', products: ['Apple Music'], status: 'CONNECTED', total_spent: 480, due_date: '2027-01-15' },
+      { cid: 'C5', name: 'Natasha Bwalya', phone: '0977000444', products: ['Spotify'], status: 'CONNECTED', total_spent: 360, due_date: '2026-11-20' },
+      { cid: 'C6', name: 'Kelvin Sakala', phone: '0977000555', products: ['Prime Video'], status: 'DISCONNECTED', total_spent: 150, due_date: null },
     ],
   },
   orders: {

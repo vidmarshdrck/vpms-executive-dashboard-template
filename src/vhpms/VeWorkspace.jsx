@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import SlideTabs from './SlideTabs.jsx'
 import { Donut, PageFooter } from './Donut.jsx'
 import { formatZmw, moneyTotal, slicesBy } from './books.js'
-import { COPY, buildWorkspace, emptySources, fetchVeWorkspace, filterFunds, fundsByMonth, todayIso } from './veData.js'
+import { COPY, buildWorkspace, emptySources, fetchVeWorkspace, filterCustomers, filterFunds, fundsByMonth, todayIso, whatsappHref } from './veData.js'
 
 function Panel({ title, children, note }) {
   return (
@@ -50,17 +50,29 @@ function accessMessage(access, empty, blocked) {
   return ''
 }
 
+function moneyTile(value) {
+  return value == null ? '—' : formatZmw(value)
+}
+
+function Stat({ label, value }) {
+  return <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{value}</div><div className="stat-desc">{label}</div></div></section>
+}
+
+function connectedNames(account) {
+  return account.names || 'No one is connected.'
+}
+
 function AccountTable({ accounts, empty }) {
   return (
     <DataTable
       rows={accounts}
       empty={empty}
       columns={[
-        { key: 'account', label: 'Account', cell: (row) => row.id },
+        { key: 'names', label: 'Account / Names', cell: (row) => connectedNames(row) },
         { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.activity} /> },
         { key: 'plan', label: 'Plan', cell: (row) => row.plan },
         { key: 'due', label: 'Due date', cell: (row) => row.dueDate },
-        { key: 'password', label: 'Password', cell: (row) => <span aria-label={row.passwordStored ? 'Password stored' : 'Password not stored'}>{row.passwordLabel}</span> },
+        { key: 'email', label: 'Email', cell: (row) => row.email || <span aria-label="Email not recorded" /> },
         { key: 'slots', label: 'Slots', cell: (row) => `${row.slotsTaken} of ${row.slotsTotal}` },
         { key: 'paid', label: 'Paid status', cell: (row) => <StatusChip value={row.paidStatus} /> },
         { key: 'agent', label: 'Agent', cell: (row) => row.agent || '—' },
@@ -71,27 +83,35 @@ function AccountTable({ accounts, empty }) {
 
 function Overview({ model }) {
   const message = accessMessage(model.access.familyAccounts, COPY.familyEmpty, COPY.familyBlocked)
-  const stats = [['Accounts', model.overview.accounts], ['Active', model.overview.active], ['Inactive', model.overview.inactive], ['People connected', model.overview.connected]]
+  const finance = model.overview.finance
+  const counts = model.access.familyAccounts === 'ok'
+    ? [['Accounts', model.overview.accounts], ['Active', model.overview.active], ['Inactive', model.overview.inactive], ['People connected', model.overview.connected]]
+    : []
   return (
     <>
       <h2 className="section-title">Overview</h2>
+      <div className="grid-4" style={{ marginBottom: 16 }}>
+        {counts.map(([label, value]) => <Stat key={label} label={label} value={value} />)}
+        <Stat label="Total spent" value={moneyTile(finance.expenses)} />
+        <Stat label="Income" value={moneyTile(finance.income)} />
+        <Stat label="Balance on hand" value={moneyTile(finance.balance)} />
+        <Stat label="Profit generated" value={moneyTile(finance.profit)} />
+      </div>
       {message ? <Message>{message}</Message> : (
-        <>
-          <div className="grid-4" style={{ marginBottom: 16 }}>{stats.map(([label, value]) => <section className="card" key={label}><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{value}</div><div className="stat-desc">{label}</div></div></section>)}</div>
+        <Panel title="Family accounts">
           {model.access.customers === 'blocked' && <p className="vh-status" role="status">{COPY.customersBlocked} Slot references stay visible.</p>}
-          <div className="grid-3">
-            {model.accounts.map((account) => (
-              <section className="card" key={account.id}>
-                <div className="card-head"><h2>{account.plan}</h2><StatusChip value={account.activity} /></div>
-                <div className="card-body">
-                  <p className="stat-desc">Account {account.id} · due {account.dueDate} · {account.slotsTaken} of {account.slotsTotal} slots taken</p>
-                  <h2 style={{ fontSize: 15, margin: '12px 0' }}>Who is connected</h2>
-                  {account.members.length ? <ul className="vh-list">{account.members.map((member) => <li key={`${account.id}-${member.slot}`}><div><strong>{member.name}</strong>{member.unmatched && <small>Name not visible</small>}</div></li>)} </ul> : <p className="empty">No one is connected.</p>}
-                </div>
-              </section>
-            ))}
-          </div>
-        </>
+          <DataTable
+            rows={model.accounts}
+            empty={COPY.familyEmpty}
+            columns={[
+              { key: 'plan', label: 'Plan', cell: (row) => row.plan },
+              { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.activity} /> },
+              { key: 'due', label: 'Due date', cell: (row) => row.dueDate },
+              { key: 'names', label: 'Connected', cell: (row) => connectedNames(row) },
+              { key: 'slots', label: 'Slots', cell: (row) => `${row.slotsTaken} of ${row.slotsTotal}` },
+            ]}
+          />
+        </Panel>
       )}
     </>
   )
@@ -133,35 +153,52 @@ function FamilyAccounts({ model }) {
 
 function Customers({ model }) {
   const [status, setStatus] = useState('All')
+  const [query, setQuery] = useState('')
   const message = accessMessage(model.access.customers, COPY.customersEmpty, COPY.customersBlocked)
   const statuses = [...new Set(model.customers.map((row) => row.status))]
-  const rows = status === 'All' ? model.customers : model.customers.filter((row) => row.status === status)
+  const rows = filterCustomers(model.customers, { status, query })
   return (
     <>
       <h2 className="section-title">Customers</h2>
       {message ? <Message>{message}</Message> : (
-        <Panel title="Customers">
-          <div className="vh-toolbar">
-            <label>Status
-              <select aria-label="Customer status" value={status} onChange={(event) => setStatus(event.target.value)}>
-                <option>All</option>
-                {statuses.map((item) => <option key={item}>{item}</option>)}
-              </select>
-            </label>
+        <section className="card" style={{ marginBottom: 16 }}>
+          <div className="card-head" style={{ flexWrap: 'wrap' }}>
+            <h2>Customers</h2>
+            <div className="vh-actions" style={{ marginLeft: 'auto' }}>
+              <div className="field" style={{ margin: 0, minWidth: 180, maxWidth: 260 }}>
+                <label htmlFor="ve-customer-search">Search</label>
+                <input id="ve-customer-search" aria-label="Search customers" type="search" value={query} onChange={(event) => setQuery(event.target.value)} />
+              </div>
+              <div className="field" style={{ margin: 0, minWidth: 160, maxWidth: 220 }}>
+                <label htmlFor="ve-customer-status">Status</label>
+                <select id="ve-customer-status" aria-label="Customer status" value={status} onChange={(event) => setStatus(event.target.value)}>
+                  <option>All</option>
+                  {statuses.map((item) => <option key={item}>{item}</option>)}
+                </select>
+              </div>
+            </div>
           </div>
-          <DataTable
-            rows={rows}
-            empty={COPY.customersEmpty}
-            columns={[
-              { key: 'name', label: 'Name', cell: (row) => row.name },
-              { key: 'due', label: 'Due date', cell: (row) => row.dueDate },
-              { key: 'products', label: 'Products', cell: (row) => row.products },
-              { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.status} /> },
-              { key: 'spent', label: 'Total spent', cell: (row) => formatZmw(row.totalSpent) },
-            ]}
-          />
-          {rows.length > 0 && <p className="stat-desc">Total spent on this list: {formatZmw(rows.reduce((sum, row) => sum + row.totalSpent, 0))}</p>}
-        </Panel>
+          <div className="card-body">
+            <DataTable
+              rows={rows}
+              empty={COPY.customersEmpty}
+              columns={[
+                { key: 'name', label: 'Name', cell: (row) => row.name },
+                { key: 'due', label: 'Due date', cell: (row) => row.dueDate },
+                { key: 'products', label: 'Products', cell: (row) => row.products },
+                { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.status} /> },
+                { key: 'spent', label: 'Total spent', cell: (row) => formatZmw(row.totalSpent) },
+                { key: 'whatsapp', label: 'WhatsApp', cell: (row) => {
+                  const href = whatsappHref(row)
+                  return href
+                    ? <a className="btn btn-primary btn-sm" href={href} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                    : <button type="button" className="btn btn-ghost btn-sm" disabled>WhatsApp</button>
+                } },
+              ]}
+            />
+            {rows.length > 0 && <p className="stat-desc">Total spent on this list: {formatZmw(rows.reduce((sum, row) => sum + row.totalSpent, 0))}</p>}
+          </div>
+        </section>
       )}
     </>
   )
