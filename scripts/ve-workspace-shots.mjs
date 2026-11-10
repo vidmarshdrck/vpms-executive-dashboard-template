@@ -57,7 +57,7 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('http://127.0.0.1:4317/')
   await page.getByRole('tab', { name: 'Overview', exact: true }).waitFor()
-  const pages = ['Overview', 'Family Accounts', 'Customers', 'Funds', 'Budget', 'Marketing']
+  const pages = ['Overview', 'Family Accounts', 'Customers', 'Funds', 'Accounts', 'Budget', 'Marketing']
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
     const label = width === 1440 ? 'desktop' : 'mobile'
