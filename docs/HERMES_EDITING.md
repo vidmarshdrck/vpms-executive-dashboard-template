@@ -78,7 +78,7 @@ VE tabs, in order: Overview, Family Accounts, Customers, Funds, Accounts, Budget
 
 Accounts lists every row in `public.ve_bank_accounts`. ZMW and USD are always shown. A currency with no row says that no account was returned. Do not add a row that is not in the table.
 
-The Accounts month control and the Funds month control share one month. Funds labels the month's orders as Total received: every `public.orders` amount in that month, including orders for people on inactive family accounts. It is not income minus expenses. Bank movements stay on Accounts.
+The header reporting period is a month-to-month range inside one year. It defaults to the current calendar quarter and is stored per user. Funds Total received is every `public.orders` amount in that range, including orders for people on inactive family accounts. It is not income minus expenses. Bank movements stay on Accounts and use the same range. There is no separate month arrow on Funds or Accounts.
 
 The Family Accounts owner is the customer stored in `slot_1` on `public.family_accounts`. There is no separate owner column. The Agent column uses `public.account_agents` (`aaid` and `name` only). That table has row level security and no SELECT policy, so a signed-in owner currently receives no agent names and the column shows the agent code until a SELECT policy exists.
 

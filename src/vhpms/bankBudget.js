@@ -285,11 +285,20 @@ export function periodTotals(rows) {
   return { moneyIn: roundTo(moneyIn, 2), moneyOut: roundTo(moneyOut, 2) }
 }
 
+function inDateBounds(date, bounds) {
+  const iso = String(date || '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false
+  if (bounds.start && iso < bounds.start) return false
+  if (bounds.end && iso > bounds.end) return false
+  return true
+}
+
 export function accountPeriod(account, transactions, month) {
+  const range = month && typeof month === 'object' ? month : null
   const mine = (transactions || []).filter((txn) => txn.accountId === account.id).sort(compareTxn)
   const withBalance = mine.filter((txn) => asNumber(txn.balance) != null && txn.date)
   const current = withBalance.length ? asNumber(withBalance.at(-1).balance) : asNumber(account.openingBalance)
-  const period = mine.filter((txn) => month && String(txn.date || '').startsWith(`${month}-`))
+  const period = mine.filter((txn) => (range ? inDateBounds(txn.date, range) : month && String(txn.date || '').startsWith(`${month}-`)))
   return {
     current,
     ...periodTotals(period),
@@ -297,11 +306,12 @@ export function accountPeriod(account, transactions, month) {
   }
 }
 
-export function filterBankTransactions(rows, { accountId = '', month = '', query = '', category = 'All' } = {}) {
+export function filterBankTransactions(rows, { accountId = '', month = '', start = '', end = '', query = '', category = 'All' } = {}) {
   const needle = String(query || '').trim().toLowerCase()
+  const range = start || end ? { start, end } : null
   return (rows || []).filter((row) => {
     if (accountId && row.accountId !== accountId) return false
-    if (month && !String(row.date || '').startsWith(`${month}-`)) return false
+    if (range ? !inDateBounds(row.date, range) : month && !String(row.date || '').startsWith(`${month}-`)) return false
     if (category && category !== 'All' && row.category !== category) return false
     if (!needle) return true
     const haystack = [row.description, row.reference, categoryLabel(row.category), row.category].join(' ').toLowerCase()

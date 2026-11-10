@@ -319,7 +319,34 @@
   .vh-app .app-main { margin-left: 0; }
   .vh-app { background: #fff; }
 }
-.vh-app .header-tools { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.vh-app .header-tools { margin-left: auto; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.vh-app .vh-timeframe { position: relative; }
+.vh-app .vh-timeframe-trigger {
+  display: flex; align-items: center; gap: 6px; min-height: 28px; padding: 4px 8px;
+  border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--text-secondary);
+  font: 600 11px/1 var(--font-sans); cursor: pointer;
+}
+.vh-app .vh-timeframe-trigger:hover { background: var(--surface-2); }
+.vh-app .vh-timeframe-trigger:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+.vh-app .vh-timeframe-trigger svg:first-child { color: var(--brand); }
+.vh-app .vh-timeframe-chevron { color: #A8A29E; }
+.vh-app .vh-timeframe-panel {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 80; width: 256px;
+  border: 1px solid var(--border); border-radius: 12px; background: #fff; padding: 16px;
+  box-shadow: 0 18px 45px -12px rgba(28, 25, 23, .28);
+}
+.vh-app .vh-timeframe-panel > p {
+  margin: 0 0 12px; font-size: 10px; line-height: 1.6; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em; color: #A8A29E;
+}
+.vh-app .vh-timeframe-panel label { font-size: 11px; font-weight: 600; margin-bottom: 12px; line-height: 16px; color: var(--text-secondary); }
+.vh-app .vh-timeframe-panel select { display: block; margin-top: 4px; padding: 6px 8px; font-size: 14px; border-radius: 6px; border-color: #d6d3d1; }
+.vh-app .vh-timeframe-panel > div { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.vh-app .vh-timeframe-panel button:not(.btn) { background: transparent; border: 0; color: #78716C; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.vh-app .vh-timeframe-panel .btn { padding: 6px 12px; font-size: 12px; }
+@media (max-width: 600px) {
+  .vh-app .vh-timeframe-panel { position: fixed; right: 12px; top: 126px; width: min(256px, calc(100vw - 24px)); }
+}
 .vh-app .profile-slot { position: relative; }
 .vh-app .profile-btn { border: 0; background: transparent; padding: 0; cursor: pointer; border-radius: 50%; }
 .vh-app .profile-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; min-width: 200px; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; box-shadow: 0 12px 30px rgba(16, 24, 32, .12); }

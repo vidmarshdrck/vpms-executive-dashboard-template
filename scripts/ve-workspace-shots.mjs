@@ -64,6 +64,12 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('http://127.0.0.1:4317/')
   await page.getByRole('tab', { name: 'Overview', exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Select reporting period' }).waitFor()
+  await page.screenshot({ path: `${outDir}/header-timeframe-desktop.png`, fullPage: false })
+  await page.getByRole('button', { name: 'Select reporting period' }).click()
+  await page.getByText('Reporting period').waitFor()
+  await page.screenshot({ path: `${outDir}/timeframe-popover-desktop.png`, fullPage: false })
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   const pages = ['Overview', 'Family Accounts', 'Customers', 'Funds', 'Accounts', 'Budget', 'Marketing']
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
