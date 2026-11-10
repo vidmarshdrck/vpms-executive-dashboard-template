@@ -17,14 +17,14 @@ function Counts({ items }) {
 export default function ActivitiesBoard({ state, onChange, composing = false }) {
   const [message, setMessage] = useState('')
   const [tab, setTab] = useState(0)
-  const [localOpen, setLocalOpen] = useState(false)
-  const open = composing || localOpen
+  const [localOpen, setLocalOpen] = useState(composing)
+  const open = localOpen
   const formRef = useRef(null)
   useEffect(() => {
     if (open) formRef.current?.querySelector('[name="title"]')?.focus()
   }, [open])
   function run(mutate) {
-    try { onChange(mutate(state)); setMessage('Saved.') } catch (error) { setMessage(error.message) }
+    try { onChange(mutate(state)); setMessage('Saved.'); return true } catch (error) { setMessage(error.message); return false }
   }
   return (
     <div className="wrap">
@@ -34,14 +34,14 @@ export default function ActivitiesBoard({ state, onChange, composing = false }) 
         <div>
           <Counts items={state.tasks} />
           <section className="card" id="new-activity" ref={formRef} hidden={!open} style={{ marginBottom: 16 }}><div className="card-head"><h2>New activity</h2></div><div className="card-body">
-            <form className="vh-form" onSubmit={(event) => { event.preventDefault(); const fields = Object.fromEntries(new FormData(event.currentTarget)); run((current) => addActivity(current, fields)); event.currentTarget.reset() }}>
+            <form className="vh-form" onSubmit={(event) => { event.preventDefault(); const fields = Object.fromEntries(new FormData(event.currentTarget)); if (!run((current) => addActivity(current, fields))) return; event.currentTarget.reset(); setLocalOpen(false) }}>
               <div className="field"><label>Title<input name="title" type="text" required /></label></div>
               <div className="field"><label>Status<select name="status">{STATUSES.map((status) => <option key={status}>{status}</option>)}</select></label></div>
               <div className="field"><label>Priority<select name="priority">{PRIORITIES.map((priority) => <option key={priority}>{priority}</option>)}</select></label></div>
               <div className="field"><label>Due<input name="due" type="date" /></label></div>
               <div className="field"><label>Initiative<select name="initiativeId"><option value="">None</option>{state.initiatives.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label></div>
               <div className="field"><label>Description<input name="description" type="text" /></label></div>
-              <button className="btn btn-primary" type="submit">Save activity</button>
+              <div className="row-actions"><button className="btn btn-primary" type="submit">Save activity</button><button className="btn btn-ghost" type="button" onClick={() => setLocalOpen(false)}>Cancel</button></div>
             </form>
           </div></section>
           {state.tasks.length ? state.tasks.map((task) => (

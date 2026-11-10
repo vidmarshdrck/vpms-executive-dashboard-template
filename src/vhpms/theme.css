@@ -326,11 +326,45 @@
 .vh-app .profile-menu .logout { margin: 10px 0 0; }
 .vh-app:has(.login-shell) { min-height: 100vh; min-height: 100dvh; background: #101820; }
 .vh-app .login-shell { position: relative; display: block; min-height: 100vh; min-height: 100dvh; padding: 0; overflow: hidden; background: #101820; }
-.vh-app .login-slides { position: absolute; inset: -12%; filter: blur(28px); transform: scale(1.12); }
-.vh-app .login-slides img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1s ease; }
+.vh-app .login-slides { position: absolute; inset: 0; }
+.vh-app .login-slides img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; opacity: 0; transition: opacity 1s ease; }
 .vh-app .login-slides img.is-active { opacity: 1; }
-.vh-app .login-layout { position: relative; z-index: 1; min-height: 100vh; display: grid; grid-template-columns: 1.15fr minmax(280px, 440px); align-items: center; }
-.vh-app .login-card { width: auto; max-width: none; margin: 28px 40px 28px 0; background: rgba(255, 255, 255, .78); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255, 255, 255, .6); box-shadow: 0 20px 50px rgba(16, 24, 32, .28); }
+.vh-app .login-layout { position: relative; z-index: 1; min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: 1.15fr minmax(280px, 440px); align-items: center; }
+.vh-app .login-card {
+  position: relative;
+  width: auto;
+  max-width: none;
+  margin: 28px 40px 28px 0;
+  border-radius: 16px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  box-shadow: 0 18px 48px rgba(16, 24, 32, 0.28);
+  color: #fff;
+}
+.vh-app .login-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: inherit;
+  background: rgba(16, 24, 32, 0.72);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  z-index: 0;
+  pointer-events: none;
+}
+.vh-app .login-card > * { position: relative; z-index: 1; }
+.vh-app .login-card h1,
+.vh-app .login-card label,
+.vh-app .login-card .brand-name { color: #fff; }
+.vh-app .login-card .sub,
+.vh-app .login-card .brand-sub,
+.vh-app .login-card .brand-eyebrow,
+.vh-app .login-card .login-foot,
+.vh-app .login-card .vidmar-credit { color: #E7E5E4; }
+.vh-app .login-card input { background: #fff; color: #1C1917; border: 1px solid #44403C; }
 .vh-app .password-field { position: relative; }
 .vh-app .password-field input { padding-right: 44px; }
 .vh-app .password-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border: 0; border-radius: 6px; background: transparent; color: var(--text-secondary); display: grid; place-items: center; cursor: pointer; }
@@ -341,3 +375,9 @@
   .vh-app .header-tools { gap: 6px; }
 }
 @media (prefers-reduced-motion: reduce) { .vh-app .login-slides img { transition: none; } }
+.vh-app .funds-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.vh-app .segmented { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.vh-app table.data tbody tr.is-clickable { cursor: pointer; }
+.vh-app .vh-modal { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.vh-app .vh-modal-backdrop { position: absolute; inset: 0; margin: 0; padding: 0; border: 0; background: rgba(16, 24, 32, 0.55); cursor: pointer; }
+.vh-app .vh-modal-panel { position: relative; z-index: 1; width: min(640px, 100%); max-height: min(80vh, 720px); overflow: auto; margin: 0; }

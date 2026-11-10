@@ -12,6 +12,7 @@ export const SPEND_COLUMNS = 'id,date,channel,campaign,amount,impressions,clicks
 export const PRODUCT_COLUMNS = 'id,name,category,is_shared_plan,slots_per_account,default_months,price_zmw,is_active'
 export const BANK_ACCOUNT_COLUMNS = 'id,label,bank,currency,account_last4,opening_balance,created_at'
 export const BANK_TXN_COLUMNS = 'id,account_id,txn_date,description,reference,amount,balance,category,orig_amount_usd,fx_rate'
+export const AGENT_COLUMNS = 'aaid,name'
 
 export const COPY = {
   signedOut: 'Sign in with Supabase to load VE records.',
@@ -105,6 +106,7 @@ export function emptySources(access) {
     products: sourceState(access),
     bankAccounts: sourceState(access),
     bankTransactions: sourceState(access),
+    accountAgents: sourceState(access),
   }
 }
 
@@ -184,7 +186,7 @@ export function latestPayments(orders) {
   return byCustomer
 }
 
-function mapAccount(row, customers, today) {
+function mapAccount(row, customers, today, agents) {
   const byId = new Map(customers.map((customer) => [customer.id, customer]))
   const members = [1, 2, 3, 4, 5].flatMap((slot) => {
     const cid = String(row[`slot_${slot}`] || '').trim()
@@ -193,6 +195,8 @@ function mapAccount(row, customers, today) {
     return [{ slot, cid, name: customer?.name || cid, unmatched: !customer, lastPayment: customer?.lastPayment || null }]
   })
   const recordedEmail = String(row.email || '').trim()
+  const agentId = String(row.aaid || '').trim()
+  const holder = members.find((member) => member.slot === 1)
   return {
     id: String(row.fid ?? ''),
     plan: String(row.product || '').trim() || 'Unspecified plan',
@@ -202,8 +206,9 @@ function mapAccount(row, customers, today) {
     slotsTotal: Number(row.slots_total) || 0,
     slotsTaken: Number(row.slots_taken) || 0,
     email: recordedEmail.includes('@') ? recordedEmail : '',
+    owner: holder?.name || 'Not recorded',
     names: members.map((member) => member.name).join(', '),
-    agent: String(row.aaid || '').trim(),
+    agent: agents.get(agentId) || agentId,
     members,
   }
 }
@@ -364,7 +369,16 @@ export function buildWorkspace(sources, today = todayIso()) {
   const customers = sources.customers.access === 'ok' ? sources.customers.rows.map(mapCustomer).sort((a, b) => a.name.localeCompare(b.name)) : []
   const payments = sources.orders.access === 'ok' ? latestPayments(sources.orders.rows) : new Map()
   for (const customer of customers) customer.lastPayment = payments.get(customer.id) || null
-  const accounts = sources.familyAccounts.access === 'ok' ? sources.familyAccounts.rows.map((row) => mapAccount(row, customers, today)) : []
+  const agentSource = sources.accountAgents || { access: 'empty', rows: [] }
+  const agents = new Map()
+  if (agentSource.access === 'ok') {
+    for (const row of agentSource.rows) {
+      const id = String(row.aaid || '').trim()
+      const name = String(row.name || '').trim()
+      if (id && name) agents.set(id, name)
+    }
+  }
+  const accounts = sources.familyAccounts.access === 'ok' ? sources.familyAccounts.rows.map((row) => mapAccount(row, customers, today, agents)) : []
   const activeAccounts = accounts.filter((account) => account.activity === 'Active').sort((a, b) => a.dueDate.localeCompare(b.dueDate))
   const inactiveAccounts = accounts.filter((account) => account.activity === 'Inactive').sort((a, b) => a.dueDate.localeCompare(b.dueDate))
   const income = sources.orders.access === 'ok' ? sources.orders.rows.map((row) => mapIncome(row, customers)) : []
@@ -470,7 +484,7 @@ export async function fetchVeWorkspace({ env = {}, token = '', today = todayIso(
   if (!token) return buildWorkspace(emptySources('signed-out'), today)
   const client = createVeClient(env, token, factory)
   if (!client) return buildWorkspace(emptySources('unconfigured'), today)
-  const [familyAccounts, customers, orders, expenses, marketing, marketingSpend, products, bankAccounts, bankTransactions] = await Promise.all([
+  const [familyAccounts, customers, orders, expenses, marketing, marketingSpend, products, bankAccounts, bankTransactions, accountAgents] = await Promise.all([
     readTable(client, 'public', 'family_accounts', FAMILY_COLUMNS, 'fid'),
     readTable(client, 'public', 'customers', CUSTOMER_COLUMNS, 'name'),
     readTable(client, 'public', 'orders', ORDER_COLUMNS, 'date'),
@@ -480,6 +494,7 @@ export async function fetchVeWorkspace({ env = {}, token = '', today = todayIso(
     readTable(client, 've', 'products', PRODUCT_COLUMNS, 'name'),
     readTable(client, 'public', 've_bank_accounts', BANK_ACCOUNT_COLUMNS, 'label'),
     readTable(client, 'public', 've_bank_transactions', BANK_TXN_COLUMNS, 'txn_date'),
+    readTable(client, 'public', 'account_agents', AGENT_COLUMNS, 'name'),
   ])
-  return buildWorkspace({ familyAccounts, customers, orders, expenses, marketing, marketingSpend, products, bankAccounts, bankTransactions }, today)
+  return buildWorkspace({ familyAccounts, customers, orders, expenses, marketing, marketingSpend, products, bankAccounts, bankTransactions, accountAgents }, today)
 }

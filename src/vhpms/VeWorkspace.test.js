@@ -10,7 +10,7 @@ import { findAccount } from './directory.js'
 import { COPY, buildWorkspace } from './veData.js'
 
 const bundle = await build({
-  stdin: { contents: "export { BusinessHome } from './src/vhpms/BusinessHome.jsx'\nexport { default as VeWorkspace } from './src/vhpms/VeWorkspace.jsx'\nexport { default as ActivitiesBoard } from './src/vhpms/ActivitiesBoard.jsx'\nexport { default as Shell } from './src/vhpms/Shell.jsx'", resolveDir: process.cwd() },
+  stdin: { contents: "export { BusinessHome } from './src/vhpms/BusinessHome.jsx'\nexport { default as VeWorkspace, FamilyModal } from './src/vhpms/VeWorkspace.jsx'\nexport { default as ActivitiesBoard } from './src/vhpms/ActivitiesBoard.jsx'\nexport { default as Shell } from './src/vhpms/Shell.jsx'", resolveDir: process.cwd() },
   bundle: true,
   write: false,
   platform: 'node',
@@ -25,7 +25,7 @@ const code = bundle.outputFiles[0].text.replace(/from "([^"]+)"/g, (_, name) => 
   if (name.startsWith('react') || name.startsWith('@supabase/') || name === 'lucide-react') return `from "file://${require.resolve(name)}"`
   return `from "${name}"`
 })
-const { BusinessHome, VeWorkspace, ActivitiesBoard, Shell } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
+const { BusinessHome, VeWorkspace, FamilyModal, ActivitiesBoard, Shell } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
 
 const TODAY = '2026-11-08'
 const SECRET = 'super-secret-value'
@@ -33,9 +33,10 @@ const SECRET = 'super-secret-value'
 function workspaceModel() {
   return buildWorkspace({
     familyAccounts: { access: 'ok', rows: [
-      { fid: 7, product: 'Netflix', due_date: '2026-12-05', paid_status: 'Unpaid', slots_total: 5, slots_taken: 1, slot_1: 'C1', password: SECRET },
+      { fid: 7, aaid: 'AG1', product: 'Netflix', due_date: '2026-12-05', paid_status: 'Unpaid', slots_total: 5, slots_taken: 1, slot_1: 'C1', password: SECRET },
       { fid: 8, product: 'Spotify', due_date: '2026-04-05', paid_status: 'Unpaid', slots_total: 5, slots_taken: 0 },
     ] },
+    accountAgents: { access: 'ok', rows: [{ aaid: 'AG1', name: 'Twaambo Banda' }] },
     customers: { access: 'ok', rows: [
       { cid: 'C1', name: 'Amara Banda', phone: '0977000111', products: ['Netflix'], status: 'CONNECTED', total_spent: 1500, due_date: '2026-12-01' },
       { cid: 'C2', name: 'Lombe Phiri', phone: '', products: ['Spotify'], status: 'DISCONNECTED', total_spent: 40, due_date: '2026-04-01' },
@@ -68,8 +69,29 @@ test('the VE pages render mapped records', () => {
   for (const title of ['Overview', 'Family Accounts', 'Customers', 'Funds', 'Accounts', 'Budget', 'Marketing']) {
     assert.match(html, new RegExp(`<span>${title}</span></button>`))
   }
-  assert.match(html, /Account \/ Names/)
+  assert.match(html, /Account owner/)
+  assert.doesNotMatch(html, /Account \/ Names/)
   assert.match(html, /Amara Banda/)
+  assert.match(html, /Twaambo Banda/)
+  assert.match(html, /Active \(1\)/)
+  assert.match(html, /Inactive \(1\)/)
+  assert.match(html, /1 of 5/)
+  assert.match(html, /Total received/)
+  assert.doesNotMatch(html, /role="dialog"/)
+  const dialog = renderToStaticMarkup(createElement(FamilyModal, {
+    account: {
+      id: '7', owner: 'Amara Banda', plan: 'Netflix',
+      members: [
+        { slot: 1, cid: 'C1', name: 'Amara Banda', lastPayment: { date: '2026-11-08', amount: 120 } },
+        { slot: 2, cid: 'C2', name: 'Lombe Phiri', lastPayment: null },
+      ],
+    },
+    onClose: () => {},
+  }))
+  assert.match(dialog, /role="dialog"/)
+  assert.match(dialog, /Lombe Phiri/)
+  assert.match(dialog, /No payment recorded/)
+  assert.match(dialog, /ZMW 120\.00/)
   assert.match(html, />Email</)
   assert.match(html, /aria-label="Email not recorded"/)
   assert.match(html, /Income and expenses/)
@@ -81,7 +103,7 @@ test('the VE pages render mapped records', () => {
   assert.match(html, /Balance on hand/)
   assert.match(html, /Profit generated/)
   assert.match(html, /ZMW 120\.00/)
-  assert.match(html, /ZMW 90\.00/)
+  assert.match(html, /ZMW 30\.00/)
   assert.match(html, /ZMW 1,500\.00/)
   assert.match(html, /aria-label="Search customers"/)
   assert.match(html, /aria-label="Customer status"/)
@@ -181,13 +203,16 @@ test('activities, inbox, and sms stay on their own screens', () => {
   assert.match(activities, /id="new-activity"/)
   assert.match(activities, /hidden=""| hidden/)
   assert.match(activities, /Save activity/)
+  assert.match(activities, /Cancel/)
   assert.match(activities, /Save initiative/)
   assert.match(activities, /Save task force item/)
   const shell = renderToStaticMarkup(createElement(Shell, {
     user: findAccount('shadrickvidmar'), view: 'activities', menu: false, setMenu: () => {}, mode: 'businesses', books: emptyBooks(), businessId: 've', title: 'Activities',
-    onOpen: () => {}, onLive: () => {}, onBack: () => {}, onBusiness: () => {}, onLogout: () => {}, onRole: () => {},
+    onOpen: () => {}, onLive: () => {}, onBack: () => {}, onBusiness: () => {}, onRole: () => {},
     }, createElement('p', null, 'Activities body')))
   assert.doesNotMatch(shell, /side-user-name/)
+  assert.equal(readFileSync(new URL('./Shell.jsx', import.meta.url), 'utf8').includes('onLogout'), false)
+  assert.match(readFileSync(new URL('./Vhpms.jsx', import.meta.url), 'utf8'), /LIVE_VIEWS = new Set\(\[[^\]]*profile/)
   assert.match(shell, /aria-label="Current role"/)
   assert.match(shell, /aria-label="Profile"/)
   assert.match(shell, /aria-label="Collapse sidebar"/)
@@ -203,4 +228,14 @@ test('activities, inbox, and sms stay on their own screens', () => {
     assert.equal(source.includes('family_accounts'), false)
     assert.equal(source.includes('Add task'), false)
   }
+})
+
+test('the sign-in slideshow stays sharp and the credentials card is frosted', () => {
+  const css = readFileSync(new URL('./theme.css', import.meta.url), 'utf8')
+  assert.match(css, /\.login-slides img[\s\S]*object-fit: cover/)
+  assert.match(css, /-webkit-backdrop-filter: blur\(18px\) saturate\(140%\)/)
+  assert.match(css, /backdrop-filter: blur\(18px\) saturate\(140%\)/)
+  assert.equal(css.includes('blur(28px)'), false)
+  assert.equal(css.includes('scale(1.12)'), false)
+  assert.equal(css.includes('inset: -12%'), false)
 })
