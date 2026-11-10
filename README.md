@@ -57,6 +57,10 @@ dashboards.
 - Calmer card surfaces, larger perspective scores, a clear active-page marker in the sidebar and a visible focus ring on form fields.
 - The reporting period reads "Start – End Year" (for example Jul – Sep 2026).
 
+## Editing these dashboards
+
+Hermes and anyone else changing VHPMS should follow [docs/HERMES_EDITING.md](docs/HERMES_EDITING.md). Picture credits for the sign-in carousel are in [docs/CREDITS.md](docs/CREDITS.md).
+
 ## Requirements
 
 - **Node.js 20.19 or newer** (or 22.12+) and npm — required by Vite 7.

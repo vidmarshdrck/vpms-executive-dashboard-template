@@ -305,3 +305,25 @@
   .vh-app .app-main { margin-left: 0; }
   .vh-app { background: #fff; }
 }
+.vh-app .header-tools { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.vh-app .profile-slot { position: relative; }
+.vh-app .profile-btn { border: 0; background: transparent; padding: 0; cursor: pointer; border-radius: 50%; }
+.vh-app .profile-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; min-width: 200px; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; box-shadow: 0 12px 30px rgba(16, 24, 32, .12); }
+.vh-app .profile-menu .logout { margin: 10px 0 0; }
+.vh-app .login-shell { display: block; padding: 0; overflow: hidden; background: #101820; }
+.vh-app .login-slides { position: absolute; inset: 0; }
+.vh-app .login-slides img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1s ease; }
+.vh-app .login-slides img.is-active { opacity: 1; }
+.vh-app .login-layout { position: relative; z-index: 1; min-height: 100vh; display: grid; grid-template-columns: 1.15fr minmax(280px, 440px); align-items: center; }
+.vh-app .login-card { width: auto; max-width: none; margin: 28px 40px 28px 0; background: rgba(255, 255, 255, .78); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255, 255, 255, .6); box-shadow: 0 20px 50px rgba(16, 24, 32, .28); }
+.vh-app .password-row { display: flex; gap: 8px; align-items: center; }
+.vh-app .password-row input { flex: 1; }
+.vh-app .login-nav { position: absolute; left: 16px; bottom: 16px; z-index: 2; display: flex; gap: 8px; align-items: center; }
+.vh-app .login-nav button[aria-current="true"] { width: 10px; height: 10px; border-radius: 50%; border: 0; background: #fff; }
+.vh-app .login-nav button:not(.btn) { width: 10px; height: 10px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .45); padding: 0; cursor: pointer; }
+@media (max-width: 800px) {
+  .vh-app .login-layout { grid-template-columns: 1fr; align-items: end; }
+  .vh-app .login-card { margin: 72px 16px 72px; }
+  .vh-app .header-tools { gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) { .vh-app .login-slides img { transition: none; } }

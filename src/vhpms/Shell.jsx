@@ -5,25 +5,62 @@ import { accountRoles, initials, roleLabel, roleLine, managementLinks, adminLink
 import { activeBusinesses } from './books.js'
 import { readSidebarRetracted, writeSidebarRetracted } from './sidebar.js'
 
+const LOGIN_SLIDES = [
+  ['business.webp', 'Glass office towers'],
+  ['markets.webp', 'A trading chart'],
+  ['estate.webp', 'A house and keys'],
+  ['transport.webp', 'A freight truck on a mountain road'],
+  ['tech.webp', 'A computer circuit board'],
+  ['classical.webp', 'The Colosseum, a ring of classical arches'],
+]
+
 export function LoginScreen({ error, busy, onSubmit }) {
+  const [slide, setSlide] = useState(0)
+  const [showPassword, setShowPassword] = useState(false)
+  useEffect(() => {
+    const media = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)')
+    if (media && media.matches) return undefined
+    const timer = setInterval(() => setSlide((current) => (current + 1) % LOGIN_SLIDES.length), 7000)
+    return () => clearInterval(timer)
+  }, [])
+  const base = import.meta.env.BASE_URL || '/'
   return (
     <div className="vh-app">
       <div className="login-shell">
-        <div className="login-card">
-          <div className="login-brand">
-            <span className="brand-logo">VH</span>
-            <span className="brand-text"><span className="brand-name">Vidmar Holdings</span><span className="brand-sub">VHPMS</span></span>
+        <div className="login-slides" aria-hidden="true">
+          {LOGIN_SLIDES.map(([file, alt], index) => (
+            <img key={file} src={`${base}login/${file}`} alt="" className={index === slide ? 'is-active' : ''} loading={index === 0 ? 'eager' : 'lazy'} />
+          ))}
+        </div>
+        <div className="login-layout">
+          <div className="login-stage" />
+          <div className="login-card">
+            <div className="login-brand">
+              <span className="brand-logo">VH</span>
+              <span className="brand-text"><span className="brand-name">VHPMS</span><span className="brand-sub">Performance</span></span>
+            </div>
+            <p className="brand-eyebrow">VHPMS</p>
+            <h1>Performance Management System</h1>
+            <p className="sub">Sign in with your PMS account.</p>
+            {error && <div className="form-msg error">{error}</div>}
+            <form onSubmit={onSubmit} noValidate>
+              <div className="field"><label htmlFor="username">Username</label><input id="username" name="username" type="text" autoComplete="username" required /></div>
+              <div className="field">
+                <label htmlFor="password">Password</label>
+                <div className="password-row">
+                  <input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" required />
+                  <button type="button" className="btn btn-ghost" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((current) => !current)}>{showPassword ? 'Hide' : 'Show'}</button>
+                </div>
+              </div>
+              <button className="btn btn-primary" type="submit" style={{ width: '100%', justifyContent: 'center' }} disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+            </form>
+            <p className="login-foot"><VidmarCredit /></p>
           </div>
-          <p className="brand-eyebrow">Vidmar Holdings</p>
-          <h1>Performance Management System</h1>
-          <p className="sub">Sign in with your PMS account.</p>
-          {error && <div className="form-msg error">{error}</div>}
-          <form onSubmit={onSubmit} noValidate>
-            <div className="field"><label htmlFor="username">Username</label><input id="username" name="username" type="text" autoComplete="username" required /></div>
-            <div className="field"><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="current-password" required /></div>
-            <button className="btn btn-primary" type="submit" style={{ width: '100%', justifyContent: 'center' }} disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-          </form>
-          <p className="login-foot"><VidmarCredit /></p>
+        </div>
+        <div className="login-nav" role="group" aria-label="Background slides">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSlide((current) => (current + LOGIN_SLIDES.length - 1) % LOGIN_SLIDES.length)}>Previous</button>
+          {LOGIN_SLIDES.map(([, alt], index) => <button type="button" key={alt} className={index === slide ? 'is-active' : ''} aria-label={alt} aria-current={index === slide ? 'true' : undefined} onClick={() => setSlide(index)} />)}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSlide((current) => (current + 1) % LOGIN_SLIDES.length)}>Next</button>
         </div>
       </div>
     </div>
@@ -40,8 +77,9 @@ const LIVE_LINKS = [
   { id: 'sms', label: 'SMS Transactions', icon: 'activity' },
 ]
 
-export default function Shell({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onLogout, onRole, title, children }) {
+export default function Shell({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onLogout, onRole, title, headerAction = null, children }) {
   const businesses = activeBusinesses(books)
+  const [profileOpen, setProfileOpen] = useState(false)
   const [retracted, setRetracted] = useState(() => (typeof localStorage === 'undefined' ? false : readSidebarRetracted(localStorage)))
   useEffect(() => {
     if (typeof localStorage === 'undefined') return
@@ -97,7 +135,6 @@ export default function Shell({ user, view, menu, setMenu, mode, books, business
               </select>
             </label>
           )}
-          <button type="button" className="logout" onClick={onLogout}>Log out</button>
         </div>
       </aside>
       <div className="scrim" onClick={() => setMenu(false)} />
@@ -107,6 +144,21 @@ export default function Shell({ user, view, menu, setMenu, mode, books, business
           <div style={{ minWidth: 0 }}>
             <div className="eyebrow">VHPMS performance management</div>
             <div className="page-title">{title}</div>
+          </div>
+          <div className="header-tools">
+            {headerAction}
+            <div className="profile-slot">
+              <button type="button" className="profile-btn" aria-label="Profile" aria-expanded={profileOpen} aria-controls="profile-menu" onClick={() => setProfileOpen((current) => !current)}>
+                <span className="avatar">{initials(user.name)}</span>
+              </button>
+              {profileOpen && (
+                <div id="profile-menu" role="menu" className="profile-menu">
+                  <p className="side-user-name">{user.name}</p>
+                  <p className="side-user-role">{roleLine(user)}</p>
+                  <button type="button" role="menuitem" className="logout" onClick={onLogout}>Log out</button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
         <main className="app-content">{children}</main>

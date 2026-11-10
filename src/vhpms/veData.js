@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { slicesBy } from './books.js'
+export { VE_UPCOMING } from './veUpcoming.js'
 
 export const FAMILY_COLUMNS = 'fid,aaid,product,due_date,paid_status,slots_total,slots_taken,slot_1,slot_2,slot_3,slot_4,slot_5'
 export const CUSTOMER_COLUMNS = 'cid,name,phone,products,status,total_spent,due_date'
@@ -159,13 +160,26 @@ export function financeSummary(income, expenses, access = {}) {
   return { expenses: expenseTotal, income: incomeTotal, balance: surplus, profit: surplus }
 }
 
+export function latestPayments(orders) {
+  const byCustomer = new Map()
+  for (const order of orders || []) {
+    const cid = String(order.cid || '').trim()
+    const date = /^\d{4}-\d{2}-\d{2}/.test(String(order.date || '')) ? String(order.date).slice(0, 10) : ''
+    if (!cid || !date) continue
+    const amount = amountOrZero(order.amount)
+    const current = byCustomer.get(cid)
+    if (!current || date > current.date || (date === current.date && amount > current.amount)) byCustomer.set(cid, { date, amount })
+  }
+  return byCustomer
+}
+
 function mapAccount(row, customers, today) {
   const byId = new Map(customers.map((customer) => [customer.id, customer]))
   const members = [1, 2, 3, 4, 5].flatMap((slot) => {
     const cid = String(row[`slot_${slot}`] || '').trim()
     if (!cid) return []
     const customer = byId.get(cid)
-    return [{ slot, cid, name: customer?.name || cid, unmatched: !customer }]
+    return [{ slot, cid, name: customer?.name || cid, unmatched: !customer, lastPayment: customer?.lastPayment || null }]
   })
   const recordedEmail = String(row.email || '').trim()
   return {
@@ -311,6 +325,8 @@ export function acquisitionSummary(lines) {
 
 export function buildWorkspace(sources, today = todayIso()) {
   const customers = sources.customers.access === 'ok' ? sources.customers.rows.map(mapCustomer).sort((a, b) => a.name.localeCompare(b.name)) : []
+  const payments = sources.orders.access === 'ok' ? latestPayments(sources.orders.rows) : new Map()
+  for (const customer of customers) customer.lastPayment = payments.get(customer.id) || null
   const accounts = sources.familyAccounts.access === 'ok' ? sources.familyAccounts.rows.map((row) => mapAccount(row, customers, today)) : []
   const activeAccounts = accounts.filter((account) => account.activity === 'Active').sort((a, b) => a.dueDate.localeCompare(b.dueDate))
   const inactiveAccounts = accounts.filter((account) => account.activity === 'Inactive').sort((a, b) => a.dueDate.localeCompare(b.dueDate))
