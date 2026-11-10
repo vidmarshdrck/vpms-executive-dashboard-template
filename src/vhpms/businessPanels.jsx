@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { Donut } from './Donut.jsx'
 import { formatMoney } from './bankBudget.js'
 import { formatZmw, slicesBy } from './books.js'
-import { categoryShare, dailyAmounts, latestMonth, monthLabel, monthRows, monthSummary, shiftMonth } from './fundsMonth.js'
-import { fundsByMonth } from './veData.js'
+import { categoryShare, compactAmount, dailyAmounts, monthSummary } from './fundsMonth.js'
+import { fundsByMonth, weeklyBudget } from './veData.js'
+import { monthsInPeriod, rowsInPeriod, weekOverlapsPeriod } from './reportingPeriod.js'
+import { useReportingPeriod } from './TimeframePopover.jsx'
 
 export function Panel({ title, children, note }) {
   return (
@@ -50,7 +52,7 @@ function RankedSplit({ title, rows, center, empty }) {
             ))}
           </ul>
         </>
-      ) : <Message>{empty || `No ${center.toLowerCase()} rows were returned for this month.`}</Message>}
+      ) : <Message>{empty || `No ${center.toLowerCase()} rows were returned for this period.`}</Message>}
     </Panel>
   )
 }
@@ -73,8 +75,11 @@ function FlowChart({ title, days, field, color }) {
   )
 }
 
-function TrendChart({ rows }) {
-  const months = fundsByMonth(rows)
+function TrendChart({ rows, period }) {
+  const months = period ? monthsInPeriod(period).map((month) => {
+    const bucket = fundsByMonth(rows).find((item) => item.month === month) || { month, income: 0, expense: 0 }
+    return bucket
+  }) : fundsByMonth(rows)
   const width = 640
   const height = 180
   const max = Math.max(...months.flatMap((month) => [month.income, month.expense]), 1)
@@ -143,26 +148,61 @@ function StatusShare({ rows, empty, center }) {
   )
 }
 
+function periodFinance(finance, incomeRows, expenseRows) {
+  const income = finance?.income == null ? null : incomeRows.reduce((sum, row) => sum + Number(row.amount), 0)
+  const expenses = finance?.expenses == null ? null : expenseRows.reduce((sum, row) => sum + Number(row.amount), 0)
+  const surplus = income != null && expenses != null ? income - expenses : null
+  return { income, expenses, balance: surplus, profit: surplus }
+}
+
+export function MonthCalendar({ days, month }) {
+  const [year, number] = month.split('-').map(Number)
+  const offset = (new Date(Date.UTC(year, number - 1, 1)).getUTCDay() + 6) % 7
+  const label = new Date(Date.UTC(year, number - 1, 1)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+  return (
+    <section className="card" style={{ marginBottom: 16 }}>
+      <div className="card-head"><h2>{label}</h2></div>
+      <div className="card-body">
+        <div className="vh-calendar-scroll" tabIndex="0" aria-label="Funds calendar">
+          <div className="vh-calendar">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <strong key={day}>{day}</strong>)}
+            {Array.from({ length: offset }, (_, index) => <div key={`pad-${index}`} className="vh-day vh-blank" />)}
+            {days.map((day) => {
+              const active = day.income || day.expense
+              const tone = day.net < 0 ? 'var(--rag-red)' : 'var(--rag-green)'
+              return <div key={day.date} className="vh-day"><span>{Number(day.date.slice(-2))}</span>{active ? <strong style={{ color: tone }}>{compactAmount(day.net)}</strong> : null}</div>
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export function StandardOverview({ model }) {
+  const period = useReportingPeriod(model.today)
+  const incomeRows = rowsInPeriod(model.incomeRows, period)
+  const expenseRows = rowsInPeriod(model.expenseRows, period)
+  const finance = periodFinance(model.finance, incomeRows, expenseRows)
   const split = [
-    Number(model.finance.income) > 0 ? { category: 'Income', amount: model.finance.income } : null,
-    Number(model.finance.expenses) > 0 ? { category: 'Expenses', amount: model.finance.expenses } : null,
+    Number(finance.income) > 0 ? { category: 'Income', amount: finance.income } : null,
+    Number(finance.expenses) > 0 ? { category: 'Expenses', amount: finance.expenses } : null,
   ].filter(Boolean)
   return (
     <>
       <h2 className="sr-only">Overview</h2>
       <div className="grid-4" style={{ margin: '16px 0' }}>
-        <Stat label="Total spent" value={moneyTile(model.finance.expenses)} />
-        <Stat label="Income" value={moneyTile(model.finance.income)} />
-        <Stat label="Balance on hand" value={moneyTile(model.finance.balance)} />
-        <Stat label="Profit generated" value={moneyTile(model.finance.profit)} />
+        <Stat label="Total spent" value={moneyTile(finance.expenses)} />
+        <Stat label="Income" value={moneyTile(finance.income)} />
+        <Stat label="Balance on hand" value={moneyTile(finance.balance)} />
+        <Stat label="Profit generated" value={moneyTile(finance.profit)} />
       </div>
       {model.incomeNote && <Message>{model.incomeNote}</Message>}
       {model.expenseNote && <Message>{model.expenseNote}</Message>}
-      <TrendChart rows={[...model.incomeRows, ...model.expenseRows]} />
+      <TrendChart rows={[...incomeRows, ...expenseRows]} period={period} />
       <div className="grid">
         <RankedSplit title="Income and expenses" rows={split} center="Split" empty="No income or expense total was returned." />
-        <RankedSplit title="Expenses by category" rows={model.expenseRows} center="Expenses" empty="No expense categories were returned." />
+        <RankedSplit title="Expenses by category" rows={expenseRows} center="Expenses" empty="No expense categories were returned." />
       </div>
       <div className="grid">
         <Panel title="Operations" note={model.operationsNote}>
@@ -181,30 +221,17 @@ export function StandardOverview({ model }) {
   )
 }
 
-export function MonthNav({ month, onMonth }) {
-  return (
-    <div className="vh-actions">
-      <button type="button" className="btn btn-ghost btn-sm" aria-label="Previous month" onClick={() => onMonth(shiftMonth(month, -1))}>Previous</button>
-      <strong aria-live="polite">{monthLabel(month)}</strong>
-      <button type="button" className="btn btn-ghost btn-sm" aria-label="Next month" onClick={() => onMonth(shiftMonth(month, 1))}>Next</button>
-    </div>
-  )
-}
-
 export function StandardFunds({ model }) {
-  const dated = [...model.incomeRows, ...model.expenseRows].map((row) => row.date)
-  const [month, setMonth] = useState(() => latestMonth(dated, model.today))
-  const rows = monthRows([...model.incomeRows, ...model.expenseRows], month)
+  const period = useReportingPeriod(model.today)
+  const rows = rowsInPeriod([...model.incomeRows, ...model.expenseRows], period)
   const summary = monthSummary(rows)
   const expenseValue = model.expenseNote && !model.expenseRows.length ? null : summary.expense
   const receivedValue = model.incomeNote && !model.incomeRows.length ? null : summary.income
-  const days = dailyAmounts(rows, month)
+  const months = monthsInPeriod(period)
+  const days = months.flatMap((month) => dailyAmounts(rows, month))
   return (
     <>
-      <div className="topbar">
-        <h2 className="sr-only">Funds</h2>
-        <MonthNav month={month} onMonth={setMonth} />
-      </div>
+      <h2 className="sr-only">Funds</h2>
       {model.incomeNote && <Message>{model.incomeNote}</Message>}
       {model.expenseNote && <Message>{model.expenseNote}</Message>}
       <div className="grid-3 funds-totals" style={{ marginBottom: 16 }}>
@@ -223,6 +250,7 @@ export function StandardFunds({ model }) {
           </div>
         </>
       ) : null}
+      {months.map((month) => <MonthCalendar key={month} month={month} days={dailyAmounts(rows, month)} />)}
       <Panel title="By account">
         <AccountBars rows={model.operations} />
         {!model.operations.filter((row) => row.amount != null && Number(row.amount) > 0).length && <Message>{model.operationsNote || 'No account amounts were returned for this business.'}</Message>}
@@ -232,12 +260,14 @@ export function StandardFunds({ model }) {
 }
 
 export function StandardMarketing({ model }) {
+  const period = useReportingPeriod(model.today)
+  const posts = rowsInPeriod(model.posts, period)
   return (
     <>
       <h2 className="sr-only">Marketing</h2>
       {model.marketingNote ? <Message>{model.marketingNote}</Message> : (
         <Panel title="Scheduled posts">
-          {model.posts?.length ? <p className="stat-desc">{model.posts.length} posts recorded.</p> : <Message>No marketing rows were returned.</Message>}
+          {posts.length ? <p className="stat-desc">{posts.length} posts recorded.</p> : <Message>No marketing rows were returned.</Message>}
         </Panel>
       )}
     </>
@@ -245,9 +275,10 @@ export function StandardMarketing({ model }) {
 }
 
 export function StandardBudget({ model }) {
-  const weeks = model.weeks || []
+  const period = useReportingPeriod(model.today)
+  const weeks = weeklyBudget(rowsInPeriod(model.expenseRows, period)).filter((item) => weekOverlapsPeriod(item.week, period))
   const [week, setWeek] = useState(weeks.at(-1)?.week || '')
-  const selected = weeks.find((item) => item.week === week) || null
+  const selected = weeks.find((item) => item.week === week) || weeks.at(-1) || null
   return (
     <>
       <h2 className="sr-only">Budget</h2>
@@ -257,7 +288,7 @@ export function StandardBudget({ model }) {
             <>
               {weeks.length > 1 && (
                 <div className="field" style={{ maxWidth: 240 }}><label>Week
-                  <select aria-label="Budget week" value={week} onChange={(event) => setWeek(event.target.value)}>
+                  <select aria-label="Budget week" value={selected?.week || ''} onChange={(event) => setWeek(event.target.value)}>
                     {weeks.map((item) => <option key={item.week} value={item.week}>Week of {item.week}</option>)}
                   </select>
                 </label></div>

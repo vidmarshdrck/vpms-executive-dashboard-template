@@ -5,10 +5,12 @@ import { Donut, PageFooter } from './Donut.jsx'
 import { formatZmw, slicesBy } from './books.js'
 import { ColumnLabel } from './icons.jsx'
 import { accountPeriod, accountsByCurrency, categoryLabel, filterBankTransactions, formatMoney, formatRate, fxText } from './bankBudget.js'
-import { categoryShare, compactAmount, dailyAmounts, latestMonth, monthLabel, monthRows, monthSummary, shiftMonth, sourceAnalysis } from './fundsMonth.js'
-import { AccountBars, StandardOverview } from './businessPanels.jsx'
+import { categoryShare, dailyAmounts, monthLabel, monthSummary, sourceAnalysis } from './fundsMonth.js'
+import { AccountBars, MonthCalendar, StandardOverview } from './businessPanels.jsx'
 import { glanceFromVe } from './businessSources.js'
-import { COPY, buildWorkspace, emptySources, fetchVeWorkspace, filterCustomers, todayIso, whatsappHref } from './veData.js'
+import { monthsInPeriod, rowsInPeriod, weekOverlapsPeriod } from './reportingPeriod.js'
+import { useReportingPeriod } from './TimeframePopover.jsx'
+import { COPY, acquisitionSummary, buildWorkspace, emptySources, fetchVeWorkspace, filterCustomers, todayIso, weeklyBudget, whatsappHref } from './veData.js'
 
 function Panel({ title, children, note }) {
   return (
@@ -241,7 +243,7 @@ function RankedSplit({ title, rows, center, format = formatZmw }) {
             ))}
           </ul>
         </>
-      ) : <Message>No {center.toLowerCase()} was returned for this month.</Message>}
+      ) : <Message>No {center.toLowerCase()} was returned for this period.</Message>}
     </Panel>
   )
 }
@@ -269,40 +271,6 @@ function FlowChart({ title, days, field, color }) {
   )
 }
 
-function AmountCalendar({ days, month }) {
-  const [year, number] = month.split('-').map(Number)
-  const offset = (new Date(Date.UTC(year, number - 1, 1)).getUTCDay() + 6) % 7
-  const label = new Date(Date.UTC(year, number - 1, 1)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-  return (
-    <section className="card" style={{ marginBottom: 16 }}>
-      <div className="card-head"><h2>{label}</h2></div>
-      <div className="card-body">
-        <div className="vh-calendar-scroll" tabIndex="0" aria-label="Funds calendar">
-          <div className="vh-calendar">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <strong key={day}>{day}</strong>)}
-            {Array.from({ length: offset }, (_, index) => <div key={`pad-${index}`} className="vh-day vh-blank" />)}
-            {days.map((day) => {
-              const active = day.income || day.expense
-              const tone = day.net < 0 ? 'var(--rag-red)' : 'var(--rag-green)'
-              return <div key={day.date} className="vh-day"><span>{Number(day.date.slice(-2))}</span>{active ? <strong style={{ color: tone }}>{compactAmount(day.net)}</strong> : null}</div>
-            })}
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function MonthNav({ month, onMonth, name }) {
-  return (
-    <div className="vh-actions">
-      <button type="button" className="btn btn-ghost btn-sm" aria-label={`Previous month for ${name}`} onClick={() => onMonth(shiftMonth(month, -1))}>Previous</button>
-      <strong aria-live="polite">{monthLabel(month)}</strong>
-      <button type="button" className="btn btn-ghost btn-sm" aria-label={`Next month for ${name}`} onClick={() => onMonth(shiftMonth(month, 1))}>Next</button>
-    </div>
-  )
-}
-
 function BalanceChart({ title, points, currency }) {
   const width = 640
   const height = 180
@@ -325,11 +293,11 @@ function BalanceChart({ title, points, currency }) {
   )
 }
 
-function BankAccountBlock({ account, model, month, query, category }) {
-  const period = accountPeriod(account, model.bankTransactions, month)
+function BankAccountBlock({ account, model, range, query, category }) {
+  const period = accountPeriod(account, model.bankTransactions, range)
   const own = model.bankTransactions.filter((row) => row.accountId === account.id)
-  const trail = filterBankTransactions(own, { month, query, category })
-  const spend = filterBankTransactions(own, { month }).filter((row) => row.amount < 0).map((row) => ({ category: categoryLabel(row.category), amount: -row.amount }))
+  const trail = filterBankTransactions(own, { start: range.start, end: range.end, query, category })
+  const spend = filterBankTransactions(own, { start: range.start, end: range.end }).filter((row) => row.amount < 0).map((row) => ({ category: categoryLabel(row.category), amount: -row.amount }))
   const money = (amount) => formatMoney(amount, account.currency)
   return (
     <>
@@ -342,13 +310,13 @@ function BankAccountBlock({ account, model, month, query, category }) {
           {account.bank && <p className="stat-desc">{account.bank}</p>}
           <div className="grid-3">
             <div><div className="stat-num" style={{ fontSize: 28 }}>{money(period.current)}</div><div className="stat-desc">Current balance</div></div>
-            <div><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-green)' }}>{money(period.moneyIn)}</div><div className="stat-desc">In this month</div></div>
-            <div><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-red)' }}>{money(period.moneyOut)}</div><div className="stat-desc">Out this month</div></div>
+            <div><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-green)' }}>{money(period.moneyIn)}</div><div className="stat-desc">In this period</div></div>
+            <div><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-red)' }}>{money(period.moneyOut)}</div><div className="stat-desc">Out this period</div></div>
           </div>
           {account.openingBalance != null && <p className="stat-desc">Opening balance {money(account.openingBalance)}</p>}
         </div>
       </article>
-      {period.points.length ? <BalanceChart title="Balance over time" points={period.points} currency={account.currency} /> : <Panel title="Balance over time"><Message>No balance points in this month.</Message></Panel>}
+      {period.points.length ? <BalanceChart title="Balance over time" points={period.points} currency={account.currency} /> : <Panel title="Balance over time"><Message>No balance points in this period.</Message></Panel>}
       <RankedSplit title="Spending by category" rows={spend} center="Spending" format={money} />
       <Panel title="Transactions">
         {own.length ? (
@@ -370,20 +338,19 @@ function BankAccountBlock({ account, model, month, query, category }) {
   )
 }
 
-function Accounts({ model, month, onMonth }) {
+function Accounts({ model }) {
+  const reporting = useReportingPeriod(model.today)
+  const range = { start: reporting.start, end: reporting.end }
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('All')
   const access = model.access.bankAccounts
   const readable = access === 'ok' || access === 'empty'
-  const monthCategories = [...new Set(model.bankTransactions.filter((row) => row.date.startsWith(`${month}-`)).map((row) => row.category))].sort()
+  const monthCategories = [...new Set(model.bankTransactions.filter((row) => row.date >= range.start && row.date <= range.end).map((row) => row.category))].sort()
   const selectedCategory = monthCategories.includes(category) ? category : 'All'
   const groups = accountsByCurrency(model.bankAccounts)
   return (
     <>
-      <div className="topbar">
-        <h2 className="sr-only">Accounts</h2>
-        <MonthNav month={month} onMonth={onMonth} name="Accounts" />
-      </div>
+      <h2 className="sr-only">Accounts</h2>
       {!readable ? <Message>{accessMessage(access, '', COPY.bankAccountsBlocked)}</Message> : (
         <>
           {model.bankAccounts.length > 0 && (
@@ -404,7 +371,7 @@ function Accounts({ model, month, onMonth }) {
           {groups.map((group) => (
             <section key={group.currency} style={{ marginBottom: 8 }}>
               <h3 className="section-title" style={{ fontSize: 18, margin: '18px 0 8px' }}>{group.currency}</h3>
-              {group.accounts.length ? group.accounts.map((account) => <BankAccountBlock key={account.id} account={account} model={model} month={month} query={query} category={selectedCategory} />) : <Message>No {group.currency} account was returned.</Message>}
+              {group.accounts.length ? group.accounts.map((account) => <BankAccountBlock key={account.id} account={account} model={model} range={range} query={query} category={selectedCategory} />) : <Message>No {group.currency} account was returned.</Message>}
             </section>
           ))}
         </>
@@ -413,20 +380,19 @@ function Accounts({ model, month, onMonth }) {
   )
 }
 
-function Funds({ model, month, onMonth }) {
-  const rows = monthRows([...model.income, ...model.expenses], month)
+function Funds({ model }) {
+  const reporting = useReportingPeriod(model.today)
+  const rows = rowsInPeriod([...model.income, ...model.expenses], reporting)
   const summary = monthSummary(rows)
-  const days = dailyAmounts(rows, month)
+  const months = monthsInPeriod(reporting)
+  const days = months.flatMap((month) => dailyAmounts(rows, month))
   const sources = sourceAnalysis(rows)
   const maxSource = Math.max(...sources.flatMap((item) => [item.income, item.expense]), 1)
   const ordersNote = accessMessage(model.access.orders, '', COPY.ordersBlocked)
   const expensesNote = accessMessage(model.access.expenses, model.access.expenses === 'empty' ? COPY.expensesEmpty : '', COPY.expensesBlocked)
   return (
     <>
-      <div className="topbar">
-        <h2 className="sr-only">Funds</h2>
-        <MonthNav month={month} onMonth={onMonth} name="Funds" />
-      </div>
+      <h2 className="sr-only">Funds</h2>
       <div className="grid-3 funds-totals" style={{ marginBottom: 16 }}>
         <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-red)' }}>{model.access.expenses === 'ok' || model.access.expenses === 'empty' ? formatZmw(summary.expense) : '—'}</div><div className="stat-desc">Expense</div></div></section>
         <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{model.access.orders === 'ok' || model.access.orders === 'empty' ? formatZmw(summary.income) : '—'}</div><div className="stat-desc">Total received</div></div></section>
@@ -443,7 +409,6 @@ function Funds({ model, month, onMonth }) {
             <FlowChart title="Expense flow" days={days} field="expense" color="var(--rag-red)" />
             <FlowChart title="Income flow" days={days} field="income" color="var(--rag-green)" />
           </div>
-          <AmountCalendar days={days} month={month} />
           <Panel title="Account analysis">
             <div role="img" aria-label="Expense and income by source">
               {sources.map((item) => (
@@ -460,6 +425,7 @@ function Funds({ model, month, onMonth }) {
           </Panel>
         </>
       ) : <Message>{COPY.fundsEmpty}</Message>}
+      {months.map((month) => <MonthCalendar key={month} month={month} days={dailyAmounts(rows, month)} />)}
     </>
   )
 }
@@ -482,6 +448,8 @@ function CategoryTable({ title, rows, empty }) {
 }
 
 function BudgetProjection({ model }) {
+  const reporting = useReportingPeriod(model.today)
+  const months = new Set(monthsInPeriod(reporting))
   const access = model.access.bankTransactions
   if (access !== 'ok' && access !== 'empty') return <Message>{accessMessage(access, '', COPY.bankTxnsBlocked)}</Message>
   const budget = model.budget
@@ -536,7 +504,7 @@ function BudgetProjection({ model }) {
             <p>Latest month, {monthLabel(budget.actual.latest.month)}: {formatZmw(budget.actual.latest.amount)}</p>
             <p>12-month average: {formatZmw(budget.actual.average)}</p>
             <DataTable
-              rows={budget.actual.months.map((row) => ({ ...row, id: row.month }))}
+              rows={budget.actual.months.filter((row) => months.has(row.month)).map((row) => ({ ...row, id: row.month }))}
               empty={COPY.bankTxnsEmpty}
               columns={[
                 { key: 'month', label: 'Month', cell: (row) => monthLabel(row.month) },
@@ -550,10 +518,20 @@ function BudgetProjection({ model }) {
   )
 }
 
+function categoryTotals(rows) {
+  const totals = new Map()
+  for (const row of rows) totals.set(row.category, (totals.get(row.category) || 0) + row.amount)
+  return [...totals.entries()].map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name))
+}
+
 function Budget({ model }) {
-  const weeks = model.weeks
+  const reporting = useReportingPeriod(model.today)
+  const expenses = rowsInPeriod(model.expenses, reporting)
+  const income = rowsInPeriod(model.income, reporting)
+  const weeks = weeklyBudget(expenses).filter((item) => weekOverlapsPeriod(item.week, reporting))
   const [week, setWeek] = useState(weeks.at(-1)?.week || '')
-  const selected = weeks.find((item) => item.week === week) || null
+  const selected = weeks.find((item) => item.week === week) || weeks.at(-1) || null
+  const selectedWeek = selected?.week || ''
   const expenseMessage = accessMessage(model.access.expenses, COPY.expensesEmpty, COPY.expensesBlocked)
   const incomeMessage = accessMessage(model.access.orders, 'No income was returned for this account.', COPY.ordersBlocked)
   return (
@@ -563,7 +541,7 @@ function Budget({ model }) {
         <Panel title="Weekly expense budget">
           {weeks.length > 0 && (
             <div className="field" style={{ maxWidth: 240 }}><label>Week
-              <select aria-label="Budget week" value={week} onChange={(event) => setWeek(event.target.value)}>
+                  <select aria-label="Budget week" value={selectedWeek} onChange={(event) => setWeek(event.target.value)}>
                 {weeks.map((item) => <option key={item.week} value={item.week}>Week of {item.week}</option>)}
               </select>
             </label></div>
@@ -573,23 +551,27 @@ function Budget({ model }) {
         </Panel>
       )}
       <div className="grid">
-        <CategoryTable title="Income categories" rows={model.incomeCategories} empty={incomeMessage || 'No income was returned for this account.'} />
-        <CategoryTable title="Expense categories" rows={model.expenseCategories} empty={expenseMessage || COPY.expensesEmpty} />
+        <CategoryTable title="Income categories" rows={categoryTotals(income)} empty={incomeMessage || 'No income was returned for this account.'} />
+        <CategoryTable title="Expense categories" rows={categoryTotals(expenses)} empty={expenseMessage || COPY.expensesEmpty} />
       </div>
     </>
   )
 }
 
 function Marketing({ model }) {
+  const reporting = useReportingPeriod(model.today)
+  const posts = rowsInPeriod(model.posts, reporting)
+  const spend = rowsInPeriod(model.spend, reporting)
+  const acquisition = acquisitionSummary(spend)
   const postsMessage = accessMessage(model.access.marketing, COPY.postsEmpty, COPY.postsBlocked)
   const spendMessage = accessMessage(model.access.marketingSpend, COPY.cacEmpty, COPY.cacBlocked)
-  const cac = model.acquisition.value == null ? 'Not recorded' : formatZmw(model.acquisition.value)
+  const cac = acquisition.value == null ? 'Not recorded' : formatZmw(acquisition.value)
   return (
     <div className="grid">
       <Panel title="Scheduled posts">
-        {postsMessage || !model.posts.length ? <Message>{postsMessage || COPY.postsEmpty}</Message> : (
+        {postsMessage || !posts.length ? <Message>{postsMessage || COPY.postsEmpty}</Message> : (
           <DataTable
-            rows={model.posts}
+            rows={posts}
             empty={COPY.postsEmpty}
             columns={[
               { key: 'date', label: 'Scheduled for', cell: (row) => row.date },
@@ -601,11 +583,11 @@ function Marketing({ model }) {
         )}
       </Panel>
       <Panel title="Customer acquisition cost (CAC)">
-        {spendMessage || !model.spend.length ? <Message>{spendMessage || COPY.cacEmpty}</Message> : (
+        {spendMessage || !spend.length ? <Message>{spendMessage || COPY.cacEmpty}</Message> : (
           <>
             <div className="stat-num" style={{ fontSize: 28 }}>CAC {cac}</div>
             <DataTable
-              rows={model.spend}
+              rows={spend}
               empty={COPY.cacEmpty}
               columns={[
                 { key: 'date', label: 'Date', cell: (row) => row.date },
@@ -645,11 +627,6 @@ export default function VeWorkspace({ business, token = '', model = null, today,
 }
 
 function VePages({ business, view }) {
-  const [month, setMonth] = useState(() => latestMonth([
-    ...view.income.map((row) => row.date),
-    ...view.expenses.map((row) => row.date),
-    ...view.bankTransactions.map((row) => row.date),
-  ], view.today))
   return (
     <div className="wrap biz">
       <div className="topbar"><div><p className="brand-eyebrow">Vidmar Holdings · {business?.code || 'VE'}</p><h1>{business?.name || 'Vidmar Entertainment'}</h1></div></div>
@@ -657,8 +634,8 @@ function VePages({ business, view }) {
         <div><Overview model={view} /></div>
         <div><FamilyAccounts model={view} /></div>
         <div><Customers model={view} /></div>
-        <div><Funds model={view} month={month} onMonth={setMonth} /></div>
-        <div><Accounts model={view} month={month} onMonth={setMonth} /></div>
+        <div><Funds model={view} /></div>
+        <div><Accounts model={view} /></div>
         <div><Budget model={view} /></div>
         <div><Marketing model={view} /></div>
       </SlideTabs>

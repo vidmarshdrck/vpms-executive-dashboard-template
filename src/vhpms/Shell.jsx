@@ -4,6 +4,9 @@ import { VidmarCredit } from './Donut.jsx'
 import { accountRoles, roleLabel, managementLinks, adminLinks, WORKSPACE_LINKS } from './directory.js'
 import { activeBusinesses } from './books.js'
 import { readSidebarRetracted, writeSidebarRetracted } from './sidebar.js'
+import { ReportingPeriodProvider, TimeframePopover } from './TimeframePopover.jsx'
+
+const PERIOD_HIDDEN = new Set(['profile', 'activities', 'inbox', 'sms'])
 
 const LOGIN_SLIDES = [
   ['business.webp', 'Glass office towers'],
@@ -72,7 +75,15 @@ const LIVE_LINKS = [
   { id: 'sms', label: 'SMS Transactions', icon: 'activity' },
 ]
 
-export default function Shell({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onRole, title, headerAction = null, children }) {
+export default function Shell({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onRole, title, headerAction = null, today, children }) {
+  return (
+    <ReportingPeriodProvider userId={user?.username || user?.id || ''} today={today}>
+      <ShellFrame user={user} view={view} menu={menu} setMenu={setMenu} mode={mode} books={books} businessId={businessId} inboxCount={inboxCount} onOpen={onOpen} onLive={onLive} onBack={onBack} onBusiness={onBusiness} onRole={onRole} title={title} headerAction={headerAction} today={today}>{children}</ShellFrame>
+    </ReportingPeriodProvider>
+  )
+}
+
+function ShellFrame({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onRole, title, headerAction = null, today, children }) {
   const businesses = activeBusinesses(books)
   const [retracted, setRetracted] = useState(() => (typeof localStorage === 'undefined' ? false : readSidebarRetracted(localStorage)))
   useEffect(() => {
@@ -134,6 +145,7 @@ export default function Shell({ user, view, menu, setMenu, mode, books, business
           </div>
           <div className="header-tools">
             {headerAction}
+            {!PERIOD_HIDDEN.has(view) && <TimeframePopover pageTitle={title} today={today} />}
             <div className="profile-slot">
               <button type="button" className="profile-btn" aria-label="Profile" onClick={() => onOpen('profile')}>
                 <span className="avatar" aria-hidden="true"><NavIcon name="user" /></span>

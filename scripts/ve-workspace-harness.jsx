@@ -124,6 +124,7 @@ export function Harness() {
     books,
     businessId,
     title: view === 'activities' ? 'Activities' : view === 'profile' ? 'Profile' : business.name,
+    today: '2026-11-10',
     onOpen: (id) => { setView(id); setMenu(false) },
     onLive: () => {},
     onBack: () => setView('business'),

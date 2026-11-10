@@ -10,7 +10,7 @@ import { findAccount } from './directory.js'
 import { COPY, buildWorkspace } from './veData.js'
 
 const bundle = await build({
-  stdin: { contents: "export { BusinessHome } from './src/vhpms/BusinessHome.jsx'\nexport { default as VeWorkspace, FamilyModal } from './src/vhpms/VeWorkspace.jsx'\nexport { default as ActivitiesBoard } from './src/vhpms/ActivitiesBoard.jsx'\nexport { default as Shell } from './src/vhpms/Shell.jsx'", resolveDir: process.cwd() },
+  stdin: { contents: "export { BusinessHome } from './src/vhpms/BusinessHome.jsx'\nexport { default as VeWorkspace, FamilyModal } from './src/vhpms/VeWorkspace.jsx'\nexport { default as ActivitiesBoard } from './src/vhpms/ActivitiesBoard.jsx'\nexport { default as Shell } from './src/vhpms/Shell.jsx'\nexport { TimeframePopover } from './src/vhpms/TimeframePopover.jsx'", resolveDir: process.cwd() },
   bundle: true,
   write: false,
   platform: 'node',
@@ -25,7 +25,7 @@ const code = bundle.outputFiles[0].text.replace(/from "([^"]+)"/g, (_, name) => 
   if (name.startsWith('react') || name.startsWith('@supabase/') || name === 'lucide-react') return `from "file://${require.resolve(name)}"`
   return `from "${name}"`
 })
-const { BusinessHome, VeWorkspace, FamilyModal, ActivitiesBoard, Shell } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
+const { BusinessHome, VeWorkspace, FamilyModal, ActivitiesBoard, Shell, TimeframePopover } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
 
 const TODAY = '2026-11-08'
 const SECRET = 'super-secret-value'
@@ -116,6 +116,9 @@ test('the VE pages render mapped records', () => {
   assert.match(html, /Expense flow/)
   assert.match(html, /Income flow/)
   assert.match(html, /aria-label="Funds calendar"/)
+  assert.match(html, /October 2026/)
+  assert.match(html, /December 2026/)
+  assert.doesNotMatch(html, /Previous month/)
   assert.match(html, /Account analysis/)
   assert.match(html, /Last payment/)
   assert.match(html, /FNB Lifestart Student \(ZMW\)/)
@@ -211,6 +214,20 @@ test('activities, inbox, and sms stay on their own screens', () => {
     onOpen: () => {}, onLive: () => {}, onBack: () => {}, onBusiness: () => {}, onRole: () => {},
     }, createElement('p', null, 'Activities body')))
   assert.doesNotMatch(shell, /side-user-name/)
+  assert.doesNotMatch(shell, /Select reporting period/)
+  const businessShell = renderToStaticMarkup(createElement(Shell, {
+    user: findAccount('shadrickvidmar'), view: 'business', menu: false, setMenu: () => {}, mode: 'businesses', books: emptyBooks(), businessId: 've', title: 'Vidmar Entertainment (VE)', today: '2026-11-10',
+    onOpen: () => {}, onLive: () => {}, onBack: () => {}, onBusiness: () => {}, onRole: () => {},
+  }, createElement('p', null, 'Business body')))
+  assert.match(businessShell, /Select reporting period/)
+  assert.match(businessShell, /Oct – Dec 2026/)
+  assert.doesNotMatch(businessShell, /Reporting period · Vidmar Entertainment/)
+  const openPeriod = renderToStaticMarkup(createElement(TimeframePopover, { pageTitle: 'Vidmar Entertainment (VE)', today: '2026-11-10', initiallyOpen: true }))
+  assert.match(openPeriod, /Reporting period · Vidmar Entertainment \(VE\)/)
+  assert.match(openPeriod, /From/)
+  assert.match(openPeriod, /<option[^>]*>Dec<\/option>/)
+  assert.match(openPeriod, />Cancel</)
+  assert.match(openPeriod, />Apply</)
   assert.equal(readFileSync(new URL('./Shell.jsx', import.meta.url), 'utf8').includes('onLogout'), false)
   assert.match(readFileSync(new URL('./Vhpms.jsx', import.meta.url), 'utf8'), /LIVE_VIEWS = new Set\(\[[^\]]*profile/)
   assert.match(shell, /aria-label="Current role"/)
