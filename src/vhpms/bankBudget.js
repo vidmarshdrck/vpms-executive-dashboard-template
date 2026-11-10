@@ -293,6 +293,18 @@ function inDateBounds(date, bounds) {
   return true
 }
 
+export function closingBalances(accounts, transactions, end) {
+  const totals = new Map()
+  for (const account of accounts || []) {
+    const mine = (transactions || []).filter((txn) => txn.accountId === account.id && asNumber(txn.balance) != null && txn.date && (!end || txn.date <= end)).sort(compareTxn)
+    const balance = mine.length ? asNumber(mine.at(-1).balance) : asNumber(account.openingBalance)
+    if (balance == null) continue
+    const currency = account.currency || 'ZMW'
+    totals.set(currency, roundTo((totals.get(currency) || 0) + balance, 2))
+  }
+  return [...totals.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([currency, amount]) => ({ currency, amount }))
+}
+
 export function accountPeriod(account, transactions, month) {
   const range = month && typeof month === 'object' ? month : null
   const mine = (transactions || []).filter((txn) => txn.accountId === account.id).sort(compareTxn)

@@ -540,11 +540,13 @@ function Budget({ model }) {
       {expenseMessage ? <Message>{expenseMessage}</Message> : (
         <Panel title="Weekly expense budget">
           {weeks.length > 0 && (
-            <div className="field" style={{ maxWidth: 240 }}><label>Week
-                  <select aria-label="Budget week" value={selectedWeek} onChange={(event) => setWeek(event.target.value)}>
-                {weeks.map((item) => <option key={item.week} value={item.week}>Week of {item.week}</option>)}
-              </select>
-            </label></div>
+            <div className="field" style={{ maxWidth: 240 }}>
+              <label>Week
+                <select aria-label="Budget week" value={selectedWeek} onChange={(event) => setWeek(event.target.value)}>
+                  {weeks.map((item) => <option key={item.week} value={item.week}>Week of {item.week}</option>)}
+                </select>
+              </label>
+            </div>
           )}
           {selected ? <DataTable rows={selected.categories.map((row) => ({ ...row, id: row.name }))} empty={COPY.budgetEmpty} columns={[{ key: 'name', label: 'Category', cell: (row) => row.name }, { key: 'amount', label: 'Recorded', cell: (row) => formatZmw(row.amount) }]} /> : <Message>{COPY.budgetEmpty}</Message>}
           {selected && <p className="stat-desc">Week total {formatZmw(selected.total)}</p>}

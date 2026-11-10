@@ -6,6 +6,7 @@ import { parseDirectory, homeView, findAccount, withCurrentRole, canSee, scopedD
 import { emptyState, parseState, STORAGE_KEY } from './model.js'
 import { freshScorecard, loadScorecard, buildOrganisation, recordPeriod } from './score.js'
 import { emptyBooks, parseBooks } from './books.js'
+import { todayIso } from './veData.js'
 import Shell, { LoginScreen } from './Shell.jsx'
 import GmDashboard from './GmDashboard.jsx'
 import { Departments, DepartmentHeatMap } from './DepartmentViews.jsx'
@@ -150,6 +151,7 @@ export default function Vhpms() {
       businessId={businessId}
       inboxCount={inboxFromSms(smsRows).length}
       title={title}
+      today={todayIso()}
       onOpen={open}
       onLive={() => { setReturnView(displayView); setMode('businesses'); setView('activities'); setMenu(false) }}
       onBack={() => { setMode('management'); setView(returnView || homeView(sessionUser)); setMenu(false) }}
