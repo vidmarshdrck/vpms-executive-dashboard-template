@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Donut } from './Donut.jsx'
+import { formatMoney } from './bankBudget.js'
 import { formatZmw, slicesBy } from './books.js'
 import { categoryShare, dailyAmounts, latestMonth, monthLabel, monthRows, monthSummary, shiftMonth } from './fundsMonth.js'
 import { fundsByMonth } from './veData.js'
@@ -97,17 +98,17 @@ function TrendChart({ rows }) {
   )
 }
 
-function AccountBars({ rows }) {
+export function AccountBars({ rows, label = 'Amount by item' }) {
   const measured = rows.filter((row) => row.amount != null && Number(row.amount) > 0)
   const max = Math.max(...measured.map((row) => Number(row.amount)), 1)
   if (!measured.length) return null
   return (
-    <div role="img" aria-label="Amount by item">
+    <div role="img" aria-label={label}>
       {measured.map((row) => (
         <div key={row.id} style={{ margin: '12px 0' }}>
           <strong>{row.title}</strong>
           <span style={{ display: 'block', height: 10, marginTop: 6, borderRadius: 99, background: 'var(--brand)', width: `${(Number(row.amount) / max) * 100}%` }} />
-          <small>{row.unit === 'ZMW' || row.unit === 'USD' ? formatZmw(row.amount) : `${row.amount} ${row.unit || ''}`.trim()}</small>
+          <small>{row.unit === 'USD' || row.unit === 'ZMW' ? formatMoney(row.amount, row.unit) : `${row.amount} ${row.unit || ''}`.trim()}</small>
         </div>
       ))}
     </div>

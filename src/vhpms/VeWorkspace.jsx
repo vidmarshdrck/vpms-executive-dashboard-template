@@ -5,7 +5,7 @@ import { formatZmw, slicesBy } from './books.js'
 import { ColumnLabel } from './icons.jsx'
 import { accountPeriod, accountsByCurrency, categoryLabel, filterBankTransactions, formatMoney, formatRate, fxText } from './bankBudget.js'
 import { categoryShare, compactAmount, dailyAmounts, latestMonth, monthLabel, monthRows, monthSummary, shiftMonth, sourceAnalysis } from './fundsMonth.js'
-import { StandardOverview } from './businessPanels.jsx'
+import { AccountBars, StandardOverview } from './businessPanels.jsx'
 import { glanceFromVe } from './businessSources.js'
 import { COPY, buildWorkspace, emptySources, fetchVeWorkspace, filterCustomers, todayIso, whatsappHref } from './veData.js'
 
@@ -473,6 +473,16 @@ function BudgetProjection({ model }) {
       </div>
       <Panel title="Where the projection comes from" note="USD plan prices are the typical orig_amount_usd on matching bank transactions. ve.products does not store a USD price. Kwacha-billed plans use the kwacha amount on those same rows.">
         {budget.lines.length ? (
+          <>
+          {['USD', 'ZMW'].map((currency) => {
+            const rows = budget.lines.filter((line) => line.currency === currency && (currency === 'USD' ? line.unitUsd : line.unitZmw) != null).map((line) => ({
+              id: line.plan,
+              title: `${line.plan} (${line.count} active)`,
+              amount: currency === 'USD' ? line.unitUsd : line.unitZmw,
+              unit: currency,
+            }))
+            return <AccountBars key={currency} rows={rows} label={`${currency} plan prices`} />
+          })}
           <DataTable
             rows={budget.lines.map((line) => ({ ...line, id: line.plan }))}
             empty="No active family accounts."
@@ -484,6 +494,7 @@ function BudgetProjection({ model }) {
               { key: 'source', label: 'Where this comes from', cell: (row) => <span style={{ display: 'block', maxWidth: 360 }}>{row.source}</span> },
             ]}
           />
+          </>
         ) : <Message>No active family accounts, so there are no plan prices in the projection.</Message>}
         <p className="stat-desc">USD plans converted {formatZmw(budget.usdConverted)}. Kwacha-billed plans {formatZmw(budget.kwachaBilled)}. Average monthly bank charges {formatZmw(budget.charges.average)}.</p>
         <p className="stat-desc">{budget.charges.source}</p>
