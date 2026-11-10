@@ -153,12 +153,17 @@ test('VE ignores planner entries and other businesses keep their books', () => {
   assert.match(ve, new RegExp(COPY.signedOut))
   assert.doesNotMatch(ve, /Planner income must not appear|Other business must not leak/)
   const vai = renderHome('vai', books)
+  assert.match(vai, /role="tab"[^>]*>Overview<\/button>/)
+  assert.match(vai, /role="tab"[^>]*>Funds<\/button>/)
+  assert.match(vai, /role="tab"[^>]*>Marketing<\/button>/)
+  assert.match(vai, /role="tab"[^>]*>Budget<\/button>/)
   assert.match(vai, />Expenses<\/button>/)
   assert.match(vai, />Income<\/button>/)
   assert.match(vai, />Counts<\/button>/)
+  assert.match(vai, /No data connected yet/)
   assert.match(vai, /type="submit"/)
   assert.match(vai, /Other business must not leak/)
-  assert.doesNotMatch(vai, /Family Accounts|Weekly expense budget/)
+  assert.doesNotMatch(vai, /Family Accounts|Weekly expense budget|Planner income/)
 })
 
 test('activities, inbox, and sms stay on their own screens', () => {

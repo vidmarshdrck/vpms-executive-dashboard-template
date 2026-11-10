@@ -4,6 +4,8 @@ import { Donut, PageFooter } from './Donut.jsx'
 import { formatZmw, slicesBy } from './books.js'
 import { accountPeriod, accountsByCurrency, categoryLabel, filterBankTransactions, formatMoney, formatRate, fxText, roundTo } from './bankBudget.js'
 import { categoryShare, compactAmount, dailyAmounts, latestMonth, monthLabel, monthRows, monthSummary, shiftMonth, sourceAnalysis } from './fundsMonth.js'
+import { StandardOverview } from './businessPanels.jsx'
+import { glanceFromVe } from './businessSources.js'
 import { COPY, buildWorkspace, emptySources, fetchVeWorkspace, filterCustomers, todayIso, whatsappHref } from './veData.js'
 
 function Panel({ title, children, note }) {
@@ -98,20 +100,9 @@ function AccountTable({ accounts, empty, onOpen }) {
 function Overview({ model }) {
   const [person, setPerson] = useState(null)
   const message = accessMessage(model.access.familyAccounts, COPY.familyEmpty, COPY.familyBlocked)
-  const finance = model.overview.finance
-  const counts = model.access.familyAccounts === 'ok'
-    ? [['Accounts', model.overview.accounts], ['Active', model.overview.active], ['Inactive', model.overview.inactive], ['People connected', model.overview.connected]]
-    : []
   return (
     <>
-      <h2 className="section-title">Overview</h2>
-      <div className="grid-4" style={{ marginBottom: 16 }}>
-        {counts.map(([label, value]) => <Stat key={label} label={label} value={value} />)}
-        <Stat label="Total spent" value={moneyTile(finance.expenses)} />
-        <Stat label="Income" value={moneyTile(finance.income)} />
-        <Stat label="Balance on hand" value={moneyTile(finance.balance)} />
-        <Stat label="Profit generated" value={moneyTile(finance.profit)} />
-      </div>
+      <StandardOverview model={glanceFromVe(model)} />
       <PaymentDialog person={person} onClose={() => setPerson(null)} />
       {message ? <Message>{message}</Message> : (
         <Panel title="Family accounts">

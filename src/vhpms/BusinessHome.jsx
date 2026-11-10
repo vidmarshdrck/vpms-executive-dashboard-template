@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { activeBusinesses, entriesFor, addEntry, removeEntry, moneyTotal, formatZmw, slicesBy, statusSlices, sharedUnit, countTotals } from './books.js'
 import { Donut, PageFooter } from './Donut.jsx'
-import SlideTabs from './SlideTabs.jsx'
 import VeWorkspace from './VeWorkspace.jsx'
+import BusinessWorkspace from './BusinessWorkspace.jsx'
 
 function MoneySection({ title, empty, entries, groupLabel, groupKey, onAdd, onRemove }) {
   const slices = slicesBy(entries, 'group')
@@ -92,13 +92,14 @@ export function BusinessHome({ books, businessId, onChange, token = '' }) {
   }
   function remove(id) { onChange(removeEntry(books, id)); setMessage('Saved.') }
   return (
-    <div className="wrap biz">
-      <div className="topbar"><div><p className="brand-eyebrow">Vidmar Holdings · {business.code}</p><h1>{business.name}</h1><p className="sub">Expenses, income, and counts for this business.</p></div></div>
-      {message && <p className="vh-status" role="status">{message}</p>}
-      <SlideTabs label="Business sections" tabs={['Expenses', 'Income', 'Counts']}>
-      <div><MoneySection title="Expenses" empty="No expenses recorded yet" entries={expenses} groupLabel="Category" groupKey="group" onAdd={(event) => save(event, 'expense')} onRemove={remove} /></div>
-      <div><MoneySection title="Income" empty="No income recorded yet" entries={income} groupLabel="Source" groupKey="group" onAdd={(event) => save(event, 'income')} onRemove={remove} /></div>
-      <div><div className="two even">
+    <BusinessWorkspace
+      business={business}
+      token={token}
+      extraTabs={['Expenses', 'Income', 'Counts']}
+      extraPages={[
+        <div key="expenses">{message && <p className="vh-status" role="status">{message}</p>}<MoneySection title="Expenses" empty="No expenses recorded yet" entries={expenses} groupLabel="Category" groupKey="group" onAdd={(event) => save(event, 'expense')} onRemove={remove} /></div>,
+        <div key="income"><MoneySection title="Income" empty="No income recorded yet" entries={income} groupLabel="Source" groupKey="group" onAdd={(event) => save(event, 'income')} onRemove={remove} /></div>,
+        <div key="counts"><div className="two even">
         <section className="card">
           <div className="card-head"><h2>Counts</h2></div>
           <div className="card-body">
@@ -125,9 +126,8 @@ export function BusinessHome({ books, businessId, onChange, token = '' }) {
             {counts.length && unit ? <Donut items={slicesBy(counts, 'title')} center={unit} format={(value) => `${value} ${unit}`} /> : <p className="empty">{counts.length ? 'Counts use more than one unit, so they stay in the table.' : 'No counts recorded yet'}</p>}
           </div>
         </section>
-      </div></div>
-      </SlideTabs>
-      <PageFooter />
-    </div>
+      </div></div>,
+      ]}
+    />
   )
 }
