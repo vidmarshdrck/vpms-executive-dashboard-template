@@ -58,6 +58,22 @@ Open a pull request into `main`. After it merges, deploy that commit's SHA (sect
 | Other businesses (expenses, income, counts) | `src/vhpms/BusinessHome.jsx` and `src/vhpms/books.js` |
 | Footer credit | `src/vhpms/Donut.jsx` (`Powered by VIDMΛR`) |
 
+Every live business opens the same four pages: Overview, Funds, Marketing, Budget. A business then keeps its own pages after those four.
+
+The live business ids, from `BUSINESS_SEED` in `src/vhpms/books.js`, are `ve`, `vai`, `rez`, `bsg`, `vt`, `eunique`, and `digital`.
+
+VE keeps Family Accounts, Customers, and Accounts, and its reads stay in `src/vhpms/veData.js`. The other businesses use `src/vhpms/BusinessWorkspace.jsx`. Their Supabase mapping is one entry in `ADAPTERS` inside `src/vhpms/businessSources.js`. Adding a business is that entry plus a row in `BUSINESS_SEED`. Each slot is either `keys` (tables that exist) or `needs` (the table name shown when nothing is connected). The screen says `No data connected yet. Needs <table>.` A missing owner SELECT is a blocked read, not a zero.
+
+| Business | Income | Expenses | Clients | Marketing | Operations | Owner SELECT |
+| --- | --- | --- | --- | --- | --- | --- |
+| VE | `public.orders` | `public.expenses` | `public.customers` | `public.marketing`, `public.marketing_spend` | `public.family_accounts`, `ve.products`, `public.ve_bank_accounts`, `public.ve_bank_transactions` | Present for the owner user on these tables |
+| VAI | `finance.invoices` where `business_id` is Vidmar AI | No expense table in `vai` | `vai.clients`, `vai.prospects` | No marketing table in `vai` | `vai.contracts`, `vai.services`, `pms.tasks`, `pms.projects` | Missing. Policies are `core.is_staff` / `core.is_ceo` for VAI. This owner has no `core.memberships` row. `authenticator` also has no USAGE on `vai`, `finance`, or `pms`, so the Data API must expose those schemas. |
+| REZ | `finance.invoices` for Real Estate Zambia. `rez.listings.rent_zmw` is asking rent and is not treated as income | No expense table in `rez` | `rez.enquiries`, `rez.applications` | No marketing table in `rez` | `rez.listings`, `rez.properties`, `rez.inspection_tasks`, `pms.tasks` | Missing. Same staff/ceo policies for REZ, and `authenticator` has no USAGE on `rez`. |
+| BSG | `finance.invoices` for BSG Trades | No BSG expense table. `public.profit_tracking` is a VE rollup and is not used | No BSG customer table. `public.leads` has no business column | No BSG marketing table | `public.phone_inventory`, `public.iphone_price_list`, `pms.tasks` | Missing. Inventory tables have RLS and no SELECT policy. Invoices and tasks use the staff policy. `iphone_price_list` also has no grant to `authenticated`. |
+| Digital Products | `commerce.sales` (`amount_received_zmw`) | No dated expense table. `cost_to_make` is a unit cost and is not used | No buyer table on `commerce.sales` | No marketing table in `commerce` | `commerce.digital_products`, `commerce.marketplace_listings`, `pms.tasks` | Missing. Policies are staff/finance for DC. `authenticator` has no USAGE on `commerce`. |
+| VT | Needs `public.vt_income` | Needs `public.vt_expenses` | Needs `public.vt_customers` | Needs `public.vt_marketing` | Needs `public.vt_operations` | No tables, so no policy yet |
+| Eunique Apparel | Needs `public.eunique_income` | Needs `public.eunique_expenses` | Needs `public.eunique_customers` | Needs `public.eunique_marketing` | Needs `public.eunique_operations` | No tables, so no policy yet |
+
 VE tabs, in order: Overview, Family Accounts, Customers, Funds, Accounts, Budget, Marketing.
 
 Accounts lists every row in `public.ve_bank_accounts`. ZMW and USD are always shown. A currency with no row says that no account was returned. Do not add a row that is not in the table.

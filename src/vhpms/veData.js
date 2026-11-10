@@ -4,7 +4,7 @@ import { slicesBy } from './books.js'
 export { VE_UPCOMING } from './veUpcoming.js'
 
 export const FAMILY_COLUMNS = 'fid,aaid,product,due_date,paid_status,slots_total,slots_taken,slot_1,slot_2,slot_3,slot_4,slot_5'
-export const CUSTOMER_COLUMNS = 'cid,name,phone,products,status,total_spent,due_date'
+export const CUSTOMER_COLUMNS = 'cid,name,phone,products,status,total_spent,due_date,date_joined'
 export const ORDER_COLUMNS = 'oid,date,amount,product,months,cid,status'
 export const EXPENSE_COLUMNS = 'id,date,amount,category,family_account_id,status,payee'
 export const MARKETING_COLUMNS = 'id,date,channel,campaign,content_type,hook_used,cta_used,amount,impressions,clicks,conversions,cac'
@@ -125,6 +125,7 @@ function mapCustomer(row) {
     name: String(row.name || '').trim() || 'Unnamed customer',
     phone: String(row.phone || '').trim(),
     dueDate: isoDate(row.due_date) || 'Not dated',
+    joined: isoDate(row.date_joined),
     products: productList(row.products) || 'None',
     status: String(row.status || '').trim() || 'Unspecified',
     totalSpent: amountOrZero(row.total_spent),
@@ -436,13 +437,17 @@ function scopedFrom(client, schema, table) {
   return scoped.from(table)
 }
 
-async function readTable(client, schema, table, columns, orderColumn) {
+export async function readScopedTable(client, schema, table, columns, orderColumn, filters = []) {
   const pageSize = 1000
   const rows = []
   for (let from = 0; from < 5000; from += pageSize) {
     let query
     try {
-      query = scopedFrom(client, schema, table).select(columns).order(orderColumn, { ascending: true })
+      query = scopedFrom(client, schema, table).select(columns)
+      for (const filter of filters) {
+        if (filter?.op === 'eq' && typeof query.eq === 'function') query = query.eq(filter.column, filter.value)
+      }
+      query = query.order(orderColumn, { ascending: true })
     } catch (error) {
       return classifyResult({ data: null, error: { message: error instanceof Error ? error.message : 'Could not query records.' } })
     }
@@ -455,6 +460,10 @@ async function readTable(client, schema, table, columns, orderColumn) {
     }
   }
   return { access: 'error', rows: [], message: 'Result limit reached.' }
+}
+
+function readTable(client, schema, table, columns, orderColumn) {
+  return readScopedTable(client, schema, table, columns, orderColumn)
 }
 
 export async function fetchVeWorkspace({ env = {}, token = '', today = todayIso(), createClient: factory = createClient } = {}) {

@@ -1,0 +1,278 @@
+import { useState } from 'react'
+import { Donut } from './Donut.jsx'
+import { formatZmw, slicesBy } from './books.js'
+import { categoryShare, dailyAmounts, latestMonth, monthLabel, monthRows, monthSummary, shiftMonth } from './fundsMonth.js'
+import { fundsByMonth } from './veData.js'
+
+export function Panel({ title, children, note }) {
+  return (
+    <section className="card" style={{ marginBottom: 16 }}>
+      <div className="card-head"><h2>{title}</h2></div>
+      <div className="card-body">
+        {note && <p className="stat-desc">{note}</p>}
+        {children}
+      </div>
+    </section>
+  )
+}
+
+export function Message({ children }) {
+  return <p className="empty">{children}</p>
+}
+
+function Stat({ label, value }) {
+  return <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{value}</div><div className="stat-desc">{label}</div></div></section>
+}
+
+function moneyTile(value) {
+  return value == null ? '—' : formatZmw(value)
+}
+
+function RankedSplit({ title, rows, center }) {
+  const share = categoryShare(rows)
+  const slices = slicesBy(share.map((item) => ({ group: item.name, amount: item.amount })), 'group')
+  const max = Math.max(...share.map((item) => item.amount), 1)
+  return (
+    <Panel title={title}>
+      {share.length ? (
+        <>
+          <Donut items={slices} center={center} format={formatZmw} />
+          <ul className="vh-list" aria-label={`${title} ranking`}>
+            {share.map((item) => (
+              <li key={item.name}>
+                <div style={{ flex: 1 }}>
+                  <strong>{item.name}</strong>
+                  <span style={{ display: 'block', height: 8, marginTop: 6, borderRadius: 99, background: 'var(--surface-2)' }}><span style={{ display: 'block', height: '100%', width: `${(item.amount / max) * 100}%`, borderRadius: 99, background: 'var(--brand)' }} /></span>
+                </div>
+                <b>{formatZmw(item.amount)} · {Math.round(item.pct)}%</b>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : <Message>No {center.toLowerCase()} rows were returned for this month.</Message>}
+    </Panel>
+  )
+}
+
+function FlowChart({ title, days, field, color }) {
+  const width = 640
+  const height = 180
+  const max = Math.max(...days.map((day) => day[field]), 1)
+  const points = days.map((day, index) => {
+    const x = days.length === 1 ? width / 2 : (index / (days.length - 1)) * width
+    const y = height - 16 - (day[field] / max) * (height - 32)
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+  return (
+    <Panel title={title}>
+      <svg className="chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title}>
+        <polyline fill="none" stroke={color} strokeWidth="3" points={points} />
+      </svg>
+    </Panel>
+  )
+}
+
+function TrendChart({ rows }) {
+  const months = fundsByMonth(rows)
+  const width = 640
+  const height = 180
+  const max = Math.max(...months.flatMap((month) => [month.income, month.expense]), 1)
+  const line = (field, color) => {
+    const points = months.map((month, index) => {
+      const x = months.length === 1 ? width / 2 : (index / (months.length - 1)) * width
+      const y = height - 16 - (month[field] / max) * (height - 32)
+      return `${x.toFixed(1)},${y.toFixed(1)}`
+    }).join(' ')
+    return <polyline key={field} fill="none" stroke={color} strokeWidth="3" points={points} />
+  }
+  return (
+    <Panel title="Finance trend">
+      {months.length ? (
+        <svg className="chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Income and expense by month">
+          {line('income', 'var(--rag-green)')}
+          {line('expense', 'var(--rag-red)')}
+        </svg>
+      ) : <Message>No dated income or expense rows were returned.</Message>}
+    </Panel>
+  )
+}
+
+function StatusDonut({ title, rows, empty }) {
+  const slices = slicesBy(rows.map((row) => ({ group: row.status || 'Unspecified', amount: 1 })), 'group')
+  return (
+    <Panel title={title}>
+      {slices.length ? <Donut items={slices} center="Status" format={(value) => String(value)} /> : <Message>{empty}</Message>}
+    </Panel>
+  )
+}
+
+function AccountBars({ rows }) {
+  const measured = rows.filter((row) => row.amount != null && Number(row.amount) > 0)
+  const max = Math.max(...measured.map((row) => Number(row.amount)), 1)
+  if (!measured.length) return null
+  return (
+    <div role="img" aria-label="Amount by item">
+      {measured.map((row) => (
+        <div key={row.id} style={{ margin: '12px 0' }}>
+          <strong>{row.title}</strong>
+          <span style={{ display: 'block', height: 10, marginTop: 6, borderRadius: 99, background: 'var(--brand)', width: `${(Number(row.amount) / max) * 100}%` }} />
+          <small>{row.unit === 'ZMW' || row.unit === 'USD' ? formatZmw(row.amount) : `${row.amount} ${row.unit || ''}`.trim()}</small>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export function StandardOverview({ model }) {
+  const dated = [...model.incomeRows, ...model.expenseRows]
+  const month = dated.length ? latestMonth(dated.map((row) => row.date), model.today) : ''
+  const monthItems = month ? monthRows(dated, month) : []
+  const days = month ? dailyAmounts(monthItems, month) : []
+  return (
+    <>
+      <h2 className="section-title">Overview</h2>
+      <div className="grid-4" style={{ marginBottom: 16 }}>
+        <Stat label="Total spent" value={moneyTile(model.finance.expenses)} />
+        <Stat label="Income" value={moneyTile(model.finance.income)} />
+        <Stat label="Balance on hand" value={moneyTile(model.finance.balance)} />
+        <Stat label="Profit generated" value={moneyTile(model.finance.profit)} />
+      </div>
+      {model.incomeNote && <Message>{model.incomeNote}</Message>}
+      {model.expenseNote && <Message>{model.expenseNote}</Message>}
+      <TrendChart rows={[...model.incomeRows, ...model.expenseRows]} />
+      {month ? (
+        <>
+          <div className="grid">
+            <RankedSplit title="Expense overview" rows={monthItems.filter((row) => row.kind === 'expense')} center="Expenses" />
+            <RankedSplit title="Income overview" rows={monthItems.filter((row) => row.kind === 'income')} center="Income" />
+          </div>
+          <div className="grid">
+            <FlowChart title="Expense flow" days={days} field="expense" color="var(--rag-red)" />
+            <FlowChart title="Income flow" days={days} field="income" color="var(--rag-green)" />
+          </div>
+        </>
+      ) : null}
+      <div className="grid">
+        <Panel title="Operations" note={model.operationsNote}>
+          <div className="grid-3" style={{ marginBottom: 12 }}>
+            <Stat label="Items" value={model.operationsNote && !model.operations.length ? '—' : String(model.operations.length)} />
+            <Stat label="Active" value={model.operationsNote && !model.operations.length ? '—' : String(model.operations.filter((row) => row.status === 'Active' || row.status === 'In stock').length)} />
+            <Stat label="Due soon" value={model.operationsNote && !model.operations.length ? '—' : String(model.upcoming.length)} />
+          </div>
+          <StatusDonut title="Operations status" rows={model.operations} empty={model.operationsNote || 'No operations rows were returned.'} />
+          <AccountBars rows={model.operations} />
+          {model.upcoming.length ? (
+            <ul className="vh-list" aria-label="Upcoming due items">
+              {model.upcoming.map((row) => <li key={row.id}><div><strong>{row.title}</strong><small>Due {row.due}</small></div></li>)}
+            </ul>
+          ) : <p className="stat-desc">No due dates in the next 30 days.</p>}
+        </Panel>
+        <Panel title="Clients" note={model.clientsNote}>
+          <div className="grid-4" style={{ marginBottom: 12 }}>
+            <Stat label="Active" value={model.clientsNote && !model.clients.length ? '—' : String(model.counts.active)} />
+            <Stat label="Inactive" value={model.clientsNote && !model.clients.length ? '—' : String(model.counts.inactive)} />
+            <Stat label="New" value={model.clientsNote && !model.clients.length ? '—' : String(model.counts.newer)} />
+            <Stat label="Renewals due" value={model.clientsNote && !model.clients.length ? '—' : String(model.counts.renewals)} />
+          </div>
+          <StatusDonut title="Client status" rows={model.clients} empty={model.clientsNote || 'No client rows were returned.'} />
+        </Panel>
+      </div>
+    </>
+  )
+}
+
+export function MonthNav({ month, onMonth }) {
+  return (
+    <div className="vh-actions">
+      <button type="button" className="btn btn-ghost btn-sm" aria-label="Previous month" onClick={() => onMonth(shiftMonth(month, -1))}>Previous</button>
+      <strong aria-live="polite">{monthLabel(month)}</strong>
+      <button type="button" className="btn btn-ghost btn-sm" aria-label="Next month" onClick={() => onMonth(shiftMonth(month, 1))}>Next</button>
+    </div>
+  )
+}
+
+export function StandardFunds({ model }) {
+  const dated = [...model.incomeRows, ...model.expenseRows].map((row) => row.date)
+  const [month, setMonth] = useState(() => latestMonth(dated, model.today))
+  const rows = monthRows([...model.incomeRows, ...model.expenseRows], month)
+  const summary = monthSummary(rows)
+  const expenseValue = model.expenseNote && !model.expenseRows.length ? null : summary.expense
+  const incomeValue = model.incomeNote && !model.incomeRows.length ? null : summary.income
+  const totalValue = expenseValue == null || incomeValue == null ? null : incomeValue - expenseValue
+  const days = dailyAmounts(rows, month)
+  return (
+    <>
+      <div className="topbar">
+        <h2 className="section-title" style={{ margin: 0 }}>Funds</h2>
+        <MonthNav month={month} onMonth={setMonth} />
+      </div>
+      {model.incomeNote && <Message>{model.incomeNote}</Message>}
+      {model.expenseNote && <Message>{model.expenseNote}</Message>}
+      <div className="grid-3" style={{ marginBottom: 16 }}>
+        <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-red)' }}>{expenseValue == null ? '—' : formatZmw(expenseValue)}</div><div className="stat-desc">Expense</div></div></section>
+        <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-green)' }}>{incomeValue == null ? '—' : formatZmw(incomeValue)}</div><div className="stat-desc">Income</div></div></section>
+        <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{totalValue == null ? '—' : formatZmw(totalValue)}</div><div className="stat-desc">Total</div></div></section>
+      </div>
+      {rows.length ? (
+        <>
+          <div className="grid">
+            <RankedSplit title="Expense overview" rows={rows.filter((row) => row.kind === 'expense')} center="Expenses" />
+            <RankedSplit title="Income overview" rows={rows.filter((row) => row.kind === 'income')} center="Income" />
+          </div>
+          <div className="grid">
+            <FlowChart title="Expense flow" days={days} field="expense" color="var(--rag-red)" />
+            <FlowChart title="Income flow" days={days} field="income" color="var(--rag-green)" />
+          </div>
+        </>
+      ) : null}
+      <Panel title="By account">
+        <AccountBars rows={model.operations} />
+        {!model.operations.filter((row) => row.amount != null && Number(row.amount) > 0).length && <Message>{model.operationsNote || 'No account amounts were returned for this business.'}</Message>}
+      </Panel>
+    </>
+  )
+}
+
+export function StandardMarketing({ model }) {
+  return (
+    <>
+      <h2 className="section-title">Marketing</h2>
+      {model.marketingNote ? <Message>{model.marketingNote}</Message> : (
+        <Panel title="Scheduled posts">
+          {model.posts?.length ? <p className="stat-desc">{model.posts.length} posts recorded.</p> : <Message>No marketing rows were returned.</Message>}
+        </Panel>
+      )}
+    </>
+  )
+}
+
+export function StandardBudget({ model }) {
+  const weeks = model.weeks || []
+  const [week, setWeek] = useState(weeks.at(-1)?.week || '')
+  const selected = weeks.find((item) => item.week === week) || null
+  return (
+    <>
+      <h2 className="section-title">Budget</h2>
+      {model.expenseNote ? <Message>{model.expenseNote}</Message> : (
+        <Panel title="Weekly expense budget">
+          <p className="stat-desc">Derived from recorded expenses. No separate budget is stored.</p>
+          {selected ? (
+            <>
+              {weeks.length > 1 && (
+                <div className="field" style={{ maxWidth: 240 }}><label>Week
+                  <select aria-label="Budget week" value={week} onChange={(event) => setWeek(event.target.value)}>
+                    {weeks.map((item) => <option key={item.week} value={item.week}>Week of {item.week}</option>)}
+                  </select>
+                </label></div>
+              )}
+              <ul className="vh-list">
+                {selected.categories.map((row) => <li key={row.name}><div><strong>{row.name}</strong><small>{formatZmw(row.amount)}</small></div></li>)}
+              </ul>
+              <p className="stat-desc">Week total {formatZmw(selected.total)}</p>
+            </>
+          ) : <Message>No expenses recorded this week.</Message>}
+        </Panel>
+      )}
+    </>
+  )
+}
