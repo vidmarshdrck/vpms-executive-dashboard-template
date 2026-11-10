@@ -1,3 +1,15 @@
+export function monthLabel(month) {
+  if (!/^\d{4}-\d{2}$/.test(String(month || ''))) return ''
+  return new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+}
+
+export function latestMonth(dates, fallback = '') {
+  const months = (dates || []).map((date) => String(date || '').slice(0, 7)).filter((month) => /^\d{4}-\d{2}$/.test(month)).sort()
+  if (months.length) return months.at(-1)
+  const text = String(fallback || '')
+  return /^\d{4}-\d{2}/.test(text) ? text.slice(0, 7) : ''
+}
+
 export function shiftMonth(month, delta) {
   const [year, number] = String(month || '').split('-').map(Number)
   if (!year || !number) return ''

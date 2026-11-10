@@ -45,6 +45,13 @@ function workspaceModel() {
     marketing: { access: 'ok', rows: [{ id: 3, date: '2026-12-01', channel: 'Meta', campaign: 'December renewals', hook_used: 'Renew before Friday', cta_used: '' }] },
     marketingSpend: { access: 'ok', rows: [{ id: 1, date: '2026-10-01', channel: 'Meta', campaign: 'October', amount: 200, conversions: 4, cac: '' }] },
     products: { access: 'ok', rows: [{ id: 'p1', name: 'Netflix', category: 'streaming', is_shared_plan: true, slots_per_account: 5, price_zmw: null, is_active: true }] },
+    bankAccounts: { access: 'ok', rows: [
+      { id: 'acct-1', label: 'FNB Lifestart Student (ZMW)', bank: 'FNB Zambia', currency: 'ZMW', account_last4: '1583', opening_balance: 488.7 },
+    ] },
+    bankTransactions: { access: 'ok', rows: [
+      { id: 1, account_id: 'acct-1', txn_date: '2026-11-04', description: 'NETFLIX.COM', reference: 'NF1', amount: -399.75, balance: 88.95, category: 've_provider_subscription', orig_amount_usd: 15.99, fx_rate: 25 },
+      { id: 2, account_id: 'acct-1', txn_date: '2026-11-08', description: 'Transfer in', reference: 'IN1', amount: 200, balance: 288.95, category: 'transfer_in' },
+    ] },
   }, TODAY)
 }
 
@@ -56,9 +63,9 @@ function renderHome(id = 've', books = emptyBooks()) {
   return renderToStaticMarkup(createElement(BusinessHome, { books, businessId: id, onChange: () => { throw new Error('read only') } }))
 }
 
-test('the six VE pages render mapped records', () => {
+test('the VE pages render mapped records', () => {
   const html = renderWorkspace(workspaceModel())
-  for (const title of ['Overview', 'Family Accounts', 'Customers', 'Funds', 'Budget', 'Marketing']) {
+  for (const title of ['Overview', 'Family Accounts', 'Customers', 'Funds', 'Accounts', 'Budget', 'Marketing']) {
     assert.match(html, new RegExp(`role="tab"[^>]*>${title}</button>`))
   }
   assert.match(html, /Account \/ Names/)
@@ -84,6 +91,20 @@ test('the six VE pages render mapped records', () => {
   assert.match(html, /aria-label="Funds calendar"/)
   assert.match(html, /Account analysis/)
   assert.match(html, /Last payment/)
+  assert.match(html, /Bank movements/)
+  assert.match(html, /FNB Lifestart Student \(ZMW\)/)
+  assert.match(html, /1583/)
+  assert.match(html, /ZMW 288\.95/)
+  assert.match(html, /No USD account was returned/)
+  assert.match(html, /aria-label="Search transactions"/)
+  assert.match(html, /USD 15\.99/)
+  assert.match(html, /FX 25\.00/)
+  assert.match(html, /aria-label="Current FX rate"/)
+  assert.match(html, /25\.00/)
+  assert.match(html, /Projected monthly cost/)
+  assert.match(html, /Gap is actual ve_provider_subscription outflow/)
+  assert.match(html, /Where this comes from/)
+  assert.equal((html.match(/November 2026/g) || []).length >= 2, true)
   assert.match(html, /Weekly expense budget/)
   assert.match(html, /Week of 2026-11-02/)
   assert.match(html, /ZMW 30\.00/)
@@ -116,6 +137,8 @@ test('empty and blocked pages use finished copy', () => {
   assert.match(html, new RegExp(COPY.expensesEmpty))
   assert.match(html, new RegExp(COPY.postsEmpty))
   assert.match(html, new RegExp(COPY.cacBlocked))
+  assert.match(html, /No ZMW account was returned/)
+  assert.match(html, /No USD account was returned/)
   assert.equal(/\b(draft|demo|sample|placeholder|coming soon)\b/i.test(html), false)
 })
 

@@ -1,6 +1,6 @@
-// Seam for the next VE pages. Leave these empty until the owner sends the schema.
-// accounts: bank accounts in USD and ZMW, each with a transaction trail.
-// budgetProjection: an automatic forward view. Do not invent figures here.
+// The Accounts page and the monthly projection read public.ve_bank_accounts and
+// public.ve_bank_transactions through the signed-in client. These values stay
+// empty so this file never supplies rows or figures to the screen.
 export const VE_UPCOMING = {
   accounts: [],
   budgetProjection: null,

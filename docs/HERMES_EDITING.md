@@ -51,15 +51,22 @@ Open a pull request into `main`. After it merges, deploy that commit's SHA (sect
 | VE business pages | `src/vhpms/VeWorkspace.jsx`, opened from `src/vhpms/BusinessHome.jsx` when the business id is `ve` |
 | VE reads and row mapping | `src/vhpms/veData.js` |
 | Funds month maths | `src/vhpms/fundsMonth.js` |
-| Empty seam for bank accounts and budget projection | `src/vhpms/veUpcoming.js` |
+| Bank budget maths and FX derivation | `src/vhpms/bankBudget.js` |
+| Empty holder kept off the screen | `src/vhpms/veUpcoming.js` |
 | Activities | `src/vhpms/ActivitiesBoard.jsx` and `src/vhpms/activities.js` |
 | Inbox and SMS | `src/vhpms/InboxSms.jsx`, `src/vhpms/sms.js`, `src/vhpms/smsClient.js` |
 | Other businesses (expenses, income, counts) | `src/vhpms/BusinessHome.jsx` and `src/vhpms/books.js` |
 | Footer credit | `src/vhpms/Donut.jsx` (`Powered by VIDMΛR`) |
 
-VE tabs, in order: Overview, Family Accounts, Customers, Funds, Budget, Marketing.
+VE tabs, in order: Overview, Family Accounts, Customers, Funds, Accounts, Budget, Marketing.
 
-`VE_UPCOMING` in `src/vhpms/veUpcoming.js` is the seam for a later Accounts page (USD and ZMW bank accounts with a transaction trail) and automatic budget projection. Leave the arrays empty. Do not invent rows.
+Accounts lists every row in `public.ve_bank_accounts`. ZMW and USD are always shown. A currency with no row says that no account was returned. Do not add a row that is not in the table.
+
+The Accounts month control and the Funds month control share one month. Funds still totals orders and recorded expenses, and adds that month's bank movements underneath.
+
+Budget shows a monthly provider projection from active family accounts, then the existing weekly expense table. The projection is: typical USD plan price × the latest month's average `fx_rate`, plus kwacha-billed plans, plus the average monthly `bank_charges`. USD prices come from `orig_amount_usd` on `ve_provider_subscription` rows whose description matches the plan. `ve.products` has no USD price, so it is not used. The actual series is `ve_provider_subscription` by month for the last 12 months. Gap is that actual outflow minus the projection. A positive gap means the bank paid more than the active plans imply.
+
+`VE_UPCOMING` stays empty. It is not a data source.
 
 ## 4. How data is read
 
@@ -69,7 +76,7 @@ VE tabs, in order: Overview, Family Accounts, Customers, Funds, Budget, Marketin
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 - the signed-in user's access token (`accessToken` and `Authorization: Bearer`)
 
-The owner policies from migration `ve_owner_workspace_access` allow that user to select (and, where granted, insert and update) `public.family_accounts`, `public.customers`, `public.orders`, `public.expenses`, `public.marketing`, `public.marketing_spend`, and `ve.products`.
+The owner policies allow that user to select (and, where granted, insert and update) `public.family_accounts`, `public.customers`, `public.orders`, `public.expenses`, `public.marketing`, `public.marketing_spend`, `public.ve_bank_accounts`, `public.ve_bank_transactions`, and `ve.products`. Bank reads use the same publishable key and user token. There is no anon read on the bank tables.
 
 Rules:
 
@@ -79,7 +86,7 @@ Rules:
 - Do not select password columns. There is no email column on `family_accounts` or `customers`; do not fake one.
 - Customer phone numbers are used only for the WhatsApp link.
 
-Income is the sum of `public.orders.amount`. Expenses are the sum of `public.expenses.amount`. Balance on hand and profit generated are that income minus those expenses, because no bank balance and no separate profit ledger are stored.
+Income on Overview is the sum of `public.orders.amount`. Expenses are the sum of `public.expenses.amount`. Balance on hand and profit generated on Overview are that income minus those expenses. The bank balance is the latest `balance` on `public.ve_bank_transactions` and is shown on Accounts, not copied into those Overview tiles. There is no separate profit ledger.
 
 Last payment for a customer is the latest `public.orders` row for that `cid` (latest date, then the larger amount on that date).
 

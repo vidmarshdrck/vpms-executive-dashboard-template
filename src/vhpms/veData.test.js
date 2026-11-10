@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  CUSTOMER_COLUMNS, EXPENSE_COLUMNS, FAMILY_COLUMNS, MARKETING_COLUMNS, ORDER_COLUMNS, PRODUCT_COLUMNS, SPEND_COLUMNS,
+  BANK_ACCOUNT_COLUMNS, BANK_TXN_COLUMNS, CUSTOMER_COLUMNS, EXPENSE_COLUMNS, FAMILY_COLUMNS, MARKETING_COLUMNS, ORDER_COLUMNS, PRODUCT_COLUMNS, SPEND_COLUMNS,
   buildWorkspace, classifyResult, createVeClient, fetchVeWorkspace, filterCustomers, filterFunds, financeSummary, fundsByMonth, weekStart, weeklyBudget, whatsappHref, whatsappNumber,
 } from './veData.js'
 
@@ -160,7 +160,7 @@ test('the authenticated read lists safe columns and drops a secret if one is ret
   assert.equal(options.url, 'https://example.supabase.co')
   assert.equal(await options.next.accessToken(), 'owner-token')
   assert.equal(options.next.global.headers.Authorization, 'Bearer owner-token')
-  assert.deepEqual(seen.map((item) => item.columns), [FAMILY_COLUMNS, CUSTOMER_COLUMNS, ORDER_COLUMNS, EXPENSE_COLUMNS, MARKETING_COLUMNS, SPEND_COLUMNS, PRODUCT_COLUMNS])
+  assert.deepEqual(seen.map((item) => item.columns), [FAMILY_COLUMNS, CUSTOMER_COLUMNS, ORDER_COLUMNS, EXPENSE_COLUMNS, MARKETING_COLUMNS, SPEND_COLUMNS, PRODUCT_COLUMNS, BANK_ACCOUNT_COLUMNS, BANK_TXN_COLUMNS])
   for (const columns of seen.map((item) => item.columns)) {
     assert.equal(/\b(password|receipt|notes|fnb_transaction_ref)\b/i.test(columns), false)
   }
@@ -173,4 +173,31 @@ test('the authenticated read lists safe columns and drops a secret if one is ret
   assert.equal(JSON.stringify(model).includes('password'), false)
   assert.equal(model.products[0].price, null)
   assert.equal(createVeClient({}, 'token'), null)
+})
+
+test('bank projection uses transaction prices and leaves an inactive plan out', () => {
+  const model = buildWorkspace(sources({
+    familyAccounts: { access: 'ok', rows: [
+      { fid: 1, product: 'Netflix', due_date: '2026-12-01', paid_status: 'Unpaid', slots_total: 1, slots_taken: 1 },
+      { fid: 2, product: 'Spotify', due_date: '2026-01-01', paid_status: 'Unpaid', slots_total: 1, slots_taken: 0 },
+    ], message: '' },
+    products: { access: 'ok', rows: [{ id: 'p1', name: 'Netflix', price_zmw: 9999, is_active: true }], message: '' },
+    bankAccounts: { access: 'ok', rows: [
+      { id: '9e0c1583-0000-4000-8000-00000000f1b1', label: 'FNB Lifestart Student (ZMW)', bank: 'FNB Zambia', currency: 'ZMW', account_last4: '1583', opening_balance: '488.70' },
+    ], message: '' },
+    bankTransactions: { access: 'ok', rows: [
+      { id: 1, account_id: '9e0c1583-0000-4000-8000-00000000f1b1', txn_date: '2026-09-30', description: 'NETFLIX.COM', reference: 'R1', amount: '-399.75', balance: '36.67', category: 've_provider_subscription', orig_amount_usd: '15.99', fx_rate: '25' },
+    ], message: '' },
+  }), TODAY)
+  assert.equal(model.bankAccounts[0].label, 'FNB Lifestart Student (ZMW)')
+  assert.equal(model.bankAccounts[0].last4, '1583')
+  assert.equal(model.bankAccounts[0].openingBalance, 488.7)
+  assert.equal(model.bankTransactions[0].balance, 36.67)
+  assert.equal(model.bankTransactions[0].origAmountUsd, 15.99)
+  assert.equal(model.products[0].price, 9999)
+  assert.deepEqual(model.budget.lines.map((line) => line.plan), ['Netflix'])
+  assert.equal(model.budget.lines[0].unitUsd, 15.99)
+  assert.equal(model.budget.fx.rate, 25)
+  assert.equal(model.budget.projection, 399.75)
+  assert.equal(JSON.stringify(model.budget).includes('9999'), false)
 })
