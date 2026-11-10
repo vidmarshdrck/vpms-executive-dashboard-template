@@ -2,14 +2,12 @@ import { createClient } from '@supabase/supabase-js'
 import { slicesBy } from './books.js'
 
 export const FAMILY_COLUMNS = 'fid,aaid,product,due_date,paid_status,slots_total,slots_taken,slot_1,slot_2,slot_3,slot_4,slot_5'
-export const CUSTOMER_COLUMNS = 'cid,name,products,status,total_spent,due_date'
+export const CUSTOMER_COLUMNS = 'cid,name,phone,products,status,total_spent,due_date'
 export const ORDER_COLUMNS = 'oid,date,amount,product,months,cid,status'
 export const EXPENSE_COLUMNS = 'id,date,amount,category,family_account_id,status,payee'
 export const MARKETING_COLUMNS = 'id,date,channel,campaign,content_type,hook_used,cta_used,amount,impressions,clicks,conversions,cac'
 export const SPEND_COLUMNS = 'id,date,channel,campaign,amount,impressions,clicks,conversions,cac'
 export const PRODUCT_COLUMNS = 'id,name,category,is_shared_plan,slots_per_account,default_months,price_zmw,is_active'
-
-const SECRET_KEYS = new Set(['password', 'passwd', 'pwd', 'account_password', 'login_password', 'secret', 'pin'])
 
 export const COPY = {
   signedOut: 'Sign in with Supabase to load VE records.',
@@ -32,22 +30,11 @@ export const COPY = {
   cacBlocked: 'Acquisition spend is not visible to this account.',
   activeEmpty: 'No active family accounts.',
   inactiveEmpty: 'No inactive family accounts.',
-  passwordStored: '•••••••• stored',
-  passwordMissing: 'Not stored',
   plansEmpty: 'No plans were returned for this account.',
 }
 
 export function todayIso(now = new Date()) {
   return now.toISOString().slice(0, 10)
-}
-
-export function passwordStored(row) {
-  if (!row || typeof row !== 'object') return false
-  return Object.entries(row).some(([key, value]) => SECRET_KEYS.has(String(key).toLowerCase()) && value != null && String(value).length > 0)
-}
-
-export function passwordLabel(stored) {
-  return stored ? COPY.passwordStored : COPY.passwordMissing
 }
 
 function isoDate(value) {
@@ -125,11 +112,51 @@ function mapCustomer(row) {
   return {
     id: String(row.cid || ''),
     name: String(row.name || '').trim() || 'Unnamed customer',
+    phone: String(row.phone || '').trim(),
     dueDate: isoDate(row.due_date) || 'Not dated',
     products: productList(row.products) || 'None',
     status: String(row.status || '').trim() || 'Unspecified',
     totalSpent: amountOrZero(row.total_spent),
   }
+}
+
+export function whatsappNumber(phone) {
+  const compact = String(phone || '').replace(/[^\d+]/g, '')
+  if (!compact) return ''
+  const digits = compact.startsWith('+')
+    ? compact.slice(1).replace(/\D/g, '')
+    : compact.startsWith('0')
+      ? `260${compact.slice(1).replace(/\D/g, '')}`
+      : compact.replace(/\D/g, '')
+  return digits.length >= 8 ? digits : ''
+}
+
+export function whatsappHref(customer) {
+  const number = whatsappNumber(customer?.phone)
+  if (!number) return ''
+  const text = `Hello ${customer.name}, this is a reminder to renew ${customer.products}. Payment is due ${customer.dueDate}.`
+  return `https://wa.me/${number}?text=${encodeURIComponent(text)}`
+}
+
+export function filterCustomers(rows, { status = 'All', query = '' } = {}) {
+  const terms = String(query || '').split(',').map((term) => term.trim().toLowerCase()).filter(Boolean)
+  return rows.filter((row) => {
+    if (status && status !== 'All' && row.status !== status) return false
+    if (!terms.length) return true
+    const haystack = [row.name, row.phone, row.products, row.id].join(' ').toLowerCase()
+    return terms.some((term) => haystack.includes(term))
+  })
+}
+
+function readable(access) {
+  return access === 'ok' || access === 'empty'
+}
+
+export function financeSummary(income, expenses, access = {}) {
+  const incomeTotal = readable(access.orders) ? income.reduce((sum, row) => sum + row.amount, 0) : null
+  const expenseTotal = readable(access.expenses) ? expenses.reduce((sum, row) => sum + row.amount, 0) : null
+  const surplus = incomeTotal != null && expenseTotal != null ? incomeTotal - expenseTotal : null
+  return { expenses: expenseTotal, income: incomeTotal, balance: surplus, profit: surplus }
 }
 
 function mapAccount(row, customers, today) {
@@ -140,7 +167,7 @@ function mapAccount(row, customers, today) {
     const customer = byId.get(cid)
     return [{ slot, cid, name: customer?.name || cid, unmatched: !customer }]
   })
-  const stored = passwordStored(row)
+  const recordedEmail = String(row.email || '').trim()
   return {
     id: String(row.fid ?? ''),
     plan: String(row.product || '').trim() || 'Unspecified plan',
@@ -149,8 +176,8 @@ function mapAccount(row, customers, today) {
     paidStatus: String(row.paid_status || '').trim() || 'Unspecified',
     slotsTotal: Number(row.slots_total) || 0,
     slotsTaken: Number(row.slots_taken) || 0,
-    passwordStored: stored,
-    passwordLabel: passwordLabel(stored),
+    email: recordedEmail.includes('@') ? recordedEmail : '',
+    names: members.map((member) => member.name).join(', '),
     agent: String(row.aaid || '').trim(),
     members,
   }
@@ -323,6 +350,7 @@ export function buildWorkspace(sources, today = todayIso()) {
       inactive: inactiveAccounts.length,
       connected: connected.size,
       openSlots: accounts.reduce((sum, account) => sum + Math.max(account.slotsTotal - account.members.length, 0), 0),
+      finance: financeSummary(income, expenses, { orders: sources.orders.access, expenses: sources.expenses.access }),
     },
     slices: {
       income: slicesBy(income.map((row) => ({ group: row.category, amount: row.amount })), 'group'),

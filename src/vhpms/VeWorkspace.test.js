@@ -37,7 +37,8 @@ function workspaceModel() {
       { fid: 8, product: 'Spotify', due_date: '2026-04-05', paid_status: 'Unpaid', slots_total: 5, slots_taken: 0 },
     ] },
     customers: { access: 'ok', rows: [
-      { cid: 'C1', name: 'Amara Banda', products: ['Netflix'], status: 'CONNECTED', total_spent: 1500, due_date: '2026-12-01' },
+      { cid: 'C1', name: 'Amara Banda', phone: '0977000111', products: ['Netflix'], status: 'CONNECTED', total_spent: 1500, due_date: '2026-12-01' },
+      { cid: 'C2', name: 'Lombe Phiri', phone: '', products: ['Spotify'], status: 'DISCONNECTED', total_spent: 40, due_date: '2026-04-01' },
     ] },
     orders: { access: 'ok', rows: [{ oid: 'O1', date: '2026-11-08', amount: 120, product: 'Netflix', months: 1, cid: 'C1', status: 'CONNECTED' }] },
     expenses: { access: 'ok', rows: [{ id: 4, date: '2026-11-04', amount: 30, category: 'Airtime', status: 'Paid', payee: 'Airtel' }] },
@@ -60,13 +61,22 @@ test('the six VE pages render mapped records', () => {
   for (const title of ['Overview', 'Family Accounts', 'Customers', 'Funds', 'Budget', 'Marketing']) {
     assert.match(html, new RegExp(`role="tab"[^>]*>${title}</button>`))
   }
-  assert.match(html, /Who is connected/)
+  assert.match(html, /Account \/ Names/)
   assert.match(html, /Amara Banda/)
-  assert.match(html, /Password/)
-  assert.match(html, /•••••••• stored/)
-  assert.match(html, /Not stored/)
+  assert.match(html, />Email</)
+  assert.match(html, /aria-label="Email not recorded"/)
   assert.match(html, /Total spent/)
+  assert.match(html, /Balance on hand/)
+  assert.match(html, /Profit generated/)
+  assert.match(html, /ZMW 120\.00/)
+  assert.match(html, /ZMW 90\.00/)
   assert.match(html, /ZMW 1,500\.00/)
+  assert.match(html, /aria-label="Search customers"/)
+  assert.match(html, /aria-label="Customer status"/)
+  assert.match(html, /https:\/\/wa\.me\/260977000111\?text=/)
+  assert.match(html, /target="_blank"/)
+  assert.match(html, /disabled="">WhatsApp/)
+  assert.doesNotMatch(html, />Password</)
   assert.match(html, /aria-label="Income and expense filter"/)
   assert.match(html, /aria-label="Funds calendar"/)
   assert.match(html, /aria-label="Income and expenditure by month"/)
