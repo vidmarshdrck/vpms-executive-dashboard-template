@@ -29,7 +29,7 @@ function moneyTile(value) {
   return value == null ? '—' : formatZmw(value)
 }
 
-function RankedSplit({ title, rows, center }) {
+function RankedSplit({ title, rows, center, empty }) {
   const share = categoryShare(rows)
   const slices = slicesBy(share.map((item) => ({ group: item.name, amount: item.amount })), 'group')
   const max = Math.max(...share.map((item) => item.amount), 1)
@@ -50,7 +50,7 @@ function RankedSplit({ title, rows, center }) {
             ))}
           </ul>
         </>
-      ) : <Message>No {center.toLowerCase()} rows were returned for this month.</Message>}
+      ) : <Message>{empty || `No ${center.toLowerCase()} rows were returned for this month.`}</Message>}
     </Panel>
   )
 }
@@ -87,7 +87,7 @@ function TrendChart({ rows }) {
     return <polyline key={field} fill="none" stroke={color} strokeWidth="3" points={points} />
   }
   return (
-    <Panel title="Finance trend">
+    <Panel title="Monthly flow">
       {months.length ? (
         <svg className="chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Income and expense by month">
           {line('income', 'var(--rag-green)')}
@@ -115,18 +115,43 @@ export function AccountBars({ rows, label = 'Amount by item' }) {
   )
 }
 
-function Fact({ label, value }) {
-  return <div><div className="stat-num" style={{ fontSize: 28 }}>{value}</div><div className="stat-desc">{label}</div></div>
+function StatusShare({ rows, empty, center }) {
+  const counts = new Map()
+  for (const row of rows || []) {
+    const name = row.status || 'Unspecified'
+    counts.set(name, (counts.get(name) || 0) + 1)
+  }
+  const share = [...counts.entries()].map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name))
+  const total = share.reduce((sum, item) => sum + item.amount, 0)
+  const slices = slicesBy(share.map((item) => ({ group: item.name, amount: item.amount })), 'group')
+  if (!slices.length) return <Message>{empty}</Message>
+  return (
+    <>
+      <Donut items={slices} center={center} format={(value) => String(value)} />
+      <ul className="vh-list" aria-label="Status ranking">
+        {share.map((item) => (
+          <li key={item.name}>
+            <div style={{ flex: 1 }}>
+              <strong>{item.name}</strong>
+              <span style={{ display: 'block', height: 8, marginTop: 6, borderRadius: 99, background: 'var(--surface-2)' }}><span style={{ display: 'block', height: '100%', width: `${(item.amount / total) * 100}%`, borderRadius: 99, background: 'var(--brand)' }} /></span>
+            </div>
+            <b>{item.amount} · {Math.round((item.amount / total) * 100)}%</b>
+          </li>
+        ))}
+      </ul>
+    </>
+  )
 }
 
 export function StandardOverview({ model }) {
-  const open = model.operationsNote && !model.operations.length
-  const closed = model.clientsNote && !model.clients.length
-  const activeOps = model.operations.filter((row) => row.status === 'Active' || row.status === 'In stock').length
+  const split = [
+    Number(model.finance.income) > 0 ? { category: 'Income', amount: model.finance.income } : null,
+    Number(model.finance.expenses) > 0 ? { category: 'Expenses', amount: model.finance.expenses } : null,
+  ].filter(Boolean)
   return (
     <>
       <h2 className="sr-only">Overview</h2>
-      <p className="stat-desc">All recorded income and expenses. Category and daily detail is on Funds.</p>
+      <p className="stat-desc">The tiles are the totals. The charts are the split. Funds has the month.</p>
       <div className="grid-4" style={{ margin: '16px 0' }}>
         <Stat label="Total spent" value={moneyTile(model.finance.expenses)} />
         <Stat label="Income" value={moneyTile(model.finance.income)} />
@@ -137,12 +162,12 @@ export function StandardOverview({ model }) {
       {model.expenseNote && <Message>{model.expenseNote}</Message>}
       <TrendChart rows={[...model.incomeRows, ...model.expenseRows]} />
       <div className="grid">
+        <RankedSplit title="Income and expenses" rows={split} center="Split" empty="No income or expense total was returned." />
+        <RankedSplit title="Expenses by category" rows={model.expenseRows} center="Expenses" empty="No expense categories were returned." />
+      </div>
+      <div className="grid">
         <Panel title="Operations" note={model.operationsNote}>
-          <div className="grid-3">
-            <Fact label="Items" value={open ? '—' : String(model.operations.length)} />
-            <Fact label="Active" value={open ? '—' : String(activeOps)} />
-            <Fact label="Due in 30 days" value={open ? '—' : String(model.upcoming.length)} />
-          </div>
+          <StatusShare rows={model.operations} center="Operations" empty={model.operationsNote || 'No operations rows were returned.'} />
           {model.upcoming.length ? (
             <ul className="vh-list" aria-label="Upcoming due items">
               {model.upcoming.slice(0, 5).map((row) => <li key={row.id}><div><strong>{row.title}</strong><small>Due {row.due}</small></div></li>)}
@@ -150,12 +175,7 @@ export function StandardOverview({ model }) {
           ) : null}
         </Panel>
         <Panel title="Clients" note={model.clientsNote}>
-          <div className="grid-4">
-            <Fact label="Active" value={closed ? '—' : String(model.counts.active)} />
-            <Fact label="Inactive" value={closed ? '—' : String(model.counts.inactive)} />
-            <Fact label="New" value={closed ? '—' : String(model.counts.newer)} />
-            <Fact label="Renewals due" value={closed ? '—' : String(model.counts.renewals)} />
-          </div>
+          <StatusShare rows={model.clients} center="Clients" empty={model.clientsNote || 'No client rows were returned.'} />
         </Panel>
       </div>
     </>
