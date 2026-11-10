@@ -184,8 +184,9 @@ export function StandardOverview({ model }) {
   const incomeRows = rowsInPeriod(model.incomeRows, period)
   const expenseRows = rowsInPeriod(model.expenseRows, period)
   const finance = periodFinance(model.finance, incomeRows, expenseRows)
-  const balances = closingBalances(model.bankAccounts, model.bankTransactions, period.end)
-  const balanceText = balances.length ? balances.map((line) => formatMoney(line.amount, line.currency)).join(' · ') : 'No bank account connected'
+  const bankBlocked = Boolean(model.bankNote)
+  const balances = bankBlocked ? [] : closingBalances(model.bankAccounts, model.bankTransactions, period.end)
+  const balanceText = bankBlocked ? '—' : (balances.length ? balances.map((line) => formatMoney(line.amount, line.currency)).join(' · ') : 'No bank account connected')
   const split = [
     Number(finance.income) > 0 ? { category: 'Income', amount: finance.income } : null,
     Number(finance.expenses) > 0 ? { category: 'Expenses', amount: finance.expenses } : null,
@@ -196,11 +197,12 @@ export function StandardOverview({ model }) {
       <div className="grid-4" style={{ margin: '16px 0' }}>
         <Stat label="Total spent" value={moneyTile(finance.expenses)} />
         <Stat label="Income" value={moneyTile(finance.income)} />
-        <Stat label="Balance on hand" value={balanceText} quiet={!balances.length} />
+        <Stat label="Balance on hand" value={balanceText} quiet={!bankBlocked && !balances.length} />
         <Stat label="Profit generated" value={moneyTile(finance.profit)} />
       </div>
       {model.incomeNote && <Message>{model.incomeNote}</Message>}
       {model.expenseNote && <Message>{model.expenseNote}</Message>}
+      {model.bankNote && <Message>{model.bankNote}</Message>}
       <TrendChart rows={[...incomeRows, ...expenseRows]} period={period} />
       <div className="grid">
         <RankedSplit title="Income and expenses" rows={split} center="Split" empty="No income or expense total was returned." />

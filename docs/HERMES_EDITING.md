@@ -104,7 +104,7 @@ Rules:
 - Do not select password columns. There is no email column on `family_accounts` or `customers`; do not fake one.
 - Customer phone numbers are used only for the WhatsApp link.
 
-Income on Overview is the sum of `public.orders.amount` in the selected period. Expenses are the sum of `public.expenses.amount` in that period. Profit generated is income minus expenses. Balance on hand is the closing bank balance: the latest `ve_bank_transactions.balance` on or before the period end, summed per currency, or the opening balance when that account has no earlier transaction. With no bank account the tile says “No bank account connected”. There is no separate profit ledger.
+Income on Overview is the sum of `public.orders.amount` in the selected period. Expenses are the sum of `public.expenses.amount` in that period. Profit generated is income minus expenses. Balance on hand is the closing bank balance: the latest `ve_bank_transactions.balance` on or before the period end, summed per currency, or the opening balance when that account has no earlier transaction. With no bank account the tile says “No bank account connected”. When the bank tables are blocked, the tile shows the same dash as a blocked income tile and the note “Bank accounts are not visible to this account.” or “Bank transactions are not visible to this account.” There is no separate profit ledger.
 
 Last payment for a customer is the latest `public.orders` row for that `cid` (latest date, then the larger amount on that date).
 
