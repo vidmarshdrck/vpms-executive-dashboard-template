@@ -77,11 +77,13 @@ test('the six VE pages render mapped records', () => {
   assert.match(html, /target="_blank"/)
   assert.match(html, /disabled="">WhatsApp/)
   assert.doesNotMatch(html, />Password</)
-  assert.match(html, /aria-label="Income and expense filter"/)
+  assert.match(html, /Expense overview/)
+  assert.match(html, /Income overview/)
+  assert.match(html, /Expense flow/)
+  assert.match(html, /Income flow/)
   assert.match(html, /aria-label="Funds calendar"/)
-  assert.match(html, /aria-label="Income and expenditure by month"/)
-  assert.match(html, /Income category split/)
-  assert.match(html, /Expense category split/)
+  assert.match(html, /Account analysis/)
+  assert.match(html, /Last payment/)
   assert.match(html, /Weekly expense budget/)
   assert.match(html, /Week of 2026-11-02/)
   assert.match(html, /ZMW 30\.00/)
@@ -140,8 +142,7 @@ test('activities, inbox, and sms stay on their own screens', () => {
   const data = readFileSync(new URL('./veData.js', import.meta.url), 'utf8')
   assert.equal(data.includes('Vidmar Holdings'), false)
   const activities = renderToStaticMarkup(createElement(ActivitiesBoard, { state: emptyActivities(), onChange: () => {} }))
-  assert.match(activities, /Add task/)
-  assert.match(activities, /class="btn btn-primary"/)
+  assert.doesNotMatch(activities, /Add task/)
   assert.match(activities, /id="new-activity"/)
   assert.match(activities, /hidden=""| hidden/)
   assert.match(activities, /Save activity/)
@@ -150,7 +151,10 @@ test('activities, inbox, and sms stay on their own screens', () => {
   const shell = renderToStaticMarkup(createElement(Shell, {
     user: findAccount('shadrickvidmar'), view: 'activities', menu: false, setMenu: () => {}, mode: 'businesses', books: emptyBooks(), businessId: 've', title: 'Activities',
     onOpen: () => {}, onLive: () => {}, onBack: () => {}, onBusiness: () => {}, onLogout: () => {}, onRole: () => {},
+    headerAction: createElement('button', { type: 'button', className: 'btn btn-primary' }, 'Add task'),
   }, createElement('p', null, 'Activities body')))
+  assert.match(shell, /Add task/)
+  assert.match(shell, /aria-label="Profile"/)
   assert.match(shell, /aria-label="Collapse sidebar"/)
   assert.match(shell, /aria-controls="sidebar"/)
   assert.match(shell, /aria-expanded="true"/)

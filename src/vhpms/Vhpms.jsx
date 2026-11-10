@@ -55,6 +55,7 @@ export default function Vhpms() {
   const [labels, setLabels] = useState(() => readStored(SMS_LABELS_KEY, parseLabels, emptyLabels()))
   const [smsRemote, setSmsRemote] = useState({ ok: true, rows: [] })
   const [smsFocus, setSmsFocus] = useState('')
+  const [composing, setComposing] = useState(false)
   const smsGeneration = useRef(0)
   const smsKey = smsWatchKey(user)
 
@@ -73,6 +74,7 @@ export default function Vhpms() {
   function open(next) {
     setView(next)
     setMenu(false)
+    if (next !== 'activities') setComposing(false)
     if (!LIVE_VIEWS.has(next)) setMode('management')
   }
   function rememberLabel(next) {
@@ -155,6 +157,7 @@ export default function Vhpms() {
       onBusiness={(id) => { setBusinessId(id); setView('business'); setMenu(false) }}
       onRole={switchRole}
       onLogout={logout}
+      headerAction={displayView === 'activities' ? <button type="button" className="btn btn-primary" onClick={() => setComposing(true)}>Add task</button> : null}
     >
       {displayView === 'gm' && <GmDashboard model={model} scorecard={scorecard} viewOnly={isViewOnly(sessionUser)} />}
       {displayView === 'departments' && <Departments scorecard={scorecard} onOpen={(code) => { setSelectedDept(code); open('department') }} />}
@@ -167,7 +170,7 @@ export default function Vhpms() {
       {displayView === 'admin-businesses' && <AdminBusinesses books={books} onChange={(next) => persist(BOOKS_KEY, next, setBooks)} />}
       {displayView === 'business-list' && <BusinessList books={books} onOpen={(id) => { setBusinessId(id); setView('business') }} />}
       {displayView === 'business' && <BusinessHome books={books} businessId={businessId} token={sessionUser.token || ''} onChange={(next) => persist(BOOKS_KEY, next, setBooks)} />}
-      {displayView === 'activities' && <ActivitiesBoard state={activities} onChange={(next) => persist(ACTIVITY_KEY, next, setActivities)} />}
+      {displayView === 'activities' && <ActivitiesBoard state={activities} composing={composing} onChange={(next) => persist(ACTIVITY_KEY, next, setActivities)} />}
       {displayView === 'inbox' && <InboxView rows={smsRows} books={books} onLabel={labelSms} onOpenSms={(id) => { setSmsFocus(id); open('sms') }} />}
       {displayView === 'sms' && <SmsDashboard user={sessionUser} books={books} rows={smsRows} loadError={!smsRemote.ok} labels={labels} focusId={smsFocus} onLabelled={rememberLabel} />}
       {WORKSPACE.has(displayView) && <WorkspaceViews view={displayView} state={planner} save={(next) => persist(STORAGE_KEY, next, setPlanner)} />}

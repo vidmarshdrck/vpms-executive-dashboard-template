@@ -1,6 +1,6 @@
 import { createElement, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import Shell from '../src/vhpms/Shell.jsx'
+import Shell, { LoginScreen } from '../src/vhpms/Shell.jsx'
 import VeWorkspace from '../src/vhpms/VeWorkspace.jsx'
 import ActivitiesBoard from '../src/vhpms/ActivitiesBoard.jsx'
 import { emptyBooks } from '../src/vhpms/books.js'
@@ -80,10 +80,12 @@ const books = emptyBooks()
 const user = findAccount('shadrickvidmar')
 
 export function Harness() {
-  const [view, setView] = useState('business')
+  const [view, setView] = useState(() => (window.location.hash === '#login' ? 'login' : 'business'))
   const [menu, setMenu] = useState(false)
+  const [composing, setComposing] = useState(false)
   const [activities, setActivities] = useState(() => emptyActivities())
   const business = books.businesses.find((item) => item.id === 've')
+  if (view === 'login') return createElement(LoginScreen, { error: '', busy: false, onSubmit: (event) => event.preventDefault() })
   return createElement(Shell, {
     user,
     view,
@@ -99,8 +101,9 @@ export function Harness() {
     onBusiness: () => { setView('business'); setMenu(false) },
     onLogout: () => {},
     onRole: () => {},
+    headerAction: view === 'activities' ? createElement('button', { type: 'button', className: 'btn btn-primary', onClick: () => setComposing(true) }, 'Add task') : null,
   }, view === 'activities'
-    ? createElement(ActivitiesBoard, { state: activities, onChange: setActivities })
+    ? createElement(ActivitiesBoard, { state: activities, composing, onChange: setActivities })
     : createElement(VeWorkspace, { business, model, today: TODAY }))
 }
 

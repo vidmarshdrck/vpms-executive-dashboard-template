@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import SlideTabs from './SlideTabs.jsx'
 import { Donut, PageFooter } from './Donut.jsx'
-import { formatZmw, moneyTotal, slicesBy } from './books.js'
-import { COPY, buildWorkspace, emptySources, fetchVeWorkspace, filterCustomers, filterFunds, fundsByMonth, todayIso, whatsappHref } from './veData.js'
+import { formatZmw, slicesBy } from './books.js'
+import { categoryShare, compactAmount, dailyAmounts, monthRows, monthSummary, shiftMonth, sourceAnalysis } from './fundsMonth.js'
+import { COPY, buildWorkspace, emptySources, fetchVeWorkspace, filterCustomers, todayIso, whatsappHref } from './veData.js'
 
 function Panel({ title, children, note }) {
   return (
@@ -58,17 +59,29 @@ function Stat({ label, value }) {
   return <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{value}</div><div className="stat-desc">{label}</div></div></section>
 }
 
-function connectedNames(account) {
-  return account.names || 'No one is connected.'
+function PaymentDialog({ person, onClose }) {
+  if (!person) return null
+  const payment = person.lastPayment
+  return (
+    <section className="card" role="dialog" aria-modal="true" aria-label={`${person.name} last payment`} style={{ marginBottom: 16 }}>
+      <div className="card-head"><h2>{person.name}</h2><button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>Close</button></div>
+      <div className="card-body">{payment ? <p>Last payment {payment.date} · {formatZmw(payment.amount)}</p> : <p>No payment recorded.</p>}</div>
+    </section>
+  )
 }
 
-function AccountTable({ accounts, empty }) {
+function NameButtons({ people, onOpen }) {
+  if (!people.length) return 'No one is connected.'
+  return people.map((person) => <button type="button" className="btn btn-ghost btn-sm" key={`${person.cid}-${person.slot || person.name}`} onClick={() => onOpen(person)}>{person.name}</button>)
+}
+
+function AccountTable({ accounts, empty, onOpen }) {
   return (
     <DataTable
       rows={accounts}
       empty={empty}
       columns={[
-        { key: 'names', label: 'Account / Names', cell: (row) => connectedNames(row) },
+        { key: 'names', label: 'Account / Names', cell: (row) => <NameButtons people={row.members} onOpen={onOpen} /> },
         { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.activity} /> },
         { key: 'plan', label: 'Plan', cell: (row) => row.plan },
         { key: 'due', label: 'Due date', cell: (row) => row.dueDate },
@@ -82,6 +95,7 @@ function AccountTable({ accounts, empty }) {
 }
 
 function Overview({ model }) {
+  const [person, setPerson] = useState(null)
   const message = accessMessage(model.access.familyAccounts, COPY.familyEmpty, COPY.familyBlocked)
   const finance = model.overview.finance
   const counts = model.access.familyAccounts === 'ok'
@@ -97,6 +111,7 @@ function Overview({ model }) {
         <Stat label="Balance on hand" value={moneyTile(finance.balance)} />
         <Stat label="Profit generated" value={moneyTile(finance.profit)} />
       </div>
+      <PaymentDialog person={person} onClose={() => setPerson(null)} />
       {message ? <Message>{message}</Message> : (
         <Panel title="Family accounts">
           {model.access.customers === 'blocked' && <p className="vh-status" role="status">{COPY.customersBlocked} Slot references stay visible.</p>}
@@ -107,7 +122,7 @@ function Overview({ model }) {
               { key: 'plan', label: 'Plan', cell: (row) => row.plan },
               { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.activity} /> },
               { key: 'due', label: 'Due date', cell: (row) => row.dueDate },
-              { key: 'names', label: 'Connected', cell: (row) => connectedNames(row) },
+              { key: 'names', label: 'Connected', cell: (row) => <NameButtons people={row.members} onOpen={setPerson} /> },
               { key: 'slots', label: 'Slots', cell: (row) => `${row.slotsTaken} of ${row.slotsTotal}` },
             ]}
           />
@@ -118,18 +133,20 @@ function Overview({ model }) {
 }
 
 function FamilyAccounts({ model }) {
+  const [person, setPerson] = useState(null)
   const message = accessMessage(model.access.familyAccounts, COPY.familyEmpty, COPY.familyBlocked)
   const plansMessage = accessMessage(model.access.products, COPY.plansEmpty, COPY.plansEmpty)
   return (
     <>
       <h2 className="section-title">Family accounts</h2>
       <p className="stat-desc">Active means the due date is today or later. Paid status is shown separately.</p>
+      <PaymentDialog person={person} onClose={() => setPerson(null)} />
       {message ? <Message>{message}</Message> : (
         <>
           <h2 className="section-title">Active</h2>
-          <Panel title="Active accounts"><AccountTable accounts={model.activeAccounts} empty={COPY.activeEmpty} /></Panel>
+          <Panel title="Active accounts"><AccountTable accounts={model.activeAccounts} empty={COPY.activeEmpty} onOpen={setPerson} /></Panel>
           <h2 className="section-title">Inactive</h2>
-          <Panel title="Inactive accounts"><AccountTable accounts={model.inactiveAccounts} empty={COPY.inactiveEmpty} /></Panel>
+          <Panel title="Inactive accounts"><AccountTable accounts={model.inactiveAccounts} empty={COPY.inactiveEmpty} onOpen={setPerson} /></Panel>
         </>
       )}
       <Panel title="Plans">
@@ -187,6 +204,8 @@ function Customers({ model }) {
                 { key: 'due', label: 'Due date', cell: (row) => row.dueDate },
                 { key: 'products', label: 'Products', cell: (row) => row.products },
                 { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.status} /> },
+                { key: 'last', label: 'Last payment', cell: (row) => row.lastPayment?.date || 'No payment recorded' },
+                { key: 'lastAmount', label: 'Last amount', cell: (row) => row.lastPayment ? formatZmw(row.lastPayment.amount) : '—' },
                 { key: 'spent', label: 'Total spent', cell: (row) => formatZmw(row.totalSpent) },
                 { key: 'whatsapp', label: 'WhatsApp', cell: (row) => {
                   const href = whatsappHref(row)
@@ -204,116 +223,134 @@ function Customers({ model }) {
   )
 }
 
-function FundsCalendar({ rows }) {
-  const dated = rows.map((row) => row.date).filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)).sort()
-  const [cursor, setCursor] = useState(() => (dated.at(-1) || todayIso()).slice(0, 7))
-  const [year, month] = cursor.split('-').map(Number)
-  const first = new Date(Date.UTC(year, month - 1, 1))
-  const days = new Date(Date.UTC(year, month, 0)).getUTCDate()
-  const offset = (first.getUTCDay() + 6) % 7
-  const undated = rows.filter((row) => !/^\d{4}-\d{2}-\d{2}$/.test(row.date || ''))
-  const label = first.toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-  function shift(delta) {
-    const next = new Date(Date.UTC(year, month - 1 + delta, 1))
-    setCursor(next.toISOString().slice(0, 7))
-  }
+function RankedSplit({ title, rows, center }) {
+  const share = categoryShare(rows)
+  const slices = slicesBy(share.map((item) => ({ group: item.name, amount: item.amount })), 'group')
+  const max = Math.max(...share.map((item) => item.amount), 1)
   return (
-    <section className="card"><div className="card-head"><h2>{label}</h2><div className="vh-actions"><button className="btn btn-ghost btn-sm" type="button" aria-label="Previous month" onClick={() => shift(-1)}>Previous</button><button className="btn btn-ghost btn-sm" type="button" onClick={() => setCursor(todayIso().slice(0, 7))}>Today</button><button className="btn btn-ghost btn-sm" type="button" aria-label="Next month" onClick={() => shift(1)}>Next</button></div></div>
+    <Panel title={title}>
+      {share.length ? (
+        <>
+          <Donut items={slices} center={center} format={formatZmw} />
+          <ul className="vh-list" aria-label={`${title} ranking`}>
+            {share.map((item) => (
+              <li key={item.name}>
+                <div style={{ flex: 1 }}>
+                  <strong>{item.name}</strong>
+                  <span style={{ display: 'block', height: 8, marginTop: 6, borderRadius: 99, background: 'var(--surface-2)' }}><span style={{ display: 'block', height: '100%', width: `${item.amount / max * 100}%`, borderRadius: 99, background: 'var(--brand)' }} /></span>
+                </div>
+                <b>{formatZmw(item.amount)} · {Math.round(item.pct)}%</b>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : <Message>No {center.toLowerCase()} was returned for this month.</Message>}
+    </Panel>
+  )
+}
+
+function FlowChart({ title, days, field, color }) {
+  const width = 640
+  const height = 180
+  const max = Math.max(...days.map((day) => day[field]), 1)
+  const points = days.map((day, index) => {
+    const x = days.length === 1 ? width / 2 : (index / (days.length - 1)) * width
+    const y = height - 16 - (day[field] / max) * (height - 32)
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+  return (
+    <Panel title={title}>
+      <svg className="chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title}>
+        <polyline fill="none" stroke={color} strokeWidth="3" points={points} />
+        {days.map((day, index) => {
+          const x = days.length === 1 ? width / 2 : (index / (days.length - 1)) * width
+          const y = height - 16 - (day[field] / max) * (height - 32)
+          return <circle key={day.date} cx={x} cy={y} r="3.5" fill={color}><title>{day.date}: {formatZmw(day[field])}</title></circle>
+        })}
+      </svg>
+    </Panel>
+  )
+}
+
+function AmountCalendar({ days, month }) {
+  const [year, number] = month.split('-').map(Number)
+  const offset = (new Date(Date.UTC(year, number - 1, 1)).getUTCDay() + 6) % 7
+  const label = new Date(Date.UTC(year, number - 1, 1)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+  return (
+    <section className="card" style={{ marginBottom: 16 }}>
+      <div className="card-head"><h2>{label}</h2></div>
       <div className="card-body">
         <div className="vh-calendar-scroll" tabIndex="0" aria-label="Funds calendar">
           <div className="vh-calendar">
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <strong key={day}>{day}</strong>)}
             {Array.from({ length: offset }, (_, index) => <div key={`pad-${index}`} className="vh-day vh-blank" />)}
-            {Array.from({ length: days }, (_, index) => {
-              const date = `${cursor}-${String(index + 1).padStart(2, '0')}`
-              const matches = rows.filter((row) => row.date === date)
-              return <div key={date} className="vh-day"><span>{index + 1}</span>{matches.map((row) => <p key={row.id}>{row.kind === 'income' ? 'Income' : 'Expense'} · {row.title} · {formatZmw(row.amount)}</p>)}</div>
+            {days.map((day) => {
+              const active = day.income || day.expense
+              const tone = day.net < 0 ? 'var(--rag-red)' : 'var(--rag-green)'
+              return <div key={day.date} className="vh-day"><span>{Number(day.date.slice(-2))}</span>{active ? <strong style={{ color: tone }}>{compactAmount(day.net)}</strong> : null}</div>
             })}
           </div>
         </div>
-        {undated.length > 0 && <div><h2 className="section-title">Not dated</h2>{undated.map((row) => <p key={row.id}>{row.title} · {formatZmw(row.amount)}</p>)}</div>}
       </div>
     </section>
   )
 }
 
-function FundsGraph({ rows }) {
-  const points = fundsByMonth(rows)
-  const max = Math.max(...points.flatMap((point) => [point.income, point.expense]), 1)
-  return (
-    <section className="card"><div className="card-head"><h2>Income and expenditure by month</h2></div><div className="card-body">
-      <div role="img" aria-label="Income and expenditure by month">
-        {points.map((point) => (
-          <div key={point.month} style={{ display: 'grid', gridTemplateColumns: '92px minmax(0, 1fr)', gap: 12, margin: '12px 0' }}>
-            <strong>{point.month}</strong>
-            <div>
-              {point.income > 0 && <span style={{ display: 'block', height: 12, margin: '4px 0', borderRadius: 3, background: 'var(--brand)', width: `${point.income / max * 100}%` }} />}
-              <small>Income {formatZmw(point.income)}</small>
-              {point.expense > 0 && <span style={{ display: 'block', height: 12, margin: '4px 0', borderRadius: 3, background: '#8fb4e3', width: `${point.expense / max * 100}%` }} />}
-              <small>Expense {formatZmw(point.expense)}</small>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div></section>
-  )
-}
-
-function FundsPie({ rows }) {
-  const income = slicesBy(rows.filter((row) => row.kind === 'income').map((row) => ({ group: row.category, amount: row.amount })), 'group')
-  const expenses = slicesBy(rows.filter((row) => row.kind === 'expense').map((row) => ({ group: row.category, amount: row.amount })), 'group')
-  return (
-    <div className="grid">
-      <Panel title="Income category split">{income.length ? <Donut items={income} center="Income" format={formatZmw} /> : <Message>No income was returned for this account.</Message>}</Panel>
-      <Panel title="Expense category split">{expenses.length ? <Donut items={expenses} center="Expenses" format={formatZmw} /> : <Message>No expenses were returned for this account.</Message>}</Panel>
-    </div>
-  )
-}
-
 function Funds({ model }) {
-  const [filter, setFilter] = useState('all')
-  const rows = filterFunds(model.income, model.expenses, filter)
+  const dated = [...model.income, ...model.expenses].map((row) => row.date).filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)).sort()
+  const [month, setMonth] = useState(() => (dated.at(-1) || todayIso()).slice(0, 7))
+  const rows = monthRows([...model.income, ...model.expenses], month)
+  const summary = monthSummary(rows)
+  const days = dailyAmounts(rows, month)
+  const sources = sourceAnalysis(rows)
+  const maxSource = Math.max(...sources.flatMap((item) => [item.income, item.expense]), 1)
+  const label = new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
   const ordersNote = accessMessage(model.access.orders, '', COPY.ordersBlocked)
   const expensesNote = accessMessage(model.access.expenses, model.access.expenses === 'empty' ? COPY.expensesEmpty : '', COPY.expensesBlocked)
   return (
     <>
-      <h2 className="section-title">Funds</h2>
-      <p className="stat-desc">Income is recorded orders. Expenses are recorded costs.</p>
-      <div className="vh-toolbar">
-        <label>Show
-          <select aria-label="Income and expense filter" value={filter} onChange={(event) => setFilter(event.target.value)}>
-            <option value="all">All</option>
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
-          </select>
-        </label>
+      <div className="topbar">
+        <h2 className="section-title" style={{ margin: 0 }}>Funds</h2>
+        <div className="vh-actions">
+          <button type="button" className="btn btn-ghost btn-sm" aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>Previous</button>
+          <strong aria-live="polite">{label}</strong>
+          <button type="button" className="btn btn-ghost btn-sm" aria-label="Next month" onClick={() => setMonth(shiftMonth(month, 1))}>Next</button>
+        </div>
+      </div>
+      <div className="grid-3" style={{ marginBottom: 16 }}>
+        <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-red)' }}>{formatZmw(summary.expense)}</div><div className="stat-desc">Expense</div></div></section>
+        <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-green)' }}>{formatZmw(summary.income)}</div><div className="stat-desc">Income</div></div></section>
+        <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{formatZmw(summary.total)}</div><div className="stat-desc">Total</div></div></section>
       </div>
       {ordersNote && model.access.orders !== 'ok' && model.access.orders !== 'empty' && <p className="vh-status" role="status">{ordersNote}</p>}
       {expensesNote && model.access.expenses !== 'ok' && <p className="vh-status" role="status">{expensesNote}</p>}
-      <SlideTabs label="Funds views" tabs={['Table', 'Calendar', 'Graph', 'Pie']}>
-        <div>
-          {rows.length ? (
-            <Panel title="Income and expenditure">
-              <DataTable
-                rows={rows}
-                empty={COPY.fundsEmpty}
-                columns={[
-                  { key: 'date', label: 'Date', cell: (row) => row.date || 'Not dated' },
-                  { key: 'title', label: 'Description', cell: (row) => row.title },
-                  { key: 'kind', label: 'Type', cell: (row) => (row.kind === 'income' ? 'Income' : 'Expense') },
-                  { key: 'category', label: 'Category', cell: (row) => row.category },
-                  { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.status} /> },
-                  { key: 'amount', label: 'Amount', cell: (row) => formatZmw(row.amount) },
-                ]}
-              />
-              <p className="stat-desc">Total {formatZmw(moneyTotal(rows))}</p>
-            </Panel>
-          ) : <Message>{COPY.fundsEmpty}</Message>}
-        </div>
-        <div>{rows.length ? <FundsCalendar rows={rows} /> : <Message>{COPY.fundsEmpty}</Message>}</div>
-        <div>{rows.length ? <FundsGraph rows={rows} /> : <Message>{COPY.fundsEmpty}</Message>}</div>
-        <div>{rows.length ? <FundsPie rows={rows} /> : <Message>{COPY.fundsEmpty}</Message>}</div>
-      </SlideTabs>
+      {rows.length ? (
+        <>
+          <div className="grid">
+            <RankedSplit title="Expense overview" rows={rows.filter((row) => row.kind === 'expense')} center="Expenses" />
+            <RankedSplit title="Income overview" rows={rows.filter((row) => row.kind === 'income')} center="Income" />
+          </div>
+          <div className="grid">
+            <FlowChart title="Expense flow" days={days} field="expense" color="var(--rag-red)" />
+            <FlowChart title="Income flow" days={days} field="income" color="var(--rag-green)" />
+          </div>
+          <AmountCalendar days={days} month={month} />
+          <Panel title="Account analysis">
+            <div role="img" aria-label="Expense and income by source">
+              {sources.map((item) => (
+                <div key={item.name} style={{ margin: '12px 0' }}>
+                  <strong>{item.name}</strong>
+                  <span style={{ display: 'block', height: 10, marginTop: 6, borderRadius: 99, background: 'var(--rag-red)', width: `${item.expense / maxSource * 100}%` }} />
+                  <span style={{ display: 'block', height: 10, marginTop: 4, borderRadius: 99, background: 'var(--rag-green)', width: `${item.income / maxSource * 100}%` }} />
+                </div>
+              ))}
+            </div>
+            <ul className="vh-list">
+              {sources.map((item) => <li key={item.name}><div><strong>{item.name}</strong><small>Expense {formatZmw(item.expense)} · Income {formatZmw(item.income)}</small></div></li>)}
+            </ul>
+          </Panel>
+        </>
+      ) : <Message>{COPY.fundsEmpty}</Message>}
     </>
   )
 }
