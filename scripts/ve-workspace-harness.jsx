@@ -2,6 +2,7 @@ import { createElement, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import Shell, { LoginScreen } from '../src/vhpms/Shell.jsx'
 import VeWorkspace from '../src/vhpms/VeWorkspace.jsx'
+import { BusinessHome } from '../src/vhpms/BusinessHome.jsx'
 import ActivitiesBoard from '../src/vhpms/ActivitiesBoard.jsx'
 import { emptyBooks } from '../src/vhpms/books.js'
 import { emptyActivities } from '../src/vhpms/activities.js'
@@ -17,6 +18,7 @@ const model = buildWorkspace({
       { fid: 18, product: 'Apple Music', due_date: '2027-01-15', paid_status: 'Unpaid', slots_total: 5, slots_taken: 1, slot_1: 'C4' },
       { fid: 4, product: 'Spotify', due_date: '2026-08-06', paid_status: 'Unpaid', slots_total: 5, slots_taken: 2, slot_1: 'C5', slot_2: 'C6' },
       { fid: 9, product: 'Prime Video', due_date: '2026-05-24', paid_status: 'Unpaid', slots_total: 5, slots_taken: 0 },
+      { fid: 21, product: 'Starlink', due_date: '2026-12-20', paid_status: 'Unpaid', slots_total: 1, slots_taken: 1, slot_1: 'C2' },
     ],
   },
   customers: {
@@ -72,11 +74,30 @@ const model = buildWorkspace({
       { id: 'p2', name: 'Spotify', category: 'music', is_shared_plan: true, slots_per_account: 5, price_zmw: 80, is_active: true },
       { id: 'p3', name: 'Apple Music', category: 'music', is_shared_plan: true, slots_per_account: 5, price_zmw: 70, is_active: true },
       { id: 'p4', name: 'Prime Video', category: 'streaming', is_shared_plan: true, slots_per_account: 5, price_zmw: 90, is_active: true },
+      { id: 'p5', name: 'Starlink', category: 'internet', is_shared_plan: false, slots_per_account: 1, price_zmw: null, is_active: true },
+    ],
+  },
+  bankAccounts: {
+    access: 'ok',
+    rows: [
+      { id: 'acct-zmw', label: 'FNB current (ZMW)', bank: 'FNB Zambia', currency: 'ZMW', account_last4: '4242', opening_balance: 1500 },
+    ],
+  },
+  bankTransactions: {
+    access: 'ok',
+    rows: [
+      { id: 1, account_id: 'acct-zmw', txn_date: '2026-10-15', description: 'NETFLIX.COM', reference: 'NF-0', amount: -399.75, balance: 1800, category: 've_provider_subscription', orig_amount_usd: 15.99, fx_rate: 25 },
+      { id: 2, account_id: 'acct-zmw', txn_date: '2026-10-16', description: 'APPLE.COM/BILL', reference: 'AP-0', amount: -249.75, balance: 1550.25, category: 've_provider_subscription', orig_amount_usd: 9.99, fx_rate: 25 },
+      { id: 3, account_id: 'acct-zmw', txn_date: '2026-11-02', description: 'NETFLIX.COM', reference: 'NF-1', amount: -399.75, balance: 1150.5, category: 've_provider_subscription', orig_amount_usd: 15.99, fx_rate: 25 },
+      { id: 4, account_id: 'acct-zmw', txn_date: '2026-11-03', description: 'APPLE.COM/BILL', reference: 'AP-1', amount: -249.75, balance: 900.75, category: 've_provider_subscription', orig_amount_usd: 9.99, fx_rate: 25 },
+      { id: 5, account_id: 'acct-zmw', txn_date: '2026-11-04', description: 'STARLINK', reference: 'SL-1', amount: -800, balance: 100.75, category: 've_provider_subscription', orig_amount_usd: null, fx_rate: null },
+      { id: 6, account_id: 'acct-zmw', txn_date: '2026-11-05', description: 'Transfer from savings', reference: 'IN-1', amount: 500, balance: 600.75, category: 'transfer_in', orig_amount_usd: null, fx_rate: null },
     ],
   },
 }, TODAY)
 
 const books = emptyBooks()
+books.entries = [{ id: 'local-1', businessId: 'vai', kind: 'expense', title: 'Browser expense line', group: 'Local', amount: 15, date: '2026-11-02', status: 'Paid' }]
 const user = findAccount('shadrickvidmar')
 
 export function Harness() {
@@ -84,7 +105,8 @@ export function Harness() {
   const [menu, setMenu] = useState(false)
   const [composing, setComposing] = useState(false)
   const [activities, setActivities] = useState(() => emptyActivities())
-  const business = books.businesses.find((item) => item.id === 've')
+  const businessId = new URLSearchParams(window.location.search).get('business') === 'vai' ? 'vai' : 've'
+  const business = books.businesses.find((item) => item.id === businessId)
   if (view === 'login') return createElement(LoginScreen, { error: '', busy: false, onSubmit: (event) => event.preventDefault() })
   return createElement(Shell, {
     user,
@@ -93,7 +115,7 @@ export function Harness() {
     setMenu,
     mode: 'businesses',
     books,
-    businessId: 've',
+    businessId,
     title: view === 'activities' ? 'Activities' : business.name,
     onOpen: (id) => { setView(id); setMenu(false) },
     onLive: () => {},
@@ -102,7 +124,9 @@ export function Harness() {
     onLogout: () => {},
     onRole: () => {},
     headerAction: view === 'activities' ? createElement('button', { type: 'button', className: 'btn btn-primary', onClick: () => setComposing(true) }, 'Add task') : null,
-  }, view === 'activities'
+  }, businessId === 'vai'
+    ? createElement(BusinessHome, { books, businessId: 'vai', token: '', onChange: () => {} })
+    : view === 'activities'
     ? createElement(ActivitiesBoard, { state: activities, composing, onChange: setActivities })
     : createElement(VeWorkspace, { business, model, today: TODAY }))
 }

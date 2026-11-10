@@ -57,7 +57,7 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('http://127.0.0.1:4317/')
   await page.getByRole('tab', { name: 'Overview', exact: true }).waitFor()
-  const pages = ['Overview', 'Family Accounts', 'Customers', 'Funds', 'Budget', 'Marketing']
+  const pages = ['Overview', 'Family Accounts', 'Customers', 'Funds', 'Accounts', 'Budget', 'Marketing']
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
     const label = width === 1440 ? 'desktop' : 'mobile'
@@ -94,6 +94,13 @@ try {
   await page.locator('#sidebar.open, .sidebar.open').waitFor()
   await page.getByRole('button', { name: 'Collapse sidebar' }).click()
   await page.waitForFunction(() => !document.querySelector('.sidebar').classList.contains('open'))
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto('http://127.0.0.1:4317/?business=vai')
+  await page.getByRole('tab', { name: 'Overview', exact: true }).waitFor()
+  await page.getByText('No data connected yet').first().waitFor()
+  await page.screenshot({ path: `${outDir}/vai-overview-desktop.png`, fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.screenshot({ path: `${outDir}/vai-overview-mobile.png`, fullPage: true })
   if (errors.length) throw new Error(errors.join('\n'))
   console.log(JSON.stringify({ outDir, pages: pages.length, widths: [1440, 390] }))
 } finally {

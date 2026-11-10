@@ -1,14 +1,17 @@
 import { createClient } from '@supabase/supabase-js'
+import { projectBudget } from './bankBudget.js'
 import { slicesBy } from './books.js'
 export { VE_UPCOMING } from './veUpcoming.js'
 
 export const FAMILY_COLUMNS = 'fid,aaid,product,due_date,paid_status,slots_total,slots_taken,slot_1,slot_2,slot_3,slot_4,slot_5'
-export const CUSTOMER_COLUMNS = 'cid,name,phone,products,status,total_spent,due_date'
+export const CUSTOMER_COLUMNS = 'cid,name,phone,products,status,total_spent,due_date,date_joined'
 export const ORDER_COLUMNS = 'oid,date,amount,product,months,cid,status'
 export const EXPENSE_COLUMNS = 'id,date,amount,category,family_account_id,status,payee'
 export const MARKETING_COLUMNS = 'id,date,channel,campaign,content_type,hook_used,cta_used,amount,impressions,clicks,conversions,cac'
 export const SPEND_COLUMNS = 'id,date,channel,campaign,amount,impressions,clicks,conversions,cac'
 export const PRODUCT_COLUMNS = 'id,name,category,is_shared_plan,slots_per_account,default_months,price_zmw,is_active'
+export const BANK_ACCOUNT_COLUMNS = 'id,label,bank,currency,account_last4,opening_balance,created_at'
+export const BANK_TXN_COLUMNS = 'id,account_id,txn_date,description,reference,amount,balance,category,orig_amount_usd,fx_rate'
 
 export const COPY = {
   signedOut: 'Sign in with Supabase to load VE records.',
@@ -32,6 +35,11 @@ export const COPY = {
   activeEmpty: 'No active family accounts.',
   inactiveEmpty: 'No inactive family accounts.',
   plansEmpty: 'No plans were returned for this account.',
+  bankAccountsBlocked: 'Bank accounts are not visible to this account.',
+  bankTxnsBlocked: 'Bank transactions are not visible to this account.',
+  bankTxnsEmpty: 'No bank transactions were returned for this account.',
+  currencyEmpty: 'No account in this currency was returned.',
+  bankTrailEmpty: 'No transactions match this month and filter.',
 }
 
 export function todayIso(now = new Date()) {
@@ -95,6 +103,8 @@ export function emptySources(access) {
     marketing: sourceState(access),
     marketingSpend: sourceState(access),
     products: sourceState(access),
+    bankAccounts: sourceState(access),
+    bankTransactions: sourceState(access),
   }
 }
 
@@ -115,6 +125,7 @@ function mapCustomer(row) {
     name: String(row.name || '').trim() || 'Unnamed customer',
     phone: String(row.phone || '').trim(),
     dueDate: isoDate(row.due_date) || 'Not dated',
+    joined: isoDate(row.date_joined),
     products: productList(row.products) || 'None',
     status: String(row.status || '').trim() || 'Unspecified',
     totalSpent: amountOrZero(row.total_spent),
@@ -258,6 +269,32 @@ function mapSpend(row) {
   }
 }
 
+function mapBankAccount(row) {
+  return {
+    id: String(row.id || ''),
+    label: String(row.label || '').trim() || 'Bank account',
+    bank: String(row.bank || '').trim(),
+    currency: String(row.currency || '').trim() || 'ZMW',
+    last4: String(row.account_last4 ?? '').trim(),
+    openingBalance: parseAmount(row.opening_balance),
+  }
+}
+
+function mapBankTransaction(row) {
+  return {
+    id: String(row.id ?? ''),
+    accountId: String(row.account_id || ''),
+    date: isoDate(row.txn_date),
+    description: String(row.description || '').trim(),
+    reference: String(row.reference || '').trim(),
+    amount: amountOrZero(row.amount),
+    balance: parseAmount(row.balance),
+    category: String(row.category || '').trim() || 'other',
+    origAmountUsd: parseAmount(row.orig_amount_usd),
+    fxRate: parseAmount(row.fx_rate),
+  }
+}
+
 function mapProduct(row) {
   return {
     id: String(row.id || row.name || ''),
@@ -335,6 +372,10 @@ export function buildWorkspace(sources, today = todayIso()) {
   const posts = sources.marketing.access === 'ok' ? sources.marketing.rows.map((row) => mapPost(row, today)) : []
   const spend = sources.marketingSpend.access === 'ok' ? sources.marketingSpend.rows.map(mapSpend) : []
   const products = sources.products.access === 'ok' ? sources.products.rows.map(mapProduct).sort((a, b) => a.name.localeCompare(b.name)) : []
+  const bankSource = sources.bankAccounts || { access: 'empty', rows: [] }
+  const bankTxnSource = sources.bankTransactions || { access: 'empty', rows: [] }
+  const bankAccounts = bankSource.access === 'ok' ? bankSource.rows.map(mapBankAccount).sort((a, b) => a.currency.localeCompare(b.currency) || a.label.localeCompare(b.label)) : []
+  const bankTransactions = bankTxnSource.access === 'ok' ? bankTxnSource.rows.map(mapBankTransaction) : []
   const connected = new Set(accounts.flatMap((account) => account.members.map((member) => member.cid)))
   return {
     today,
@@ -346,6 +387,8 @@ export function buildWorkspace(sources, today = todayIso()) {
       marketing: sources.marketing.access,
       marketingSpend: sources.marketingSpend.access,
       products: sources.products.access,
+      bankAccounts: bankSource.access,
+      bankTransactions: bankTxnSource.access,
     },
     accounts,
     activeAccounts,
@@ -356,6 +399,9 @@ export function buildWorkspace(sources, today = todayIso()) {
     posts,
     spend,
     products,
+    bankAccounts,
+    bankTransactions,
+    budget: projectBudget({ activeAccounts, transactions: bankTransactions }),
     weeks: weeklyBudget(expenses),
     incomeCategories: categoryTotals(income),
     expenseCategories: categoryTotals(expenses),
@@ -391,13 +437,17 @@ function scopedFrom(client, schema, table) {
   return scoped.from(table)
 }
 
-async function readTable(client, schema, table, columns, orderColumn) {
+export async function readScopedTable(client, schema, table, columns, orderColumn, filters = []) {
   const pageSize = 1000
   const rows = []
   for (let from = 0; from < 5000; from += pageSize) {
     let query
     try {
-      query = scopedFrom(client, schema, table).select(columns).order(orderColumn, { ascending: true })
+      query = scopedFrom(client, schema, table).select(columns)
+      for (const filter of filters) {
+        if (filter?.op === 'eq' && typeof query.eq === 'function') query = query.eq(filter.column, filter.value)
+      }
+      query = query.order(orderColumn, { ascending: true })
     } catch (error) {
       return classifyResult({ data: null, error: { message: error instanceof Error ? error.message : 'Could not query records.' } })
     }
@@ -412,11 +462,15 @@ async function readTable(client, schema, table, columns, orderColumn) {
   return { access: 'error', rows: [], message: 'Result limit reached.' }
 }
 
+function readTable(client, schema, table, columns, orderColumn) {
+  return readScopedTable(client, schema, table, columns, orderColumn)
+}
+
 export async function fetchVeWorkspace({ env = {}, token = '', today = todayIso(), createClient: factory = createClient } = {}) {
   if (!token) return buildWorkspace(emptySources('signed-out'), today)
   const client = createVeClient(env, token, factory)
   if (!client) return buildWorkspace(emptySources('unconfigured'), today)
-  const [familyAccounts, customers, orders, expenses, marketing, marketingSpend, products] = await Promise.all([
+  const [familyAccounts, customers, orders, expenses, marketing, marketingSpend, products, bankAccounts, bankTransactions] = await Promise.all([
     readTable(client, 'public', 'family_accounts', FAMILY_COLUMNS, 'fid'),
     readTable(client, 'public', 'customers', CUSTOMER_COLUMNS, 'name'),
     readTable(client, 'public', 'orders', ORDER_COLUMNS, 'date'),
@@ -424,6 +478,8 @@ export async function fetchVeWorkspace({ env = {}, token = '', today = todayIso(
     readTable(client, 'public', 'marketing', MARKETING_COLUMNS, 'date'),
     readTable(client, 'public', 'marketing_spend', SPEND_COLUMNS, 'date'),
     readTable(client, 've', 'products', PRODUCT_COLUMNS, 'name'),
+    readTable(client, 'public', 've_bank_accounts', BANK_ACCOUNT_COLUMNS, 'label'),
+    readTable(client, 'public', 've_bank_transactions', BANK_TXN_COLUMNS, 'txn_date'),
   ])
-  return buildWorkspace({ familyAccounts, customers, orders, expenses, marketing, marketingSpend, products }, today)
+  return buildWorkspace({ familyAccounts, customers, orders, expenses, marketing, marketingSpend, products, bankAccounts, bankTransactions }, today)
 }
