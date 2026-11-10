@@ -1,5 +1,5 @@
 import { categoryShare } from './fundsMonth.js'
-import { createVeClient, parseAmount, readScopedTable, weeklyBudget } from './veData.js'
+import { COPY, createVeClient, parseAmount, readScopedTable, weeklyBudget } from './veData.js'
 
 export const CORE_BUSINESS_IDS = {
   ve: 'fecb8ec7-3920-479c-9277-eff4ffdbd676',
@@ -372,6 +372,10 @@ export function glanceFromVe(model) {
   }))
   const incomeNote = model.access?.orders === 'blocked' ? 'Order income is not visible to this account.' : model.access?.orders === 'signed-out' ? 'Sign in with Supabase to load these records.' : ''
   const expenseNote = model.access?.expenses === 'blocked' ? 'Expenses are not visible to this account.' : model.access?.expenses === 'signed-out' ? 'Sign in with Supabase to load these records.' : ''
+  const bankNotes = []
+  if (model.access?.bankAccounts === 'blocked') bankNotes.push(COPY.bankAccountsBlocked)
+  if (model.access?.bankTransactions === 'blocked') bankNotes.push(COPY.bankTxnsBlocked)
+  if (model.access?.bankAccounts === 'error' || model.access?.bankTransactions === 'error') bankNotes.push(COPY.loadError)
   return {
     businessId: 've',
     today: model.today,
@@ -388,6 +392,7 @@ export function glanceFromVe(model) {
     upcoming: upcomingItems(operations, model.today),
     bankAccounts: model.access?.bankAccounts === 'ok' ? model.bankAccounts : [],
     bankTransactions: model.access?.bankTransactions === 'ok' ? model.bankTransactions : [],
+    bankNote: bankNotes.join(' '),
     posts: model.posts || [],
     spend: model.spend || [],
     marketingNote: '',

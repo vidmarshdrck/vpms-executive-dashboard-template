@@ -172,6 +172,20 @@ test('empty and blocked pages use finished copy', () => {
   assert.match(html, new RegExp(COPY.cacBlocked))
   assert.match(html, /No bank account connected/)
   assert.match(html, /No ZMW account was returned/)
+  const blockedBank = renderWorkspace(buildWorkspace({
+    familyAccounts: { access: 'empty', rows: [] },
+    customers: { access: 'empty', rows: [] },
+    orders: { access: 'empty', rows: [] },
+    expenses: { access: 'empty', rows: [] },
+    marketing: { access: 'empty', rows: [] },
+    marketingSpend: { access: 'empty', rows: [] },
+    products: { access: 'empty', rows: [] },
+    bankAccounts: { access: 'blocked', rows: [], message: 'permission denied' },
+    bankTransactions: { access: 'blocked', rows: [], message: 'permission denied' },
+  }, TODAY))
+  assert.match(blockedBank, /Bank accounts are not visible to this account/)
+  assert.match(blockedBank, /Bank transactions are not visible to this account/)
+  assert.doesNotMatch(blockedBank, /No bank account connected/)
   assert.match(html, /No USD account was returned/)
   assert.equal(/\b(draft|demo|sample|placeholder|coming soon)\b/i.test(html), false)
 })
