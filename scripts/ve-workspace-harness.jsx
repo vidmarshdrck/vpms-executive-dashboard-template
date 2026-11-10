@@ -22,6 +22,7 @@ const model = buildWorkspace({
       { fid: 21, product: 'Starlink', due_date: '2026-12-20', paid_status: 'Unpaid', slots_total: 1, slots_taken: 1, slot_1: 'C2' },
     ],
   },
+  accountAgents: { access: 'ok', rows: [{ aaid: 'AG1', name: 'Twaambo Banda' }] },
   customers: {
     access: 'ok',
     rows: [
@@ -127,7 +128,6 @@ export function Harness() {
     onLive: () => {},
     onBack: () => setView('business'),
     onBusiness: () => { setView('business'); setMenu(false) },
-    onLogout: () => {},
     onRole: () => {},
   }, businessId === 'vai'
     ? createElement(BusinessHome, { books, businessId: 'vai', token: '', onChange: () => {} })

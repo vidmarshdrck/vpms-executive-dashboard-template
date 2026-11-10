@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  BANK_ACCOUNT_COLUMNS, BANK_TXN_COLUMNS, CUSTOMER_COLUMNS, EXPENSE_COLUMNS, FAMILY_COLUMNS, MARKETING_COLUMNS, ORDER_COLUMNS, PRODUCT_COLUMNS, SPEND_COLUMNS,
+  AGENT_COLUMNS, BANK_ACCOUNT_COLUMNS, BANK_TXN_COLUMNS, CUSTOMER_COLUMNS, EXPENSE_COLUMNS, FAMILY_COLUMNS, MARKETING_COLUMNS, ORDER_COLUMNS, PRODUCT_COLUMNS, SPEND_COLUMNS,
   buildWorkspace, classifyResult, createVeClient, fetchVeWorkspace, filterCustomers, filterFunds, financeSummary, fundsByMonth, weekStart, weeklyBudget, whatsappHref, whatsappNumber,
 } from './veData.js'
 
@@ -40,6 +40,15 @@ test('family accounts map connected names and leave email blank when none is sto
   assert.equal(model.activeAccounts.length, 1)
   assert.equal(model.inactiveAccounts.length, 2)
   assert.equal(model.activeAccounts[0].plan, 'Netflix')
+  assert.equal(model.activeAccounts[0].owner, 'Amara Banda')
+  assert.equal(model.activeAccounts[0].agent, 'AG1')
+  const named = buildWorkspace(sources({
+    familyAccounts: { access: 'ok', rows: accounts, message: '' },
+    customers: { access: 'ok', rows: customers, message: '' },
+    accountAgents: { access: 'ok', rows: [{ aaid: 'AG1', name: 'Twaambo Banda', email: 'agent@example.com' }] },
+  }), TODAY)
+  assert.equal(named.activeAccounts[0].agent, 'Twaambo Banda')
+  assert.equal(JSON.stringify(named).includes('agent@example.com'), false)
   assert.equal(model.activeAccounts[0].names, 'Amara Banda, Lombe Phiri')
   assert.equal(model.activeAccounts[0].email, '')
   assert.equal(model.inactiveAccounts.find((account) => account.id === '8').members[0].unmatched, true)
@@ -160,7 +169,7 @@ test('the authenticated read lists safe columns and drops a secret if one is ret
   assert.equal(options.url, 'https://example.supabase.co')
   assert.equal(await options.next.accessToken(), 'owner-token')
   assert.equal(options.next.global.headers.Authorization, 'Bearer owner-token')
-  assert.deepEqual(seen.map((item) => item.columns), [FAMILY_COLUMNS, CUSTOMER_COLUMNS, ORDER_COLUMNS, EXPENSE_COLUMNS, MARKETING_COLUMNS, SPEND_COLUMNS, PRODUCT_COLUMNS, BANK_ACCOUNT_COLUMNS, BANK_TXN_COLUMNS])
+  assert.deepEqual(seen.map((item) => item.columns), [FAMILY_COLUMNS, CUSTOMER_COLUMNS, ORDER_COLUMNS, EXPENSE_COLUMNS, MARKETING_COLUMNS, SPEND_COLUMNS, PRODUCT_COLUMNS, BANK_ACCOUNT_COLUMNS, BANK_TXN_COLUMNS, AGENT_COLUMNS])
   for (const columns of seen.map((item) => item.columns)) {
     assert.equal(/\b(password|receipt|notes|fnb_transaction_ref)\b/i.test(columns), false)
   }

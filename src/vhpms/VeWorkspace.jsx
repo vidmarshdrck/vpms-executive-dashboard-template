@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import SlideTabs from './SlideTabs.jsx'
 import { Donut, PageFooter } from './Donut.jsx'
 import { formatZmw, slicesBy } from './books.js'
@@ -31,14 +32,20 @@ function StatusChip({ value }) {
   return <span className={`chip ${tone}`}>{value}</span>
 }
 
-function DataTable({ columns, rows, empty }) {
+function DataTable({ columns, rows, empty, onRow }) {
   return (
     <div className="tbl-scroll">
       <table className="data">
         <thead><tr>{columns.map((column) => <th key={column.key}>{column.label}</th>)}</tr></thead>
         <tbody>
           {rows.length ? rows.map((row) => (
-            <tr key={row.id}>{columns.map((column) => <td key={column.key}>{column.cell(row)}</td>)}</tr>
+            <tr
+              key={row.id}
+              className={onRow ? 'is-clickable' : undefined}
+              tabIndex={onRow ? 0 : undefined}
+              onClick={onRow ? () => onRow(row) : undefined}
+              onKeyDown={onRow ? (event) => { if (event.key === 'Enter') onRow(row) } : undefined}
+            >{columns.map((column) => <td key={column.key}>{column.cell(row)}</td>)}</tr>
           )) : <tr><td colSpan={columns.length}>{empty}</td></tr>}
         </tbody>
       </table>
@@ -55,20 +62,44 @@ function accessMessage(access, empty, blocked) {
   return ''
 }
 
-function PaymentDialog({ person, onClose }) {
-  if (!person) return null
-  const payment = person.lastPayment
-  return (
-    <section className="card" role="dialog" aria-modal="true" aria-label={`${person.name} last payment`} style={{ marginBottom: 16 }}>
-      <div className="card-head"><h2>{person.name}</h2><button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>Close</button></div>
-      <div className="card-body">{payment ? <p>Last payment {payment.date} · {formatZmw(payment.amount)}</p> : <p>No payment recorded.</p>}</div>
-    </section>
+export function FamilyModal({ account, onClose }) {
+  useEffect(() => {
+    if (!account) return undefined
+    function onKey(event) { if (event.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [account, onClose])
+  if (!account) return null
+  const dialog = (
+    <div className="vh-modal">
+      <button type="button" className="vh-modal-backdrop" aria-label="Close" onClick={onClose} />
+      <section className="card vh-modal-panel" role="dialog" aria-modal="true" aria-label={`${account.owner} family`}>
+        <div className="card-head"><h2>{account.plan}</h2><button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>Close</button></div>
+        <div className="card-body">
+          <p className="stat-desc" style={{ marginTop: 0 }}>{account.owner}</p>
+          {account.members.length ? (
+            <div className="tbl-scroll">
+              <table className="data">
+                <thead><tr><th>Name</th><th>Slot</th><th>Last payment</th><th>Amount</th></tr></thead>
+                <tbody>
+                  {account.members.map((member) => (
+                    <tr key={`${member.cid}-${member.slot}`}>
+                      <td>{member.name}</td>
+                      <td>{member.slot}</td>
+                      <td>{member.lastPayment?.date || 'No payment recorded'}</td>
+                      <td>{member.lastPayment ? formatZmw(member.lastPayment.amount) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="empty">No one is connected.</p>}
+        </div>
+      </section>
+    </div>
   )
-}
-
-function NameButtons({ people, onOpen }) {
-  if (!people.length) return 'No one is connected.'
-  return people.map((person) => <button type="button" className="btn btn-ghost btn-sm" key={`${person.cid}-${person.slot || person.name}`} onClick={() => onOpen(person)}>{person.name}</button>)
+  if (typeof document === 'undefined') return dialog
+  return createPortal(dialog, document.querySelector('.vh-app') || document.body)
 }
 
 function AccountTable({ accounts, empty, onOpen }) {
@@ -76,13 +107,14 @@ function AccountTable({ accounts, empty, onOpen }) {
     <DataTable
       rows={accounts}
       empty={empty}
+      onRow={onOpen}
       columns={[
-        { key: 'names', label: <ColumnLabel icon="users">Account / Names</ColumnLabel>, cell: (row) => <NameButtons people={row.members} onOpen={onOpen} /> },
+        { key: 'owner', label: <ColumnLabel icon="users">Account owner</ColumnLabel>, cell: (row) => row.owner },
         { key: 'status', label: <ColumnLabel icon="activity">Status</ColumnLabel>, cell: (row) => <StatusChip value={row.activity} /> },
         { key: 'plan', label: <ColumnLabel icon="package">Plan</ColumnLabel>, cell: (row) => row.plan },
         { key: 'due', label: <ColumnLabel icon="calendar">Due date</ColumnLabel>, cell: (row) => row.dueDate },
         { key: 'email', label: <ColumnLabel icon="mail">Email</ColumnLabel>, cell: (row) => row.email || <span aria-label="Email not recorded" /> },
-        { key: 'slots', label: <ColumnLabel icon="layers">Slots</ColumnLabel>, cell: (row) => `${row.slotsTaken} of ${row.slotsTotal}` },
+        { key: 'slots', label: <ColumnLabel icon="layers">Slots</ColumnLabel>, cell: (row) => <button type="button" className="btn btn-ghost btn-sm" aria-label={`Slots for ${row.owner}`} onClick={(event) => { event.stopPropagation(); onOpen(row) }}>{row.slotsTaken} of {row.slotsTotal}</button> },
         { key: 'paid', label: <ColumnLabel icon="receipt">Paid status</ColumnLabel>, cell: (row) => <StatusChip value={row.paidStatus} /> },
         { key: 'agent', label: <ColumnLabel icon="user">Agent</ColumnLabel>, cell: (row) => row.agent || '—' },
       ]}
@@ -95,17 +127,24 @@ function Overview({ model }) {
 }
 
 function FamilyAccounts({ model }) {
-  const [person, setPerson] = useState(null)
+  const [account, setAccount] = useState(null)
+  const [group, setGroup] = useState('active')
   const message = accessMessage(model.access.familyAccounts, COPY.familyEmpty, COPY.familyBlocked)
   const plansMessage = accessMessage(model.access.products, COPY.plansEmpty, COPY.plansEmpty)
+  const rows = group === 'active' ? model.activeAccounts : model.inactiveAccounts
   return (
     <>
       <h2 className="sr-only">Family accounts</h2>
-      <PaymentDialog person={person} onClose={() => setPerson(null)} />
+      <FamilyModal account={account} onClose={() => setAccount(null)} />
       {message ? <Message>{message}</Message> : (
         <>
-          <Panel title="Active accounts"><AccountTable accounts={model.activeAccounts} empty={COPY.activeEmpty} onOpen={setPerson} /></Panel>
-          <Panel title="Inactive accounts"><AccountTable accounts={model.inactiveAccounts} empty={COPY.inactiveEmpty} onOpen={setPerson} /></Panel>
+          <div className="segmented" role="tablist" aria-label="Account activity">
+            <button type="button" role="tab" aria-selected={group === 'active'} className={group === 'active' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'} onClick={() => setGroup('active')}>Active ({model.activeAccounts.length})</button>
+            <button type="button" role="tab" aria-selected={group === 'inactive'} className={group === 'inactive' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'} onClick={() => setGroup('inactive')}>Inactive ({model.inactiveAccounts.length})</button>
+          </div>
+          <Panel title={group === 'active' ? 'Active accounts' : 'Inactive accounts'}>
+            <AccountTable accounts={rows} empty={group === 'active' ? COPY.activeEmpty : COPY.inactiveEmpty} onOpen={setAccount} />
+          </Panel>
         </>
       )}
       <Panel title="Plans">
@@ -388,10 +427,9 @@ function Funds({ model, month, onMonth }) {
         <h2 className="sr-only">Funds</h2>
         <MonthNav month={month} onMonth={onMonth} name="Funds" />
       </div>
-      <div className="grid-3" style={{ marginBottom: 16 }}>
-        <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-red)' }}>{formatZmw(summary.expense)}</div><div className="stat-desc">Expense</div></div></section>
-        <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-green)' }}>{formatZmw(summary.income)}</div><div className="stat-desc">Income</div></div></section>
-        <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{formatZmw(summary.total)}</div><div className="stat-desc">Total</div></div></section>
+      <div className="grid-3 funds-totals" style={{ marginBottom: 16 }}>
+        <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-red)' }}>{model.access.expenses === 'ok' || model.access.expenses === 'empty' ? formatZmw(summary.expense) : '—'}</div><div className="stat-desc">Expense</div></div></section>
+        <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{model.access.orders === 'ok' || model.access.orders === 'empty' ? formatZmw(summary.income) : '—'}</div><div className="stat-desc">Total received</div></div></section>
       </div>
       {ordersNote && model.access.orders !== 'ok' && model.access.orders !== 'empty' && <p className="vh-status" role="status">{ordersNote}</p>}
       {expensesNote && model.access.expenses !== 'ok' && <p className="vh-status" role="status">{expensesNote}</p>}

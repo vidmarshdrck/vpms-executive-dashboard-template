@@ -78,7 +78,9 @@ VE tabs, in order: Overview, Family Accounts, Customers, Funds, Accounts, Budget
 
 Accounts lists every row in `public.ve_bank_accounts`. ZMW and USD are always shown. A currency with no row says that no account was returned. Do not add a row that is not in the table.
 
-The Accounts month control and the Funds month control share one month. Funds still totals orders and recorded expenses, and adds that month's bank movements underneath.
+The Accounts month control and the Funds month control share one month. Funds labels the month's orders as Total received: every `public.orders` amount in that month, including orders for people on inactive family accounts. It is not income minus expenses. Bank movements stay on Accounts.
+
+The Family Accounts owner is the customer stored in `slot_1` on `public.family_accounts`. There is no separate owner column. The Agent column uses `public.account_agents` (`aaid` and `name` only). That table has row level security and no SELECT policy, so a signed-in owner currently receives no agent names and the column shows the agent code until a SELECT policy exists.
 
 Budget shows a monthly provider projection from active family accounts, then the existing weekly expense table. The projection is: typical USD plan price × the latest month's average `fx_rate`, plus kwacha-billed plans, plus the average monthly `bank_charges`. USD prices come from `orig_amount_usd` on `ve_provider_subscription` rows whose description matches the plan. `ve.products` has no USD price, so it is not used. The actual series is `ve_provider_subscription` by month for the last 12 months. Gap is that actual outflow minus the projection. A positive gap means the bank paid more than the active plans imply.
 

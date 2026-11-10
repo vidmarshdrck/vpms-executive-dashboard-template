@@ -197,8 +197,7 @@ export function StandardFunds({ model }) {
   const rows = monthRows([...model.incomeRows, ...model.expenseRows], month)
   const summary = monthSummary(rows)
   const expenseValue = model.expenseNote && !model.expenseRows.length ? null : summary.expense
-  const incomeValue = model.incomeNote && !model.incomeRows.length ? null : summary.income
-  const totalValue = expenseValue == null || incomeValue == null ? null : incomeValue - expenseValue
+  const receivedValue = model.incomeNote && !model.incomeRows.length ? null : summary.income
   const days = dailyAmounts(rows, month)
   return (
     <>
@@ -208,10 +207,9 @@ export function StandardFunds({ model }) {
       </div>
       {model.incomeNote && <Message>{model.incomeNote}</Message>}
       {model.expenseNote && <Message>{model.expenseNote}</Message>}
-      <div className="grid-3" style={{ marginBottom: 16 }}>
+      <div className="grid-3 funds-totals" style={{ marginBottom: 16 }}>
         <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-red)' }}>{expenseValue == null ? '—' : formatZmw(expenseValue)}</div><div className="stat-desc">Expense</div></div></section>
-        <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-green)' }}>{incomeValue == null ? '—' : formatZmw(incomeValue)}</div><div className="stat-desc">Income</div></div></section>
-        <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{totalValue == null ? '—' : formatZmw(totalValue)}</div><div className="stat-desc">Total</div></div></section>
+        <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{receivedValue == null ? '—' : formatZmw(receivedValue)}</div><div className="stat-desc">Total received</div></div></section>
       </div>
       {rows.length ? (
         <>

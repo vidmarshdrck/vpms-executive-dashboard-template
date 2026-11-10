@@ -24,7 +24,7 @@ const DIR_KEY = 'vhpms-directory-v1'
 const SCORE_KEY = 'vhpms-scorecard-v1'
 const BOOKS_KEY = 'vhpms-books-v1'
 const WORKSPACE = new Set(['operations', 'tasks', 'projects', 'priorities', 'calendar', 'receipts', 'sources'])
-const LIVE_VIEWS = new Set(['activities', 'inbox', 'sms', 'business', 'business-list'])
+const LIVE_VIEWS = new Set(['activities', 'inbox', 'sms', 'business', 'business-list', 'profile'])
 
 function readStored(key, parse, fallback) {
   try { return parse(localStorage.getItem(key)) } catch { return fallback }
@@ -155,7 +155,6 @@ export default function Vhpms() {
       onBack={() => { setMode('management'); setView(returnView || homeView(sessionUser)); setMenu(false) }}
       onBusiness={(id) => { setBusinessId(id); setView('business'); setMenu(false) }}
       onRole={switchRole}
-      onLogout={logout}
     >
       {displayView === 'gm' && <GmDashboard model={model} scorecard={scorecard} viewOnly={isViewOnly(sessionUser)} />}
       {displayView === 'departments' && <Departments scorecard={scorecard} onOpen={(code) => { setSelectedDept(code); open('department') }} />}
