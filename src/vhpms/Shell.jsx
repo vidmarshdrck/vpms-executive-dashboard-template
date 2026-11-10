@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BUSINESS_ICONS, NavIcon, MenuIcon } from './icons.jsx'
 import { VidmarCredit } from './Donut.jsx'
-import { accountRoles, roleLabel, roleLine, managementLinks, adminLinks, WORKSPACE_LINKS } from './directory.js'
+import { accountRoles, roleLabel, managementLinks, adminLinks, WORKSPACE_LINKS } from './directory.js'
 import { activeBusinesses } from './books.js'
 import { readSidebarRetracted, writeSidebarRetracted } from './sidebar.js'
 
@@ -28,7 +28,7 @@ export function LoginScreen({ error, busy, onSubmit }) {
     <div className="vh-app">
       <div className="login-shell">
         <div className="login-slides" aria-hidden="true">
-          {LOGIN_SLIDES.map(([file, alt], index) => (
+          {LOGIN_SLIDES.map(([file], index) => (
             <img key={file} src={`${base}login/${file}`} alt="" className={index === slide ? 'is-active' : ''} loading={index === 0 ? 'eager' : 'lazy'} />
           ))}
         </div>
@@ -47,20 +47,15 @@ export function LoginScreen({ error, busy, onSubmit }) {
               <div className="field"><label htmlFor="username">Username</label><input id="username" name="username" type="text" autoComplete="username" required /></div>
               <div className="field">
                 <label htmlFor="password">Password</label>
-                <div className="password-row">
+                <div className="password-field">
                   <input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" required />
-                  <button type="button" className="btn btn-ghost" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((current) => !current)}>{showPassword ? 'Hide' : 'Show'}</button>
+                  <button type="button" className="password-toggle" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((current) => !current)}><NavIcon name={showPassword ? 'eye-off' : 'eye'} /></button>
                 </div>
               </div>
               <button className="btn btn-primary" type="submit" style={{ width: '100%', justifyContent: 'center' }} disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
             </form>
             <p className="login-foot"><VidmarCredit /></p>
           </div>
-        </div>
-        <div className="login-nav" role="group" aria-label="Background slides">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSlide((current) => (current + LOGIN_SLIDES.length - 1) % LOGIN_SLIDES.length)}>Previous</button>
-          {LOGIN_SLIDES.map(([, alt], index) => <button type="button" key={alt} className={index === slide ? 'is-active' : ''} aria-label={alt} aria-current={index === slide ? 'true' : undefined} onClick={() => setSlide(index)} />)}
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSlide((current) => (current + 1) % LOGIN_SLIDES.length)}>Next</button>
         </div>
       </div>
     </div>
@@ -77,26 +72,9 @@ const LIVE_LINKS = [
   { id: 'sms', label: 'SMS Transactions', icon: 'activity' },
 ]
 
-export default function Shell({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onLogout, onRole, title, headerAction = null, children }) {
+export default function Shell({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onRole, title, headerAction = null, children }) {
   const businesses = activeBusinesses(books)
-  const [profileOpen, setProfileOpen] = useState(false)
-  const profileRef = useRef(null)
   const [retracted, setRetracted] = useState(() => (typeof localStorage === 'undefined' ? false : readSidebarRetracted(localStorage)))
-  useEffect(() => {
-    if (!profileOpen) return undefined
-    function onPointer(event) {
-      if (!profileRef.current?.contains(event.target)) setProfileOpen(false)
-    }
-    function onKey(event) {
-      if (event.key === 'Escape') setProfileOpen(false)
-    }
-    document.addEventListener('mousedown', onPointer)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onPointer)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [profileOpen])
   useEffect(() => {
     if (typeof localStorage === 'undefined') return
     writeSidebarRetracted(localStorage, retracted)
@@ -135,13 +113,6 @@ export default function Shell({ user, view, menu, setMenu, mode, books, business
         </nav>
         {mode === 'management' && <button type="button" className="live-btn" onClick={onLive}><span className="nav-label">Live workspace</span></button>}
         <div className="side-user">
-          <div className="side-user-row">
-            <span className="avatar" aria-hidden="true"><NavIcon name="user" /></span>
-            <span style={{ minWidth: 0 }}>
-              <span className="side-user-name">{user.name}</span>
-              <span className="side-user-role">{roleLine(user)}</span>
-            </span>
-          </div>
           {accountRoles(user).length > 1 && (
             <label className="role-switch">
               <span>Current role</span>
@@ -163,17 +134,10 @@ export default function Shell({ user, view, menu, setMenu, mode, books, business
           </div>
           <div className="header-tools">
             {headerAction}
-            <div className="profile-slot" ref={profileRef}>
-              <button type="button" className="profile-btn" aria-label="Profile" aria-expanded={profileOpen} aria-controls="profile-menu" onClick={() => setProfileOpen((current) => !current)}>
+            <div className="profile-slot">
+              <button type="button" className="profile-btn" aria-label="Profile" onClick={() => onOpen('profile')}>
                 <span className="avatar" aria-hidden="true"><NavIcon name="user" /></span>
               </button>
-              {profileOpen && (
-                <div id="profile-menu" role="menu" className="profile-menu">
-                  <p className="side-user-name">{user.name}</p>
-                  <p className="side-user-role">{roleLine(user)}</p>
-                  <button type="button" role="menuitem" className="logout" onClick={onLogout}>Log out</button>
-                </div>
-              )}
             </div>
           </div>
         </header>
