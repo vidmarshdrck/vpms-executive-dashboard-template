@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
-import { NavIcon, MenuIcon } from './icons.jsx'
+import { useEffect, useRef, useState } from 'react'
+import { BUSINESS_ICONS, NavIcon, MenuIcon } from './icons.jsx'
 import { VidmarCredit } from './Donut.jsx'
-import { accountRoles, initials, roleLabel, roleLine, managementLinks, adminLinks, WORKSPACE_LINKS } from './directory.js'
+import { accountRoles, roleLabel, roleLine, managementLinks, adminLinks, WORKSPACE_LINKS } from './directory.js'
 import { activeBusinesses } from './books.js'
 import { readSidebarRetracted, writeSidebarRetracted } from './sidebar.js'
 
@@ -36,7 +36,7 @@ export function LoginScreen({ error, busy, onSubmit }) {
           <div className="login-stage" />
           <div className="login-card">
             <div className="login-brand">
-              <span className="brand-logo">VH</span>
+              <span className="brand-logo" aria-hidden="true"><NavIcon name="hexagon" /></span>
               <span className="brand-text"><span className="brand-name">VHPMS</span><span className="brand-sub">Performance</span></span>
             </div>
             <p className="brand-eyebrow">VHPMS</p>
@@ -80,7 +80,23 @@ const LIVE_LINKS = [
 export default function Shell({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onLogout, onRole, title, headerAction = null, children }) {
   const businesses = activeBusinesses(books)
   const [profileOpen, setProfileOpen] = useState(false)
+  const profileRef = useRef(null)
   const [retracted, setRetracted] = useState(() => (typeof localStorage === 'undefined' ? false : readSidebarRetracted(localStorage)))
+  useEffect(() => {
+    if (!profileOpen) return undefined
+    function onPointer(event) {
+      if (!profileRef.current?.contains(event.target)) setProfileOpen(false)
+    }
+    function onKey(event) {
+      if (event.key === 'Escape') setProfileOpen(false)
+    }
+    document.addEventListener('mousedown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [profileOpen])
   useEffect(() => {
     if (typeof localStorage === 'undefined') return
     writeSidebarRetracted(localStorage, retracted)
@@ -94,7 +110,7 @@ export default function Shell({ user, view, menu, setMenu, mode, books, business
     <div className={`vh-app${retracted ? ' sidebar-retracted' : ''}`}>
       <aside className={`sidebar ${menu ? 'open' : ''}`} id="sidebar">
         <button type="button" className="sidebar-brand" aria-controls="sidebar" aria-expanded={menu || !retracted} aria-label={retracted && !menu ? 'Expand sidebar' : 'Collapse sidebar'} onClick={toggleSidebar}>
-          <span className="brand-logo">VH</span>
+          <span className="brand-logo" aria-hidden="true"><NavIcon name="hexagon" /></span>
           <span className="brand-text"><span className="brand-name">Vidmar Holdings</span><span className="brand-sub">VHPMS</span></span>
         </button>
         <nav className="side-nav" aria-label="Primary navigation">
@@ -102,7 +118,7 @@ export default function Shell({ user, view, menu, setMenu, mode, books, business
             <>
               {LIVE_LINKS.map((item) => <button type="button" key={item.id} aria-current={view === item.id ? 'page' : undefined} onClick={() => onOpen(item.id)}><NavIcon name={item.icon} /><span className="nav-label">{item.label}{item.id === 'inbox' && inboxCount > 0 ? ` (${inboxCount})` : ''}</span></button>)}
               <div className="side-label spaced">Businesses</div>
-              {businesses.map((business) => <button type="button" key={business.id} aria-current={view === 'business' && businessId === business.id ? 'page' : undefined} onClick={() => onBusiness(business.id)}><NavIcon name="building" /><span className="nav-label">{business.name}</span></button>)}
+              {businesses.map((business) => <button type="button" key={business.id} aria-current={view === 'business' && businessId === business.id ? 'page' : undefined} onClick={() => onBusiness(business.id)}><NavIcon name={BUSINESS_ICONS[business.id] || 'building'} /><span className="nav-label">{business.name}</span></button>)}
               {!businesses.length && <p className="side-label">No active businesses</p>}
               <button type="button" className="back-management" onClick={onBack}><NavIcon name="dashboard" /><span className="nav-label">Back to management</span></button>
             </>
@@ -120,7 +136,7 @@ export default function Shell({ user, view, menu, setMenu, mode, books, business
         {mode === 'management' && <button type="button" className="live-btn" onClick={onLive}><span className="nav-label">Live workspace</span></button>}
         <div className="side-user">
           <div className="side-user-row">
-            <span className="avatar">{initials(user.name)}</span>
+            <span className="avatar" aria-hidden="true"><NavIcon name="user" /></span>
             <span style={{ minWidth: 0 }}>
               <span className="side-user-name">{user.name}</span>
               <span className="side-user-role">{roleLine(user)}</span>
@@ -147,9 +163,9 @@ export default function Shell({ user, view, menu, setMenu, mode, books, business
           </div>
           <div className="header-tools">
             {headerAction}
-            <div className="profile-slot">
+            <div className="profile-slot" ref={profileRef}>
               <button type="button" className="profile-btn" aria-label="Profile" aria-expanded={profileOpen} aria-controls="profile-menu" onClick={() => setProfileOpen((current) => !current)}>
-                <span className="avatar">{initials(user.name)}</span>
+                <span className="avatar" aria-hidden="true"><NavIcon name="user" /></span>
               </button>
               {profileOpen && (
                 <div id="profile-menu" role="menu" className="profile-menu">

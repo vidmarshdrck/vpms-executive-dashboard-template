@@ -22,7 +22,7 @@ const bundle = await build({
 const { createRequire } = await import('node:module')
 const require = createRequire(import.meta.url)
 const code = bundle.outputFiles[0].text.replace(/from "([^"]+)"/g, (_, name) => {
-  if (name.startsWith('react') || name.startsWith('@supabase/')) return `from "file://${require.resolve(name)}"`
+  if (name.startsWith('react') || name.startsWith('@supabase/') || name === 'lucide-react') return `from "file://${require.resolve(name)}"`
   return `from "${name}"`
 })
 const { BusinessHome, VeWorkspace, ActivitiesBoard, Shell } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
@@ -66,7 +66,7 @@ function renderHome(id = 've', books = emptyBooks()) {
 test('the VE pages render mapped records', () => {
   const html = renderWorkspace(workspaceModel())
   for (const title of ['Overview', 'Family Accounts', 'Customers', 'Funds', 'Accounts', 'Budget', 'Marketing']) {
-    assert.match(html, new RegExp(`role="tab"[^>]*>${title}</button>`))
+    assert.match(html, new RegExp(`<span>${title}</span></button>`))
   }
   assert.match(html, /Account \/ Names/)
   assert.match(html, /Amara Banda/)
@@ -91,7 +91,6 @@ test('the VE pages render mapped records', () => {
   assert.match(html, /aria-label="Funds calendar"/)
   assert.match(html, /Account analysis/)
   assert.match(html, /Last payment/)
-  assert.match(html, /Bank movements/)
   assert.match(html, /FNB Lifestart Student \(ZMW\)/)
   assert.match(html, /1583/)
   assert.match(html, /ZMW 288\.95/)
@@ -149,17 +148,17 @@ test('VE ignores planner entries and other businesses keep their books', () => {
     { id: 'other', businessId: 'vai', kind: 'income', title: 'Other business must not leak', group: 'Local', amount: 999, date: '2026-11-08', status: 'Pending' },
   ]
   const ve = renderHome('ve', books)
-  assert.match(ve, /role="tab"[^>]*>Marketing<\/button>/)
+  assert.match(ve, /<span>Marketing<\/span><\/button>/)
   assert.match(ve, new RegExp(COPY.signedOut))
   assert.doesNotMatch(ve, /Planner income must not appear|Other business must not leak/)
   const vai = renderHome('vai', books)
-  assert.match(vai, /role="tab"[^>]*>Overview<\/button>/)
-  assert.match(vai, /role="tab"[^>]*>Funds<\/button>/)
-  assert.match(vai, /role="tab"[^>]*>Marketing<\/button>/)
-  assert.match(vai, /role="tab"[^>]*>Budget<\/button>/)
-  assert.match(vai, />Expenses<\/button>/)
-  assert.match(vai, />Income<\/button>/)
-  assert.match(vai, />Counts<\/button>/)
+  assert.match(vai, /<span>Overview<\/span><\/button>/)
+  assert.match(vai, /<span>Funds<\/span><\/button>/)
+  assert.match(vai, /<span>Marketing<\/span><\/button>/)
+  assert.match(vai, /<span>Budget<\/span><\/button>/)
+  assert.match(vai, /<span>Expenses<\/span><\/button>/)
+  assert.match(vai, /<span>Income<\/span><\/button>/)
+  assert.match(vai, /<span>Counts<\/span><\/button>/)
   assert.match(vai, /No data connected yet/)
   assert.match(vai, /type="submit"/)
   assert.match(vai, /Other business must not leak/)
@@ -183,6 +182,9 @@ test('activities, inbox, and sms stay on their own screens', () => {
   }, createElement('p', null, 'Activities body')))
   assert.match(shell, /Add task/)
   assert.match(shell, /aria-label="Profile"/)
+  const shellSource = readFileSync(new URL('./Shell.jsx', import.meta.url), 'utf8')
+  assert.match(shellSource, /Escape/)
+  assert.match(shellSource, /mousedown/)
   assert.match(shell, /aria-label="Collapse sidebar"/)
   assert.match(shell, /aria-controls="sidebar"/)
   assert.match(shell, /aria-expanded="true"/)

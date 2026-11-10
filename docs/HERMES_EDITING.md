@@ -158,7 +158,7 @@ GitHub Actions (`.github/workflows/deploy.yml`) still publishes the template to 
 
 ## 8. Brand and safety
 
-- Blue is `#1454c0`.
+- Blue is `#1454c0`. Spacing, type, contrast, and icons follow [docs/DESIGN.md](DESIGN.md).
 - The footer credit is `Powered by VIDMΛR` (Greek capital lambda). Do not write `Vidmar Holdings` on new screens.
 - Do not use the words draft, demo, sample, placeholder, or coming soon on a screen the owner uses.
 - Do not put fictional rows in the shipped UI. Tests and `scripts/ve-workspace-harness.jsx` may use fictional rows.

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import SlideTabs from './SlideTabs.jsx'
 import { Donut, PageFooter } from './Donut.jsx'
 import { formatZmw, slicesBy } from './books.js'
-import { accountPeriod, accountsByCurrency, categoryLabel, filterBankTransactions, formatMoney, formatRate, fxText, roundTo } from './bankBudget.js'
+import { ColumnLabel } from './icons.jsx'
+import { accountPeriod, accountsByCurrency, categoryLabel, filterBankTransactions, formatMoney, formatRate, fxText } from './bankBudget.js'
 import { categoryShare, compactAmount, dailyAmounts, latestMonth, monthLabel, monthRows, monthSummary, shiftMonth, sourceAnalysis } from './fundsMonth.js'
 import { StandardOverview } from './businessPanels.jsx'
 import { glanceFromVe } from './businessSources.js'
@@ -54,14 +55,6 @@ function accessMessage(access, empty, blocked) {
   return ''
 }
 
-function moneyTile(value) {
-  return value == null ? '—' : formatZmw(value)
-}
-
-function Stat({ label, value }) {
-  return <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{value}</div><div className="stat-desc">{label}</div></div></section>
-}
-
 function PaymentDialog({ person, onClose }) {
   if (!person) return null
   const payment = person.lastPayment
@@ -84,44 +77,21 @@ function AccountTable({ accounts, empty, onOpen }) {
       rows={accounts}
       empty={empty}
       columns={[
-        { key: 'names', label: 'Account / Names', cell: (row) => <NameButtons people={row.members} onOpen={onOpen} /> },
-        { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.activity} /> },
-        { key: 'plan', label: 'Plan', cell: (row) => row.plan },
-        { key: 'due', label: 'Due date', cell: (row) => row.dueDate },
-        { key: 'email', label: 'Email', cell: (row) => row.email || <span aria-label="Email not recorded" /> },
-        { key: 'slots', label: 'Slots', cell: (row) => `${row.slotsTaken} of ${row.slotsTotal}` },
-        { key: 'paid', label: 'Paid status', cell: (row) => <StatusChip value={row.paidStatus} /> },
-        { key: 'agent', label: 'Agent', cell: (row) => row.agent || '—' },
+        { key: 'names', label: <ColumnLabel icon="users">Account / Names</ColumnLabel>, cell: (row) => <NameButtons people={row.members} onOpen={onOpen} /> },
+        { key: 'status', label: <ColumnLabel icon="activity">Status</ColumnLabel>, cell: (row) => <StatusChip value={row.activity} /> },
+        { key: 'plan', label: <ColumnLabel icon="package">Plan</ColumnLabel>, cell: (row) => row.plan },
+        { key: 'due', label: <ColumnLabel icon="calendar">Due date</ColumnLabel>, cell: (row) => row.dueDate },
+        { key: 'email', label: <ColumnLabel icon="mail">Email</ColumnLabel>, cell: (row) => row.email || <span aria-label="Email not recorded" /> },
+        { key: 'slots', label: <ColumnLabel icon="layers">Slots</ColumnLabel>, cell: (row) => `${row.slotsTaken} of ${row.slotsTotal}` },
+        { key: 'paid', label: <ColumnLabel icon="receipt">Paid status</ColumnLabel>, cell: (row) => <StatusChip value={row.paidStatus} /> },
+        { key: 'agent', label: <ColumnLabel icon="user">Agent</ColumnLabel>, cell: (row) => row.agent || '—' },
       ]}
     />
   )
 }
 
 function Overview({ model }) {
-  const [person, setPerson] = useState(null)
-  const message = accessMessage(model.access.familyAccounts, COPY.familyEmpty, COPY.familyBlocked)
-  return (
-    <>
-      <StandardOverview model={glanceFromVe(model)} />
-      <PaymentDialog person={person} onClose={() => setPerson(null)} />
-      {message ? <Message>{message}</Message> : (
-        <Panel title="Family accounts">
-          {model.access.customers === 'blocked' && <p className="vh-status" role="status">{COPY.customersBlocked} Slot references stay visible.</p>}
-          <DataTable
-            rows={model.accounts}
-            empty={COPY.familyEmpty}
-            columns={[
-              { key: 'plan', label: 'Plan', cell: (row) => row.plan },
-              { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.activity} /> },
-              { key: 'due', label: 'Due date', cell: (row) => row.dueDate },
-              { key: 'names', label: 'Connected', cell: (row) => <NameButtons people={row.members} onOpen={setPerson} /> },
-              { key: 'slots', label: 'Slots', cell: (row) => `${row.slotsTaken} of ${row.slotsTotal}` },
-            ]}
-          />
-        </Panel>
-      )}
-    </>
-  )
+  return <StandardOverview model={glanceFromVe(model)} />
 }
 
 function FamilyAccounts({ model }) {
@@ -130,14 +100,12 @@ function FamilyAccounts({ model }) {
   const plansMessage = accessMessage(model.access.products, COPY.plansEmpty, COPY.plansEmpty)
   return (
     <>
-      <h2 className="section-title">Family accounts</h2>
+      <h2 className="sr-only">Family accounts</h2>
       <p className="stat-desc">Active means the due date is today or later. Paid status is shown separately.</p>
       <PaymentDialog person={person} onClose={() => setPerson(null)} />
       {message ? <Message>{message}</Message> : (
         <>
-          <h2 className="section-title">Active</h2>
           <Panel title="Active accounts"><AccountTable accounts={model.activeAccounts} empty={COPY.activeEmpty} onOpen={setPerson} /></Panel>
-          <h2 className="section-title">Inactive</h2>
           <Panel title="Inactive accounts"><AccountTable accounts={model.inactiveAccounts} empty={COPY.inactiveEmpty} onOpen={setPerson} /></Panel>
         </>
       )}
@@ -168,11 +136,11 @@ function Customers({ model }) {
   const rows = filterCustomers(model.customers, { status, query })
   return (
     <>
-      <h2 className="section-title">Customers</h2>
+      <h2 className="sr-only">Customers</h2>
       {message ? <Message>{message}</Message> : (
         <section className="card" style={{ marginBottom: 16 }}>
           <div className="card-head" style={{ flexWrap: 'wrap' }}>
-            <h2>Customers</h2>
+            <h2 className="sr-only">Customer list</h2>
             <div className="vh-actions" style={{ marginLeft: 'auto' }}>
               <div className="field" style={{ margin: 0, minWidth: 180, maxWidth: 260 }}>
                 <label htmlFor="ve-customer-search">Search</label>
@@ -192,14 +160,14 @@ function Customers({ model }) {
               rows={rows}
               empty={COPY.customersEmpty}
               columns={[
-                { key: 'name', label: 'Name', cell: (row) => row.name },
-                { key: 'due', label: 'Due date', cell: (row) => row.dueDate },
-                { key: 'products', label: 'Products', cell: (row) => row.products },
-                { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.status} /> },
-                { key: 'last', label: 'Last payment', cell: (row) => row.lastPayment?.date || 'No payment recorded' },
-                { key: 'lastAmount', label: 'Last amount', cell: (row) => row.lastPayment ? formatZmw(row.lastPayment.amount) : '—' },
-                { key: 'spent', label: 'Total spent', cell: (row) => formatZmw(row.totalSpent) },
-                { key: 'whatsapp', label: 'WhatsApp', cell: (row) => {
+                { key: 'name', label: <ColumnLabel icon="user">Name</ColumnLabel>, cell: (row) => row.name },
+                { key: 'due', label: <ColumnLabel icon="calendar">Due date</ColumnLabel>, cell: (row) => row.dueDate },
+                { key: 'products', label: <ColumnLabel icon="package">Products</ColumnLabel>, cell: (row) => row.products },
+                { key: 'status', label: <ColumnLabel icon="activity">Status</ColumnLabel>, cell: (row) => <StatusChip value={row.status} /> },
+                { key: 'last', label: <ColumnLabel icon="receipt">Last payment</ColumnLabel>, cell: (row) => row.lastPayment?.date || 'No payment recorded' },
+                { key: 'lastAmount', label: <ColumnLabel icon="wallet">Last amount</ColumnLabel>, cell: (row) => row.lastPayment ? formatZmw(row.lastPayment.amount) : '—' },
+                { key: 'spent', label: <ColumnLabel icon="wallet">Total spent</ColumnLabel>, cell: (row) => formatZmw(row.totalSpent) },
+                { key: 'whatsapp', label: <ColumnLabel icon="message">WhatsApp</ColumnLabel>, cell: (row) => {
                   const href = whatsappHref(row)
                   return href
                     ? <a className="btn btn-primary btn-sm" href={href} target="_blank" rel="noopener noreferrer">WhatsApp</a>
@@ -320,31 +288,6 @@ function BalanceChart({ title, points, currency }) {
   )
 }
 
-function BankMonth({ model, month }) {
-  const accountAccess = model.access.bankAccounts
-  const txnAccess = model.access.bankTransactions
-  if (accountAccess !== 'ok' && accountAccess !== 'empty') {
-    return <Panel title="Bank movements"><Message>{accessMessage(accountAccess, '', COPY.bankAccountsBlocked)}</Message></Panel>
-  }
-  if (!model.bankAccounts.length) return <Panel title="Bank movements"><Message>No bank account was returned.</Message></Panel>
-  return (
-    <Panel title="Bank movements" note={txnAccess === 'ok' ? '' : accessMessage(txnAccess, COPY.bankTxnsEmpty, COPY.bankTxnsBlocked)}>
-      {model.bankAccounts.map((account) => {
-        const period = accountPeriod(account, model.bankTransactions, month)
-        const spend = filterBankTransactions(model.bankTransactions, { accountId: account.id, month }).filter((row) => row.amount < 0)
-        const share = categoryShare(spend.map((row) => ({ category: categoryLabel(row.category), amount: -row.amount })))
-        return (
-          <div key={account.id} style={{ marginBottom: 16 }}>
-            <strong>{account.label}</strong>
-            <p className="stat-desc">{account.currency}{account.last4 ? ` · ${account.last4}` : ''} · In {formatMoney(period.moneyIn, account.currency)} · Out {formatMoney(period.moneyOut, account.currency)} · Net {formatMoney(roundTo(period.moneyIn - period.moneyOut, 2), account.currency)}</p>
-            {share.length ? <ul className="vh-list">{share.map((item) => <li key={item.name}><div><strong>{item.name}</strong><small>{formatMoney(item.amount, account.currency)} · {Math.round(item.pct)}%</small></div></li>)}</ul> : <p className="stat-desc">No bank outflows in this month.</p>}
-          </div>
-        )
-      })}
-    </Panel>
-  )
-}
-
 function BankAccountBlock({ account, model, month, query, category }) {
   const period = accountPeriod(account, model.bankTransactions, month)
   const own = model.bankTransactions.filter((row) => row.accountId === account.id)
@@ -357,7 +300,7 @@ function BankAccountBlock({ account, model, month, query, category }) {
       <article className="card" style={{ marginBottom: 16 }}>
         <div className="card-head">
           <h2>{account.label}</h2>
-          <span className="chip na">{account.currency}{account.last4 ? ` · ${account.last4}` : ''}</span>
+          <span className="chip na">{account.last4 ? `Ending ${account.last4}` : account.currency}</span>
         </div>
         <div className="card-body">
           {account.bank && <p className="stat-desc">{account.bank}</p>}
@@ -402,7 +345,7 @@ function Accounts({ model, month, onMonth }) {
   return (
     <>
       <div className="topbar">
-        <h2 className="section-title" style={{ margin: 0 }}>Accounts</h2>
+        <h2 className="sr-only">Accounts</h2>
         <MonthNav month={month} onMonth={onMonth} name="Accounts" />
       </div>
       {!readable ? <Message>{accessMessage(access, '', COPY.bankAccountsBlocked)}</Message> : (
@@ -445,7 +388,7 @@ function Funds({ model, month, onMonth }) {
   return (
     <>
       <div className="topbar">
-        <h2 className="section-title" style={{ margin: 0 }}>Funds</h2>
+        <h2 className="sr-only">Funds</h2>
         <MonthNav month={month} onMonth={onMonth} name="Funds" />
       </div>
       <div className="grid-3" style={{ marginBottom: 16 }}>
@@ -482,7 +425,6 @@ function Funds({ model, month, onMonth }) {
           </Panel>
         </>
       ) : <Message>{COPY.fundsEmpty}</Message>}
-      <BankMonth model={model} month={month} />
     </>
   )
 }
@@ -577,7 +519,6 @@ function Budget({ model }) {
   return (
     <>
       <BudgetProjection model={model} />
-      <h2 className="section-title">Weekly expense budget</h2>
       <p className="stat-desc">{COPY.budgetNote}</p>
       {expenseMessage ? <Message>{expenseMessage}</Message> : (
         <Panel title="Weekly expense budget">

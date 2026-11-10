@@ -97,15 +97,6 @@ function TrendChart({ rows }) {
   )
 }
 
-function StatusDonut({ title, rows, empty }) {
-  const slices = slicesBy(rows.map((row) => ({ group: row.status || 'Unspecified', amount: 1 })), 'group')
-  return (
-    <Panel title={title}>
-      {slices.length ? <Donut items={slices} center="Status" format={(value) => String(value)} /> : <Message>{empty}</Message>}
-    </Panel>
-  )
-}
-
 function AccountBars({ rows }) {
   const measured = rows.filter((row) => row.amount != null && Number(row.amount) > 0)
   const max = Math.max(...measured.map((row) => Number(row.amount)), 1)
@@ -123,15 +114,19 @@ function AccountBars({ rows }) {
   )
 }
 
+function Fact({ label, value }) {
+  return <div><div className="stat-num" style={{ fontSize: 28 }}>{value}</div><div className="stat-desc">{label}</div></div>
+}
+
 export function StandardOverview({ model }) {
-  const dated = [...model.incomeRows, ...model.expenseRows]
-  const month = dated.length ? latestMonth(dated.map((row) => row.date), model.today) : ''
-  const monthItems = month ? monthRows(dated, month) : []
-  const days = month ? dailyAmounts(monthItems, month) : []
+  const open = model.operationsNote && !model.operations.length
+  const closed = model.clientsNote && !model.clients.length
+  const activeOps = model.operations.filter((row) => row.status === 'Active' || row.status === 'In stock').length
   return (
     <>
-      <h2 className="section-title">Overview</h2>
-      <div className="grid-4" style={{ marginBottom: 16 }}>
+      <h2 className="sr-only">Overview</h2>
+      <p className="stat-desc">All recorded income and expenses. Category and daily detail is on Funds.</p>
+      <div className="grid-4" style={{ margin: '16px 0' }}>
         <Stat label="Total spent" value={moneyTile(model.finance.expenses)} />
         <Stat label="Income" value={moneyTile(model.finance.income)} />
         <Stat label="Balance on hand" value={moneyTile(model.finance.balance)} />
@@ -140,41 +135,26 @@ export function StandardOverview({ model }) {
       {model.incomeNote && <Message>{model.incomeNote}</Message>}
       {model.expenseNote && <Message>{model.expenseNote}</Message>}
       <TrendChart rows={[...model.incomeRows, ...model.expenseRows]} />
-      {month ? (
-        <>
-          <div className="grid">
-            <RankedSplit title="Expense overview" rows={monthItems.filter((row) => row.kind === 'expense')} center="Expenses" />
-            <RankedSplit title="Income overview" rows={monthItems.filter((row) => row.kind === 'income')} center="Income" />
-          </div>
-          <div className="grid">
-            <FlowChart title="Expense flow" days={days} field="expense" color="var(--rag-red)" />
-            <FlowChart title="Income flow" days={days} field="income" color="var(--rag-green)" />
-          </div>
-        </>
-      ) : null}
       <div className="grid">
         <Panel title="Operations" note={model.operationsNote}>
-          <div className="grid-3" style={{ marginBottom: 12 }}>
-            <Stat label="Items" value={model.operationsNote && !model.operations.length ? '—' : String(model.operations.length)} />
-            <Stat label="Active" value={model.operationsNote && !model.operations.length ? '—' : String(model.operations.filter((row) => row.status === 'Active' || row.status === 'In stock').length)} />
-            <Stat label="Due soon" value={model.operationsNote && !model.operations.length ? '—' : String(model.upcoming.length)} />
+          <div className="grid-3">
+            <Fact label="Items" value={open ? '—' : String(model.operations.length)} />
+            <Fact label="Active" value={open ? '—' : String(activeOps)} />
+            <Fact label="Due in 30 days" value={open ? '—' : String(model.upcoming.length)} />
           </div>
-          <StatusDonut title="Operations status" rows={model.operations} empty={model.operationsNote || 'No operations rows were returned.'} />
-          <AccountBars rows={model.operations} />
           {model.upcoming.length ? (
             <ul className="vh-list" aria-label="Upcoming due items">
-              {model.upcoming.map((row) => <li key={row.id}><div><strong>{row.title}</strong><small>Due {row.due}</small></div></li>)}
+              {model.upcoming.slice(0, 5).map((row) => <li key={row.id}><div><strong>{row.title}</strong><small>Due {row.due}</small></div></li>)}
             </ul>
-          ) : <p className="stat-desc">No due dates in the next 30 days.</p>}
+          ) : null}
         </Panel>
         <Panel title="Clients" note={model.clientsNote}>
-          <div className="grid-4" style={{ marginBottom: 12 }}>
-            <Stat label="Active" value={model.clientsNote && !model.clients.length ? '—' : String(model.counts.active)} />
-            <Stat label="Inactive" value={model.clientsNote && !model.clients.length ? '—' : String(model.counts.inactive)} />
-            <Stat label="New" value={model.clientsNote && !model.clients.length ? '—' : String(model.counts.newer)} />
-            <Stat label="Renewals due" value={model.clientsNote && !model.clients.length ? '—' : String(model.counts.renewals)} />
+          <div className="grid-4">
+            <Fact label="Active" value={closed ? '—' : String(model.counts.active)} />
+            <Fact label="Inactive" value={closed ? '—' : String(model.counts.inactive)} />
+            <Fact label="New" value={closed ? '—' : String(model.counts.newer)} />
+            <Fact label="Renewals due" value={closed ? '—' : String(model.counts.renewals)} />
           </div>
-          <StatusDonut title="Client status" rows={model.clients} empty={model.clientsNote || 'No client rows were returned.'} />
         </Panel>
       </div>
     </>
@@ -203,7 +183,7 @@ export function StandardFunds({ model }) {
   return (
     <>
       <div className="topbar">
-        <h2 className="section-title" style={{ margin: 0 }}>Funds</h2>
+        <h2 className="sr-only">Funds</h2>
         <MonthNav month={month} onMonth={setMonth} />
       </div>
       {model.incomeNote && <Message>{model.incomeNote}</Message>}
@@ -236,7 +216,7 @@ export function StandardFunds({ model }) {
 export function StandardMarketing({ model }) {
   return (
     <>
-      <h2 className="section-title">Marketing</h2>
+      <h2 className="sr-only">Marketing</h2>
       {model.marketingNote ? <Message>{model.marketingNote}</Message> : (
         <Panel title="Scheduled posts">
           {model.posts?.length ? <p className="stat-desc">{model.posts.length} posts recorded.</p> : <Message>No marketing rows were returned.</Message>}
@@ -252,7 +232,7 @@ export function StandardBudget({ model }) {
   const selected = weeks.find((item) => item.week === week) || null
   return (
     <>
-      <h2 className="section-title">Budget</h2>
+      <h2 className="sr-only">Budget</h2>
       {model.expenseNote ? <Message>{model.expenseNote}</Message> : (
         <Panel title="Weekly expense budget">
           <p className="stat-desc">Derived from recorded expenses. No separate budget is stored.</p>
