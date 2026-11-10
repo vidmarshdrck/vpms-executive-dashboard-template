@@ -101,7 +101,6 @@ function FamilyAccounts({ model }) {
   return (
     <>
       <h2 className="sr-only">Family accounts</h2>
-      <p className="stat-desc">Active means the due date is today or later. Paid status is shown separately.</p>
       <PaymentDialog person={person} onClose={() => setPerson(null)} />
       {message ? <Message>{message}</Message> : (
         <>
@@ -175,7 +174,6 @@ function Customers({ model }) {
                 } },
               ]}
             />
-            {rows.length > 0 && <p className="stat-desc">Total spent on this list: {formatZmw(rows.reduce((sum, row) => sum + row.totalSpent, 0))}</p>}
           </div>
         </section>
       )}
@@ -294,7 +292,6 @@ function BankAccountBlock({ account, model, month, query, category }) {
   const trail = filterBankTransactions(own, { month, query, category })
   const spend = filterBankTransactions(own, { month }).filter((row) => row.amount < 0).map((row) => ({ category: categoryLabel(row.category), amount: -row.amount }))
   const money = (amount) => formatMoney(amount, account.currency)
-  const hasBalance = own.some((row) => row.balance != null)
   return (
     <>
       <article className="card" style={{ marginBottom: 16 }}>
@@ -309,7 +306,7 @@ function BankAccountBlock({ account, model, month, query, category }) {
             <div><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-green)' }}>{money(period.moneyIn)}</div><div className="stat-desc">In this month</div></div>
             <div><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-red)' }}>{money(period.moneyOut)}</div><div className="stat-desc">Out this month</div></div>
           </div>
-          <p className="stat-desc">{hasBalance ? 'Current balance is the latest transaction balance.' : 'Current balance is the opening balance.'}{account.openingBalance != null ? ` Opening balance ${money(account.openingBalance)}.` : ''}</p>
+          {account.openingBalance != null && <p className="stat-desc">Opening balance {money(account.openingBalance)}</p>}
         </div>
       </article>
       {period.points.length ? <BalanceChart title="Balance over time" points={period.points} currency={account.currency} /> : <Panel title="Balance over time"><Message>No balance points in this month.</Message></Panel>}
@@ -453,12 +450,10 @@ function BudgetProjection({ model }) {
   return (
     <>
       <h2 className="section-title">Monthly provider projection</h2>
-      <p className="stat-desc">{budget.formula}</p>
       <div className="grid-3" style={{ marginBottom: 16 }}>
         <section className="card"><div className="card-body">
           <div className="stat-num" style={{ fontSize: 28 }} aria-label="Current FX rate">{budget.fx.rate == null ? 'Not recorded' : formatRate(budget.fx.rate)}</div>
           <div className="stat-desc">Current FX rate, ZMW per USD{budget.fx.month ? `, ${monthLabel(budget.fx.month)}` : ''}</div>
-          <p className="stat-desc">{budget.fx.source}</p>
         </div></section>
         <section className="card"><div className="card-body">
           <div className="stat-num" style={{ fontSize: 28 }}>{budget.projection == null ? 'Not recorded' : formatZmw(budget.projection)}</div>
@@ -467,11 +462,10 @@ function BudgetProjection({ model }) {
         <section className="card"><div className="card-body">
           <div className="stat-num" style={{ fontSize: 28 }}>{budget.gapLatest == null ? 'Not recorded' : formatZmw(budget.gapLatest)}</div>
           <div className="stat-desc">Gap against the latest month</div>
-          <p className="stat-desc">{budget.gapLabel}</p>
           {budget.gapAverage != null && <p className="stat-desc">Gap against the 12-month average: {formatZmw(budget.gapAverage)}</p>}
         </div></section>
       </div>
-      <Panel title="Where the projection comes from" note="USD plan prices are the typical orig_amount_usd on matching bank transactions. ve.products does not store a USD price. Kwacha-billed plans use the kwacha amount on those same rows.">
+      <Panel title="Plan prices">
         {budget.lines.length ? (
           <>
           {['USD', 'ZMW'].map((currency) => {
@@ -491,19 +485,16 @@ function BudgetProjection({ model }) {
               { key: 'price', label: 'Typical price', cell: (row) => (row.currency === 'USD' && row.unitUsd != null ? formatMoney(row.unitUsd, 'USD') : row.currency === 'ZMW' && row.unitZmw != null ? formatZmw(row.unitZmw) : 'Not recorded') },
               { key: 'each', label: 'Each account', cell: (row) => (row.unitZmw == null ? 'Not recorded' : formatZmw(row.unitZmw)) },
               { key: 'total', label: 'Monthly', cell: (row) => (row.total == null ? 'Left out' : formatZmw(row.total)) },
-              { key: 'source', label: 'Where this comes from', cell: (row) => <span style={{ display: 'block', maxWidth: 360 }}>{row.source}</span> },
             ]}
           />
           </>
         ) : <Message>No active family accounts, so there are no plan prices in the projection.</Message>}
         <p className="stat-desc">USD plans converted {formatZmw(budget.usdConverted)}. Kwacha-billed plans {formatZmw(budget.kwachaBilled)}. Average monthly bank charges {formatZmw(budget.charges.average)}.</p>
-        <p className="stat-desc">{budget.charges.source}</p>
         {!budget.complete && <p className="stat-desc">Plans with no matched price are left out of the projected total.</p>}
       </Panel>
       <Panel title="Actual provider subscriptions">
         {budget.actual.latest ? (
           <>
-            <p className="stat-desc">{budget.actual.source}</p>
             <p>Latest month, {monthLabel(budget.actual.latest.month)}: {formatZmw(budget.actual.latest.amount)}</p>
             <p>12-month average: {formatZmw(budget.actual.average)}</p>
             <DataTable
@@ -530,7 +521,6 @@ function Budget({ model }) {
   return (
     <>
       <BudgetProjection model={model} />
-      <p className="stat-desc">{COPY.budgetNote}</p>
       {expenseMessage ? <Message>{expenseMessage}</Message> : (
         <Panel title="Weekly expense budget">
           {weeks.length > 0 && (
@@ -576,7 +566,6 @@ function Marketing({ model }) {
         {spendMessage || !model.spend.length ? <Message>{spendMessage || COPY.cacEmpty}</Message> : (
           <>
             <div className="stat-num" style={{ fontSize: 28 }}>CAC {cac}</div>
-            <p className="stat-desc">CAC is spend divided by conversions where a conversion count was recorded. A stored CAC value is shown beside it.</p>
             <DataTable
               rows={model.spend}
               empty={COPY.cacEmpty}
@@ -625,7 +614,7 @@ function VePages({ business, view }) {
   ], view.today))
   return (
     <div className="wrap biz">
-      <div className="topbar"><div><p className="brand-eyebrow">Vidmar Holdings · {business?.code || 'VE'}</p><h1>{business?.name || 'Vidmar Entertainment'}</h1><p className="sub">Family accounts, customers, bank accounts, funds, budget, and marketing.</p></div></div>
+      <div className="topbar"><div><p className="brand-eyebrow">Vidmar Holdings · {business?.code || 'VE'}</p><h1>{business?.name || 'Vidmar Entertainment'}</h1></div></div>
       <SlideTabs label="VE sections" tabs={['Overview', 'Family Accounts', 'Customers', 'Funds', 'Accounts', 'Budget', 'Marketing']}>
         <div><Overview model={view} /></div>
         <div><FamilyAccounts model={view} /></div>

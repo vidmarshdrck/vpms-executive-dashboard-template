@@ -151,7 +151,6 @@ export function StandardOverview({ model }) {
   return (
     <>
       <h2 className="sr-only">Overview</h2>
-      <p className="stat-desc">The tiles are the totals. The charts are the split. Funds has the month.</p>
       <div className="grid-4" style={{ margin: '16px 0' }}>
         <Stat label="Total spent" value={moneyTile(model.finance.expenses)} />
         <Stat label="Income" value={moneyTile(model.finance.income)} />
@@ -256,7 +255,6 @@ export function StandardBudget({ model }) {
       <h2 className="sr-only">Budget</h2>
       {model.expenseNote ? <Message>{model.expenseNote}</Message> : (
         <Panel title="Weekly expense budget">
-          <p className="stat-desc">Derived from recorded expenses. No separate budget is stored.</p>
           {selected ? (
             <>
               {weeks.length > 1 && (
