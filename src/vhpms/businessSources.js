@@ -386,6 +386,8 @@ export function glanceFromVe(model) {
     operations,
     operationsNote: model.access?.familyAccounts === 'blocked' ? 'Family accounts are not visible to this account.' : model.access?.familyAccounts === 'empty' ? 'No family account rows were returned for this account.' : '',
     upcoming: upcomingItems(operations, model.today),
+    bankAccounts: model.access?.bankAccounts === 'ok' ? model.bankAccounts : [],
+    bankTransactions: model.access?.bankTransactions === 'ok' ? model.bankTransactions : [],
     posts: model.posts || [],
     spend: model.spend || [],
     marketingNote: '',

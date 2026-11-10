@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Donut } from './Donut.jsx'
-import { formatMoney } from './bankBudget.js'
+import { closingBalances, formatMoney } from './bankBudget.js'
 import { formatZmw, slicesBy } from './books.js'
 import { categoryShare, compactAmount, dailyAmounts, monthSummary } from './fundsMonth.js'
 import { fundsByMonth, weeklyBudget } from './veData.js'
@@ -23,8 +23,8 @@ export function Message({ children }) {
   return <p className="empty">{children}</p>
 }
 
-function Stat({ label, value }) {
-  return <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{value}</div><div className="stat-desc">{label}</div></div></section>
+function Stat({ label, value, quiet = false }) {
+  return <section className="card"><div className="card-body"><div className="stat-num" style={quiet ? { fontSize: 16, lineHeight: 1.35 } : { fontSize: 28 }}>{value}</div><div className="stat-desc">{label}</div></div></section>
 }
 
 function moneyTile(value) {
@@ -184,6 +184,8 @@ export function StandardOverview({ model }) {
   const incomeRows = rowsInPeriod(model.incomeRows, period)
   const expenseRows = rowsInPeriod(model.expenseRows, period)
   const finance = periodFinance(model.finance, incomeRows, expenseRows)
+  const balances = closingBalances(model.bankAccounts, model.bankTransactions, period.end)
+  const balanceText = balances.length ? balances.map((line) => formatMoney(line.amount, line.currency)).join(' · ') : 'No bank account connected'
   const split = [
     Number(finance.income) > 0 ? { category: 'Income', amount: finance.income } : null,
     Number(finance.expenses) > 0 ? { category: 'Expenses', amount: finance.expenses } : null,
@@ -194,7 +196,7 @@ export function StandardOverview({ model }) {
       <div className="grid-4" style={{ margin: '16px 0' }}>
         <Stat label="Total spent" value={moneyTile(finance.expenses)} />
         <Stat label="Income" value={moneyTile(finance.income)} />
-        <Stat label="Balance on hand" value={moneyTile(finance.balance)} />
+        <Stat label="Balance on hand" value={balanceText} quiet={!balances.length} />
         <Stat label="Profit generated" value={moneyTile(finance.profit)} />
       </div>
       {model.incomeNote && <Message>{model.incomeNote}</Message>}

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  accountPeriod, accountsByCurrency, averageMonthlyBankCharges, descriptionMatchesPlan, filterBankTransactions, latestFxRate, projectBudget, providerSpendByMonth, typicalPlanPrice,
+  accountPeriod, accountsByCurrency, averageMonthlyBankCharges, closingBalances, descriptionMatchesPlan, filterBankTransactions, latestFxRate, projectBudget, providerSpendByMonth, typicalPlanPrice,
 } from './bankBudget.js'
 
 const active = [
@@ -132,4 +132,11 @@ test('a currency with no account stays empty and the latest balance is the last 
   const opening = accountPeriod({ id: 'usd', openingBalance: 20, currency: 'USD' }, [], '2026-09')
   assert.equal(opening.current, 20)
   assert.equal(opening.points.length, 0)
+  const balances = closingBalances(
+    [{ id: 'zmw', currency: 'ZMW', openingBalance: 10 }, { id: 'usd', currency: 'USD', openingBalance: 5 }, { id: 'zmw-2', currency: 'ZMW', openingBalance: 1 }],
+    [{ accountId: 'zmw', date: '2026-11-08', balance: 100, id: 1 }, { accountId: 'zmw', date: '2027-01-02', balance: 900, id: 2 }],
+    '2026-12-31',
+  )
+  assert.deepEqual(balances, [{ currency: 'USD', amount: 5 }, { currency: 'ZMW', amount: 101 }])
+  assert.deepEqual(closingBalances([], [], '2026-12-31'), [])
 })
