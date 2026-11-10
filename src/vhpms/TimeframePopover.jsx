@@ -17,7 +17,7 @@ export function ReportingPeriodProvider({ userId = '', today, children }) {
     setPeriod(readStoredPeriod(storageOrNull(), userId, today))
   }
   function apply(next) {
-    const safe = writeStoredPeriod(storageOrNull(), userId, next)
+    const safe = writeStoredPeriod(storageOrNull(), userId, next, today)
     setPeriod(safe)
   }
   const todayYear = defaultPeriod(today).year
@@ -28,7 +28,7 @@ export function ReportingPeriodProvider({ userId = '', today, children }) {
 export function useReportingPeriod(today) {
   const context = useContext(ReportingPeriodContext)
   if (context) return context
-  const period = clampPeriod(defaultPeriod(today))
+  const period = clampPeriod(defaultPeriod(today), today)
   return { ...period, ...periodBounds(period), label: periodLabel(period), today, todayYear: period.year, apply() {} }
 }
 
