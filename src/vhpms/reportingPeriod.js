@@ -22,8 +22,8 @@ function bounded(value, minimum, maximum, fallback) {
   return number
 }
 
-export function clampPeriod(period = {}) {
-  const fallback = defaultPeriod()
+export function clampPeriod(period = {}, today) {
+  const fallback = defaultPeriod(today)
   const year = bounded(period.year, 2020, 2100, fallback.year)
   const from = bounded(period.from, 1, 12, fallback.from)
   const to = Math.max(from, bounded(period.to, 1, 12, from))
@@ -85,14 +85,18 @@ export function readStoredPeriod(storage, userId, today) {
   try {
     const raw = storage?.getItem(periodStorageKey(userId))
     if (!raw) return defaultPeriod(today)
-    return clampPeriod(JSON.parse(raw))
+    return clampPeriod(JSON.parse(raw), today)
   } catch {
     return defaultPeriod(today)
   }
 }
 
-export function writeStoredPeriod(storage, userId, period) {
-  const safe = clampPeriod(period)
-  storage?.setItem(periodStorageKey(userId), JSON.stringify(safe))
+export function writeStoredPeriod(storage, userId, period, today) {
+  const safe = clampPeriod(period, today)
+  try {
+    storage?.setItem(periodStorageKey(userId), JSON.stringify(safe))
+  } catch {
+    // Private browsing can reject localStorage. Apply still keeps the period in memory.
+  }
   return safe
 }
