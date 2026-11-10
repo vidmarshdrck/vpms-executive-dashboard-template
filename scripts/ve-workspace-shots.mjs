@@ -55,6 +55,13 @@ try {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({ path: `${outDir}/login-mobile.png`, fullPage: true })
   await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto('http://127.0.0.1:4317/?shot=profile')
+  await page.getByRole('heading', { name: 'Profile', exact: true }).waitFor()
+  await page.screenshot({ path: `${outDir}/profile-desktop.png`, fullPage: true })
+  await page.goto('http://127.0.0.1:4317/?shot=activities')
+  await page.getByRole('button', { name: 'Add task', exact: true }).waitFor()
+  await page.screenshot({ path: `${outDir}/sidebar-desktop.png`, fullPage: false })
+  await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('http://127.0.0.1:4317/')
   await page.getByRole('tab', { name: 'Overview', exact: true }).waitFor()
   const pages = ['Overview', 'Family Accounts', 'Customers', 'Funds', 'Accounts', 'Budget', 'Marketing']

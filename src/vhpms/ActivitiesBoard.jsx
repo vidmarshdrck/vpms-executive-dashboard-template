@@ -16,7 +16,9 @@ function Counts({ items }) {
 
 export default function ActivitiesBoard({ state, onChange, composing = false }) {
   const [message, setMessage] = useState('')
-  const open = composing
+  const [tab, setTab] = useState(0)
+  const [localOpen, setLocalOpen] = useState(false)
+  const open = composing || localOpen
   const formRef = useRef(null)
   useEffect(() => {
     if (open) formRef.current?.querySelector('[name="title"]')?.focus()
@@ -28,7 +30,7 @@ export default function ActivitiesBoard({ state, onChange, composing = false }) 
     <div className="wrap">
       <div className="topbar"><div><p className="brand-eyebrow">Vidmar Holdings</p><h1>Activities</h1><p className="sub">Personal activities, initiatives, and task force work.</p></div></div>
       {message && <p className="vh-status" role="status">{message}</p>}
-      <SlideTabs label="Activities sections" tabs={['Activities', 'Initiatives', 'Task Force']}>
+      <SlideTabs label="Activities sections" tabs={['Activities', 'Initiatives', 'Task Force']} index={tab} onIndex={setTab} action={<button type="button" className="btn btn-primary" onClick={() => { setTab(0); setLocalOpen(true) }}>Add task</button>}>
         <div>
           <Counts items={state.tasks} />
           <section className="card" id="new-activity" ref={formRef} hidden={!open} style={{ marginBottom: 16 }}><div className="card-head"><h2>New activity</h2></div><div className="card-body">

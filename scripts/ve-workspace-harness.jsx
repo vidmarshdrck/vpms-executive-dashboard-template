@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import Shell, { LoginScreen } from '../src/vhpms/Shell.jsx'
 import VeWorkspace from '../src/vhpms/VeWorkspace.jsx'
 import { BusinessHome } from '../src/vhpms/BusinessHome.jsx'
+import ProfilePage from '../src/vhpms/ProfilePage.jsx'
 import ActivitiesBoard from '../src/vhpms/ActivitiesBoard.jsx'
 import { emptyBooks } from '../src/vhpms/books.js'
 import { emptyActivities } from '../src/vhpms/activities.js'
@@ -101,7 +102,12 @@ books.entries = [{ id: 'local-1', businessId: 'vai', kind: 'expense', title: 'Br
 const user = findAccount('shadrickvidmar')
 
 export function Harness() {
-  const [view, setView] = useState(() => (window.location.hash === '#login' ? 'login' : 'business'))
+  const [view, setView] = useState(() => {
+    const shot = new URLSearchParams(window.location.search).get('shot')
+    if (window.location.hash === '#login' || shot === 'login') return 'login'
+    if (shot === 'profile' || shot === 'activities') return shot
+    return 'business'
+  })
   const [menu, setMenu] = useState(false)
   const [composing, setComposing] = useState(false)
   const [activities, setActivities] = useState(() => emptyActivities())
@@ -116,16 +122,17 @@ export function Harness() {
     mode: 'businesses',
     books,
     businessId,
-    title: view === 'activities' ? 'Activities' : business.name,
+    title: view === 'activities' ? 'Activities' : view === 'profile' ? 'Profile' : business.name,
     onOpen: (id) => { setView(id); setMenu(false) },
     onLive: () => {},
     onBack: () => setView('business'),
     onBusiness: () => { setView('business'); setMenu(false) },
     onLogout: () => {},
     onRole: () => {},
-    headerAction: view === 'activities' ? createElement('button', { type: 'button', className: 'btn btn-primary', onClick: () => setComposing(true) }, 'Add task') : null,
   }, businessId === 'vai'
     ? createElement(BusinessHome, { books, businessId: 'vai', token: '', onChange: () => {} })
+    : view === 'profile'
+    ? createElement(ProfilePage, { user, onLogout: () => {} })
     : view === 'activities'
     ? createElement(ActivitiesBoard, { state: activities, composing, onChange: setActivities })
     : createElement(VeWorkspace, { business, model, today: TODAY }))

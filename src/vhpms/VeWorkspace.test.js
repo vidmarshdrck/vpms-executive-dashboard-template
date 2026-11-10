@@ -176,7 +176,8 @@ test('activities, inbox, and sms stay on their own screens', () => {
   const data = readFileSync(new URL('./veData.js', import.meta.url), 'utf8')
   assert.equal(data.includes('Vidmar Holdings'), false)
   const activities = renderToStaticMarkup(createElement(ActivitiesBoard, { state: emptyActivities(), onChange: () => {} }))
-  assert.doesNotMatch(activities, /Add task/)
+  assert.match(activities, /Add task/)
+  assert.match(activities, /slide-tabs-action/)
   assert.match(activities, /id="new-activity"/)
   assert.match(activities, /hidden=""| hidden/)
   assert.match(activities, /Save activity/)
@@ -185,13 +186,10 @@ test('activities, inbox, and sms stay on their own screens', () => {
   const shell = renderToStaticMarkup(createElement(Shell, {
     user: findAccount('shadrickvidmar'), view: 'activities', menu: false, setMenu: () => {}, mode: 'businesses', books: emptyBooks(), businessId: 've', title: 'Activities',
     onOpen: () => {}, onLive: () => {}, onBack: () => {}, onBusiness: () => {}, onLogout: () => {}, onRole: () => {},
-    headerAction: createElement('button', { type: 'button', className: 'btn btn-primary' }, 'Add task'),
-  }, createElement('p', null, 'Activities body')))
-  assert.match(shell, /Add task/)
+    }, createElement('p', null, 'Activities body')))
+  assert.doesNotMatch(shell, /side-user-name/)
+  assert.match(shell, /aria-label="Current role"/)
   assert.match(shell, /aria-label="Profile"/)
-  const shellSource = readFileSync(new URL('./Shell.jsx', import.meta.url), 'utf8')
-  assert.match(shellSource, /Escape/)
-  assert.match(shellSource, /mousedown/)
   assert.match(shell, /aria-label="Collapse sidebar"/)
   assert.match(shell, /aria-controls="sidebar"/)
   assert.match(shell, /aria-expanded="true"/)

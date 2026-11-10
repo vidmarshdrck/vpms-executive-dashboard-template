@@ -124,7 +124,7 @@ export function grantedSections(user) {
 
 export function canSee(user, view) {
   if (!user || view === 'login') return false
-  if (view === 'business' || view === 'business-list' || view === 'activities' || view === 'inbox' || view === 'sms') return true
+  if (view === 'business' || view === 'business-list' || view === 'activities' || view === 'inbox' || view === 'sms' || view === 'profile') return true
   if (view === 'department') return managementLinks(user).some((link) => link.id === 'department' || link.id === 'departments' || link.id === 'hr')
   return [...managementLinks(user), ...adminLinks(user), ...WORKSPACE_LINKS].some((link) => link.id === view)
 }
