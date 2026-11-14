@@ -172,22 +172,48 @@ try {
       await page.getByRole('tab', { name: tab, exact: true }).click()
       const block = page.locator(`[data-plot="${plot}"]`)
       await block.waitFor()
-      await page.waitForFunction((name) => {
-        const bars = [...document.querySelectorAll(`[data-plot="${name}"] .plot-bar`)]
-        return bars.some((bar) => bar.getBoundingClientRect().width >= 4)
-      }, plot)
+      await page.waitForFunction(({ name, width: viewport }) => {
+        const root = document.querySelector(`[data-plot="${name}"]`)
+        const scroll = root?.querySelector('.plot-scroll')
+        const svg = root?.querySelector('.plot-svg')
+        const bar = root?.querySelector('.plot-bar')
+        if (!root || !scroll || !svg || !bar) return false
+        const fitted = Math.abs(svg.getBoundingClientRect().width - scroll.clientWidth) < 2
+        const slots = Number(root.dataset.slots)
+        const barW = bar.getBoundingClientRect().width
+        if (!fitted) return false
+        return viewport > 600 ? root.dataset.scale === 'day' && slots >= 90 && barW >= 3.5 && barW <= 4.5 : root.dataset.scale === 'week' && slots >= 12 && slots <= 16 && barW >= 9.5 && barW <= 12.5
+      }, { name: plot, width })
       const measured = await page.evaluate((name) => {
         const root = document.querySelector(`[data-plot="${name}"]`)
-        const label = root.querySelector('.plot-label')
+        const scroll = root.querySelector('.plot-scroll')
+        const svg = root.querySelector('.plot-svg')
+        const label = root.querySelector('.plot-y .plot-label')
         const bars = [...root.querySelectorAll('.plot-bar')]
         const bar = bars.find((item) => item.getBoundingClientRect().height > 0) || bars[0]
         const labelBox = label.getBoundingClientRect()
         const barBox = bar.getBoundingClientRect()
+        const rootBox = root.getBoundingClientRect()
+        const scrollBox = scroll.getBoundingClientRect()
+        const months = [...root.querySelectorAll('.plot-month')].map((item) => item.textContent)
+        const dec = [...root.querySelectorAll('.plot-month')].find((item) => item.textContent === 'Dec')
+        const decBox = dec ? dec.getBoundingClientRect() : null
+        const firstTick = root.querySelector('.plot-tick, .plot-month')
+        const firstBox = firstTick ? firstTick.getBoundingClientRect() : null
+        const slots = Number(root.dataset.slots)
         return {
           fontSize: getComputedStyle(label).fontSize,
           labelHeight: Math.round(labelBox.height * 10) / 10,
           barWidth: Math.round(barBox.width * 100) / 100,
-          plotHeight: Math.round(root.getBoundingClientRect().height * 10) / 10,
+          slotWidth: Math.round((svg.getBoundingClientRect().width / slots) * 100) / 100,
+          slots,
+          scale: root.dataset.scale,
+          plotHeight: Math.round(rootBox.height * 10) / 10,
+          scrolls: scroll.scrollWidth > scroll.clientWidth + 2,
+          months,
+          decInside: Boolean(decBox && decBox.left >= scrollBox.left - 1 && decBox.right <= scrollBox.right + 1),
+          topInset: Math.round((labelBox.top - rootBox.top) * 10) / 10,
+          firstTickLeft: firstBox ? Math.round((firstBox.left - scrollBox.left) * 10) / 10 : null,
         }
       }, plot)
       measures.push({ width, plot, ...measured })
@@ -197,7 +223,12 @@ try {
       await page.screenshot({ path: `${outDir}/${file}`, clip: { x: Math.max(box.x, 0), y: Math.max(box.y, 0), width: box.width, height: box.height } })
     }
   }
-  const bad = measures.filter((item) => parseFloat(item.fontSize) !== 11 || item.barWidth < 4)
+  const bad = measures.filter((item) => {
+    const daily = item.width > 600
+    const barOk = daily ? item.barWidth >= 3.5 && item.barWidth <= 4.5 : item.barWidth >= 9.5 && item.barWidth <= 12.5
+    const scaleOk = daily ? item.scale === 'day' && item.slots >= 90 : item.scale === 'week' && item.slots >= 12 && item.slots <= 16
+    return parseFloat(item.fontSize) !== 11 || !barOk || !scaleOk || item.scrolls || !item.decInside || item.topInset < 8 || item.firstTickLeft < 0
+  })
   if (bad.length) throw new Error(`chart pixels ${JSON.stringify(measures)}`)
   if (errors.length) throw new Error(errors.join('\n'))
   console.log(JSON.stringify({ outDir, pages: pages.length, widths: [1440, 390], measures }))

@@ -102,6 +102,24 @@ function RankedSplit({ title, rows, center, empty }) {
   )
 }
 
+function useNarrowViewport() {
+  const [narrow, setNarrow] = useState(false)
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 600px)')
+    const apply = () => setNarrow(query.matches)
+    apply()
+    query.addEventListener('change', apply)
+    return () => query.removeEventListener('change', apply)
+  }, [])
+  return narrow
+}
+
+function labelEdge(left, width) {
+  if (left < 10) return ' is-first'
+  if (left > width - 18) return ' is-last'
+  return ''
+}
+
 function usePlotBox() {
   const ref = useRef(null)
   const [box, setBox] = useState({ width: 640, height: 220 })
@@ -134,44 +152,80 @@ function monthBlocks(days) {
   return blocks
 }
 
+function weekStart(iso) {
+  const date = new Date(`${iso}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7))
+  return date.toISOString().slice(0, 10)
+}
+
+function plotRows(days, weekly) {
+  if (!weekly) return days.map((day) => ({ ...day, month: day.date.slice(8, 10) === '01' ? day.date.slice(0, 7) : '' }))
+  const groups = new Map()
+  for (const day of days) {
+    const key = weekStart(day.date)
+    if (!groups.has(key)) groups.set(key, { date: key, income: 0, expense: 0, month: '' })
+    const bucket = groups.get(key)
+    bucket.income += Number(day.income) || 0
+    bucket.expense += Number(day.expense) || 0
+    if (day.date.slice(8, 10) === '01') bucket.month = day.date.slice(0, 7)
+  }
+  return [...groups.values()]
+}
+
 function PixelPlot({ title, days, series, legend = null }) {
   const [scrollRef, box] = usePlotBox()
-  const barW = 4
-  const slot = series.length > 1 ? 14 : 10
+  const weekly = useNarrowViewport()
+  const rows = plotRows(days, weekly)
   const axisH = 34
+  const topPad = 8
   const plotH = Math.max(48, box.height - axisH)
-  const contentWidth = Math.max(days.length, 1) * slot
-  const svgWidth = Math.max(box.width, contentWidth)
-  const max = Math.max(...days.flatMap((day) => series.map((item) => Number(day[item.field]) || 0)), 1)
+  const svgWidth = Math.max(1, box.width)
+  const slot = svgWidth / Math.max(rows.length, 1)
+  const barW = weekly ? Math.min(12, Math.max(10, slot - 4), Math.max(1, slot - 2)) : Math.min(4, Math.max(1, slot - 1))
+  const max = Math.max(...rows.flatMap((row) => series.map((item) => Number(row[item.field]) || 0)), 1)
   const ticks = [max, max / 2, 0]
+  const yFor = (value) => topPad + (1 - value / max) * (plotH - topPad - 1)
   return (
     <Panel title={title}>
-      <div className="plot-block" data-plot={title}>
+      <div className="plot-block" data-plot={title} data-slots={rows.length} data-scale={weekly ? 'week' : 'day'}>
         <div className="plot-y" aria-hidden="true">
           {ticks.map((tick) => <span key={tick} className="plot-label">{formatAmount(tick)}</span>)}
         </div>
         <div className="plot-scroll" ref={scrollRef}>
           <svg className="plot-svg" width={svgWidth} height={plotH} viewBox={`0 0 ${svgWidth} ${plotH}`} role="img" aria-label={title}>
-            {ticks.map((tick, index) => {
-              const y = plotH - (tick / max) * (plotH - 1)
-              return <line key={index} x1="0" x2={svgWidth} y1={y} y2={y} stroke="var(--border)" />
+            {ticks.map((tick, index) => <line key={index} x1="0" x2={svgWidth} y1={yFor(tick)} y2={yFor(tick)} stroke="var(--border)" />)}
+            {rows.map((row, index) => {
+              const inner = Math.min(slot, barW + (series.length - 1) * Math.max(1, slot - barW))
+              const origin = index * slot + Math.max(0, (slot - inner) / 2)
+              const step = series.length === 1 ? 0 : Math.max(1, inner - barW)
+              return series.map((item, seriesIndex) => {
+                const value = Number(row[item.field]) || 0
+                const y = yFor(value)
+                return <rect key={`${row.date}-${item.field}`} className="plot-bar" x={origin + seriesIndex * step} y={y} width={barW} height={Math.max(plotH - 1 - y, 0)} fill={item.color}><title>{`${formatDisplayDate(row.date)} ${formatAmount(value)}`}</title></rect>
+              })
             })}
-            {days.map((day, index) => series.map((item, seriesIndex) => {
-              const value = Number(day[item.field]) || 0
-              const height = (value / max) * (plotH - 1)
-              const x = index * slot + seriesIndex * (barW + 2)
-              return <rect key={`${day.date}-${item.field}`} className="plot-bar" x={x} y={plotH - height} width={barW} height={Math.max(height, 0)} fill={item.color}><title>{`${formatDisplayDate(day.date)} ${formatAmount(value)}`}</title></rect>
-            }))}
           </svg>
           <div className="plot-x" style={{ width: svgWidth }} aria-hidden="true">
-            {days.map((day, index) => {
-              const dayNum = Number(day.date.slice(-2))
-              if (![1, 8, 15, 22, 29].includes(dayNum)) return null
-              return <span key={day.date} className="plot-label plot-tick" style={{ left: index * slot }}>{dayNum}</span>
-            })}
-            {monthBlocks(days).map((block) => (
-              <span key={block.month} className="plot-label plot-month" style={{ left: (block.start + block.count / 2) * slot }}>{MONTHS[Number(block.month.slice(5)) - 1]}</span>
-            ))}
+            {weekly ? rows.map((row, index) => {
+              if (!row.month) return null
+              const left = index * slot + slot / 2
+              return <span key={row.date} className={`plot-label plot-month${labelEdge(left, svgWidth)}`} style={{ left }}>{MONTHS[Number(row.month.slice(5)) - 1]}</span>
+            }) : (
+              <>
+                {rows.flatMap((row, index) => {
+                  const dayNum = Number(row.date.slice(-2))
+                  if (![1, 8, 15, 22, 29].includes(dayNum)) return []
+                  const left = index * slot + slot / 2
+                  return [{ date: row.date, dayNum, left }]
+                }).filter((tick, index, ticks) => !ticks[index + 1] || ticks[index + 1].left - tick.left >= 18).map((tick) => (
+                  <span key={tick.date} className={`plot-label plot-tick${labelEdge(tick.left, svgWidth)}`} style={{ left: tick.left }}>{tick.dayNum}</span>
+                ))}
+                {monthBlocks(rows).map((block) => {
+                  const left = (block.start + block.count / 2) * slot
+                  return <span key={block.month} className={`plot-label plot-month${labelEdge(left, svgWidth)}`} style={{ left }}>{MONTHS[Number(block.month.slice(5)) - 1]}</span>
+                })}
+              </>
+            )}
           </div>
         </div>
       </div>

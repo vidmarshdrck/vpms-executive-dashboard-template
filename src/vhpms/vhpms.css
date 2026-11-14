@@ -35,12 +35,14 @@
 .vh-app .chart-split > .card { height: 100%; margin-bottom: 0; display: flex; flex-direction: column; }
 .vh-app .chart-split > .card .card-body { flex: 1; display: flex; flex-direction: column; }
 .vh-app .plot-block { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: stretch; height: 220px; }
-.vh-app .plot-y { display: flex; flex-direction: column; justify-content: space-between; height: 220px; padding-bottom: 34px; }
-.vh-app .plot-scroll { min-width: 0; height: 220px; overflow-x: auto; overflow-y: hidden; }
+.vh-app .plot-y { display: flex; flex-direction: column; justify-content: space-between; height: 220px; padding-top: 8px; padding-bottom: 34px; }
+.vh-app .plot-scroll { min-width: 0; height: 220px; overflow: hidden; }
 .vh-app .plot-svg { display: block; }
 .vh-app .plot-x { position: relative; height: 34px; }
 .vh-app .plot-label { font-size: 11px; line-height: 11px; font-variant-numeric: tabular-nums; color: var(--text-muted); white-space: nowrap; }
 .vh-app .plot-tick, .vh-app .plot-month { position: absolute; top: 2px; transform: translateX(-50%); }
+.vh-app .plot-tick.is-first, .vh-app .plot-month.is-first { transform: none; }
+.vh-app .plot-tick.is-last, .vh-app .plot-month.is-last { transform: translateX(-100%); }
 .vh-app .plot-month { top: 16px; }
 .vh-app .chart-split .plot-block, .vh-app .chart-split .plot-y, .vh-app .chart-split .plot-scroll { height: 280px; }
 @media (max-width: 480px) {
