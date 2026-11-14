@@ -293,16 +293,35 @@ function inDateBounds(date, bounds) {
   return true
 }
 
+function closingBalance(account, transactions, end) {
+  const mine = (transactions || []).filter((txn) => txn.accountId === account.id && asNumber(txn.balance) != null && txn.date && (!end || txn.date <= end)).sort(compareTxn)
+  return mine.length ? asNumber(mine.at(-1).balance) : asNumber(account.openingBalance)
+}
+
 export function closingBalances(accounts, transactions, end) {
   const totals = new Map()
   for (const account of accounts || []) {
-    const mine = (transactions || []).filter((txn) => txn.accountId === account.id && asNumber(txn.balance) != null && txn.date && (!end || txn.date <= end)).sort(compareTxn)
-    const balance = mine.length ? asNumber(mine.at(-1).balance) : asNumber(account.openingBalance)
+    const balance = closingBalance(account, transactions, end)
     if (balance == null) continue
     const currency = account.currency || 'ZMW'
     totals.set(currency, roundTo((totals.get(currency) || 0) + balance, 2))
   }
   return [...totals.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([currency, amount]) => ({ currency, amount }))
+}
+
+export function balancesByAccount(accounts, transactions, end) {
+  return (accounts || []).flatMap((account) => {
+    const amount = closingBalance(account, transactions, end)
+    if (amount == null) return []
+    return [{
+      id: account.id,
+      label: account.label,
+      bank: account.bank,
+      last4: account.last4,
+      amount,
+      currency: account.currency || 'ZMW',
+    }]
+  })
 }
 
 export function accountPeriod(account, transactions, month) {
