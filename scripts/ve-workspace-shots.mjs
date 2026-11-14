@@ -182,7 +182,9 @@ try {
         const slots = Number(root.dataset.slots)
         const barW = bar.getBoundingClientRect().width
         if (!fitted) return false
-        return viewport > 600 ? root.dataset.scale === 'day' && slots >= 90 && barW >= 3.5 && barW <= 4.5 : root.dataset.scale === 'week' && slots >= 12 && slots <= 16 && barW >= 9.5 && barW <= 12.5
+        const weekly = root.dataset.scale === 'week' && slots >= 12 && slots <= 16
+        const barOk = root.dataset.series === '1' ? barW >= 5 && barW <= 12.5 : barW >= 4.5 && barW <= 5.5
+        return viewport > 600 ? root.dataset.scale === 'day' && slots >= 90 && barW >= 3.5 && barW <= 4.5 : weekly && barOk
       }, { name: plot, width })
       const measured = await page.evaluate((name) => {
         const root = document.querySelector(`[data-plot="${name}"]`)
@@ -201,10 +203,24 @@ try {
         const firstTick = root.querySelector('.plot-tick, .plot-month')
         const firstBox = firstTick ? firstTick.getBoundingClientRect() : null
         const slots = Number(root.dataset.slots)
+        const placed = bars.map((item) => item.getBoundingClientRect()).sort((a, b) => a.x - b.x || a.y - b.y)
+        const seriesCount = Number(root.dataset.series)
+        const innerGaps = []
+        const weekGaps = []
+        for (let index = 0; index < placed.length; index += seriesCount) {
+          if (seriesCount > 1 && placed[index + 1]) innerGaps.push(placed[index + 1].x - placed[index].x - placed[index].width)
+          const next = placed[index + seriesCount]
+          const last = placed[index + seriesCount - 1]
+          if (next && last) weekGaps.push(next.x - last.x - last.width)
+        }
+        const labels = [...root.querySelectorAll('.plot-y .plot-label')].map((item) => item.textContent)
         return {
           fontSize: getComputedStyle(label).fontSize,
           labelHeight: Math.round(labelBox.height * 10) / 10,
           barWidth: Math.round(barBox.width * 100) / 100,
+          innerGap: innerGaps.length ? Math.round(Math.min(...innerGaps) * 100) / 100 : null,
+          weekGap: weekGaps.length ? Math.round(Math.min(...weekGaps) * 100) / 100 : null,
+          axis: labels,
           slotWidth: Math.round((svg.getBoundingClientRect().width / slots) * 100) / 100,
           slots,
           scale: root.dataset.scale,
@@ -225,9 +241,11 @@ try {
   }
   const bad = measures.filter((item) => {
     const daily = item.width > 600
-    const barOk = daily ? item.barWidth >= 3.5 && item.barWidth <= 4.5 : item.barWidth >= 9.5 && item.barWidth <= 12.5
+    const barOk = daily ? item.barWidth >= 3.5 && item.barWidth <= 4.5 : (item.axis[0] && (item.plot === 'Expense flow' ? item.barWidth >= 5 && item.barWidth <= 12.5 : item.barWidth >= 4.5 && item.barWidth <= 5.5 && item.innerGap >= 1.5 && item.innerGap <= 2.5))
+    const gapOk = daily || item.weekGap >= 5.5
     const scaleOk = daily ? item.scale === 'day' && item.slots >= 90 : item.scale === 'week' && item.slots >= 12 && item.slots <= 16
-    return parseFloat(item.fontSize) !== 11 || !barOk || !scaleOk || item.scrolls || !item.decInside || item.topInset < 8 || item.firstTickLeft < 0
+    const headroom = daily ? item.axis[0] === 'ZMW 250.00' && item.axis[1] === 'ZMW 125.00' : item.axis[0] === 'ZMW 400.00' && item.axis[1] === 'ZMW 200.00'
+    return parseFloat(item.fontSize) !== 11 || !barOk || !gapOk || !scaleOk || !headroom || item.scrolls || !item.decInside || item.topInset < 8 || item.firstTickLeft < 0
   })
   if (bad.length) throw new Error(`chart pixels ${JSON.stringify(measures)}`)
   if (errors.length) throw new Error(errors.join('\n'))

@@ -7,7 +7,7 @@ import { NavIcon } from './icons.jsx'
 import { MONTHS, monthsInPeriod, rowsInPeriod, weekOverlapsPeriod } from './reportingPeriod.js'
 import { useReportingPeriod } from './TimeframePopover.jsx'
 import { COPY, acquisitionSummary, weeklyBudget } from './veData.js'
-import { EMPTY, accountCaption, formatAmount, formatDayHeading, formatDisplayDate, isNeedsNote, moneyHidden, monthStripRows, sectionDetail, sentenceCase, statusLabel } from './workspaceCharts.js'
+import { EMPTY, accountCaption, axisMax, formatAmount, formatDayHeading, formatDisplayDate, isNeedsNote, moneyHidden, monthStripRows, sectionDetail, sentenceCase, statusLabel, weekBars } from './workspaceCharts.js'
 
 export function Panel({ title, children, note }) {
   return (
@@ -181,13 +181,14 @@ function PixelPlot({ title, days, series, legend = null }) {
   const plotH = Math.max(48, box.height - axisH)
   const svgWidth = Math.max(1, box.width)
   const slot = svgWidth / Math.max(rows.length, 1)
-  const barW = weekly ? Math.min(12, Math.max(10, slot - 4), Math.max(1, slot - 2)) : Math.min(4, Math.max(1, slot - 1))
-  const max = Math.max(...rows.flatMap((row) => series.map((item) => Number(row[item.field]) || 0)), 1)
+  const weeks = weekly ? weekBars(svgWidth, rows.length, series.length) : null
+  const barW = weekly ? weeks.barWidth : Math.min(4, Math.max(1, slot - 1))
+  const max = axisMax(Math.max(...rows.flatMap((row) => series.map((item) => Number(row[item.field]) || 0)), 0))
   const ticks = [max, max / 2, 0]
   const yFor = (value) => topPad + (1 - value / max) * (plotH - topPad - 1)
   return (
     <Panel title={title}>
-      <div className="plot-block" data-plot={title} data-slots={rows.length} data-scale={weekly ? 'week' : 'day'}>
+      <div className="plot-block" data-plot={title} data-slots={rows.length} data-scale={weekly ? 'week' : 'day'} data-series={series.length} data-axis={max}>
         <div className="plot-y" aria-hidden="true">
           {ticks.map((tick) => <span key={tick} className="plot-label">{formatAmount(tick)}</span>)}
         </div>
@@ -196,8 +197,8 @@ function PixelPlot({ title, days, series, legend = null }) {
             {ticks.map((tick, index) => <line key={index} x1="0" x2={svgWidth} y1={yFor(tick)} y2={yFor(tick)} stroke="var(--border)" />)}
             {rows.map((row, index) => {
               const inner = Math.min(slot, barW + (series.length - 1) * Math.max(1, slot - barW))
-              const origin = index * slot + Math.max(0, (slot - inner) / 2)
-              const step = series.length === 1 ? 0 : Math.max(1, inner - barW)
+              const origin = weekly ? index * weeks.stride : index * slot + Math.max(0, (slot - inner) / 2)
+              const step = weekly ? barW + weeks.innerGap : (series.length === 1 ? 0 : Math.max(1, inner - barW))
               return series.map((item, seriesIndex) => {
                 const value = Number(row[item.field]) || 0
                 const y = yFor(value)
@@ -208,7 +209,7 @@ function PixelPlot({ title, days, series, legend = null }) {
           <div className="plot-x" style={{ width: svgWidth }} aria-hidden="true">
             {weekly ? rows.map((row, index) => {
               if (!row.month) return null
-              const left = index * slot + slot / 2
+              const left = index * weeks.stride + weeks.group / 2
               return <span key={row.date} className={`plot-label plot-month${labelEdge(left, svgWidth)}`} style={{ left }}>{MONTHS[Number(row.month.slice(5)) - 1]}</span>
             }) : (
               <>

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { balancesByAccount } from './bankBudget.js'
 import { BUSINESS_SEED } from './books.js'
-import { EMPTY, accountCaption, emptyDetail, formatAmount, formatDayHeading, formatDisplayDate, isNeedsNote, monthStripRows, sectionDetail, sentenceCase, sourceLine, statusLabel } from './workspaceCharts.js'
+import { EMPTY, accountCaption, axisMax, emptyDetail, formatAmount, formatDayHeading, formatDisplayDate, isNeedsNote, monthStripRows, sectionDetail, sentenceCase, sourceLine, statusLabel, weekBars } from './workspaceCharts.js'
 
 const MINUS = '\u2212'
 
@@ -15,6 +15,23 @@ test('money uses one currency format, two decimals, and a real minus sign', () =
   assert.equal(formatAmount(15.99, 'USD'), 'USD 15.99')
   assert.equal(formatAmount(-2400, 'USD'), `USD ${MINUS}2,400.00`)
   assert.equal(formatAmount(-165).includes('-'), false)
+})
+
+test('chart axes sit one clean step above the peak', () => {
+  assert.equal(axisMax(220), 250)
+  assert.equal(axisMax(350), 400)
+  assert.equal(axisMax(0), 1)
+  for (const peak of [40, 80, 180, 220, 260, 350, 499]) {
+    const axis = axisMax(peak)
+    assert.ok(axis >= peak * 1.1 - 1e-6 && axis <= peak * 1.15 + 1e-6, `${peak} -> ${axis}`)
+  }
+  const pair = weekBars(260, 14, 2)
+  assert.equal(pair.barWidth, 5)
+  assert.equal(pair.innerGap, 2)
+  assert.ok(pair.weekGap >= 6)
+  const single = weekBars(228, 14, 1)
+  assert.ok(single.weekGap >= 6)
+  assert.ok(single.barWidth <= 12)
 })
 
 test('bank captions keep the name and the last four digits', () => {

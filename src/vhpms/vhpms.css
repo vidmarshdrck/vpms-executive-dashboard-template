@@ -77,6 +77,9 @@
   .vh-app .bar-row { grid-template-columns: minmax(0, 1fr) auto; }
   .vh-app .bar-row .bar-track { grid-column: 1 / -1; }
   .vh-app .bar-name { width: auto; max-width: 100%; }
+  .vh-app .card:has(.plot-block) .card-head,
+  .vh-app .card:has(.plot-block) .card-body { padding-left: 12px; padding-right: 12px; }
+  .vh-app .plot-block { gap: 4px; }
 }
 @media (max-width: 480px) {
   .vh-app .kpi-figure,

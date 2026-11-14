@@ -75,6 +75,42 @@ export function moneyHidden(note) {
   return /not visible|Could not load|Sign in|not configured/i.test(note)
 }
 
+export function axisMax(peak) {
+  const value = Number(peak) || 0
+  if (!(value > 0)) return 1
+  const low = value * 1.1
+  const high = value * 1.15
+  const exponent = Math.floor(Math.log10(low))
+  let chosen = null
+  for (let power = exponent - 2; power <= exponent + 1; power += 1) {
+    const base = 10 ** power
+    for (const factor of [1, 2, 2.5, 5]) {
+      const step = factor * base
+      const rounded = Math.ceil((low - Number.EPSILON) / step) * step
+      if (rounded + 1e-6 >= low && rounded <= high + 1e-6 && (chosen == null || step > chosen.step)) chosen = { step, rounded }
+    }
+  }
+  const result = chosen ? chosen.rounded : Math.ceil((low - Number.EPSILON) / 10 ** Math.max(exponent - 1, 0)) * 10 ** Math.max(exponent - 1, 0)
+  return Number(result.toPrecision(12))
+}
+
+export function weekBars(width, count, seriesCount) {
+  const bars = Math.max(seriesCount, 1)
+  const weeks = Math.max(count, 1)
+  const innerGap = bars > 1 ? 2 : 0
+  const minWeekGap = 6
+  const gaps = Math.max(weeks - 1, 0)
+  let barWidth = bars > 1 ? 5 : 12
+  let group = barWidth * bars + innerGap * (bars - 1)
+  if (width - weeks * group - gaps * minWeekGap < 0 && bars === 1) {
+    barWidth = Math.max(1, (width - gaps * minWeekGap) / weeks)
+    group = barWidth
+  }
+  const spare = width - weeks * group - gaps * minWeekGap
+  const weekGap = gaps === 0 ? 0 : minWeekGap + Math.max(0, spare) / gaps
+  return { barWidth, innerGap, weekGap, stride: group + weekGap, group }
+}
+
 export function formatAmount(amount, currency = 'ZMW') {
   const number = Number(amount)
   if (!Number.isFinite(number)) return '—'
