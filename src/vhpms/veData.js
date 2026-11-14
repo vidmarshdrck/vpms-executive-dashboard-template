@@ -42,6 +42,8 @@ export const COPY = {
   bankTxnsEmpty: 'No bank transactions were returned for this account.',
   currencyEmpty: 'No account in this currency was returned.',
   bankTrailEmpty: 'No transactions match this month and filter.',
+  reconciliationEmpty: 'No reconciliation was returned for this account.',
+  reconciliationBlocked: 'Reconciliation is not visible to this account.',
 }
 
 export function todayIso(now = new Date()) {
@@ -108,6 +110,7 @@ export function emptySources(access) {
     bankAccounts: sourceState(access),
     bankTransactions: sourceState(access),
     accountAgents: sourceState(access),
+    reconciliation: sourceState(access),
   }
 }
 
@@ -191,6 +194,15 @@ export function personName(value) {
   const name = String(value || '').trim()
   if (!name || name.toLowerCase() === 'nan') return ''
   return name
+}
+
+function recordedActivity(activity, reconciliation, id) {
+  if (!reconciliation) return { activity, activitySource: '' }
+  const confirmed = reconciliation.confirmed_activity?.[id]
+  const preserved = reconciliation.preserved_activity?.[id]
+  if (confirmed === 'Active' || confirmed === 'Inactive') return { activity: confirmed, activitySource: 'Confirmed' }
+  if (preserved === 'Active' || preserved === 'Inactive') return { activity: preserved, activitySource: 'Not confirmed' }
+  return { activity, activitySource: 'Not confirmed' }
 }
 
 function mapAccount(row, customers, today, agents) {
@@ -414,7 +426,18 @@ export function buildWorkspace(sources, today = todayIso()) {
       if (id && name) agents.set(id, name)
     }
   }
-  const accounts = sources.familyAccounts.access === 'ok' ? sources.familyAccounts.rows.map((row) => mapAccount(row, customers, today, agents)) : []
+  const reconciliationSource = sources.reconciliation || { access: 'empty', rows: [] }
+  const reconciliationEvent = reconciliationSource.access === 'ok'
+    ? reconciliationSource.rows.filter(row => row.business_id === 'VE' && row.event === 've_family_reconciliation_v1' && row.after_value?.version === 1).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0]
+    : null
+  const reconciliation = reconciliationEvent?.after_value || null
+  const accounts = sources.familyAccounts.access === 'ok' ? sources.familyAccounts.rows.map((row) => {
+    const account = mapAccount(row, customers, today, agents)
+    const recorded = recordedActivity(account.activity, reconciliation, account.id)
+    account.activity = recorded.activity
+    account.activitySource = recorded.activitySource
+    return account
+  }) : []
   const activeAccounts = accounts.filter((account) => account.activity === 'Active').sort((a, b) => a.dueDate.localeCompare(b.dueDate))
   const inactiveAccounts = accounts.filter((account) => account.activity === 'Inactive').sort((a, b) => a.dueDate.localeCompare(b.dueDate))
   const income = sources.orders.access === 'ok' ? sources.orders.rows.map((row) => mapIncome(row, customers)) : []
@@ -429,6 +452,9 @@ export function buildWorkspace(sources, today = todayIso()) {
   const connected = new Set(accounts.flatMap((account) => account.members.map((member) => member.cid)))
   return {
     today,
+    reconciliation,
+    reconciliationAccess: reconciliationSource.access,
+    reconciliationEventId: reconciliationEvent?.id || null,
     access: {
       familyAccounts: sources.familyAccounts.access,
       customers: sources.customers.access,
@@ -520,7 +546,7 @@ export async function fetchVeWorkspace({ env = {}, token = '', today = todayIso(
   if (!token) return buildWorkspace(emptySources('signed-out'), today)
   const client = createVeClient(env, token, factory)
   if (!client) return buildWorkspace(emptySources('unconfigured'), today)
-  const [familyAccounts, customers, orders, expenses, marketing, marketingSpend, products, bankAccounts, bankTransactions, accountAgents] = await Promise.all([
+  const [familyAccounts, customers, orders, expenses, marketing, marketingSpend, products, bankAccounts, bankTransactions, accountAgents, reconciliation] = await Promise.all([
     readTable(client, 'public', 'family_accounts', FAMILY_COLUMNS, 'fid'),
     readTable(client, 'public', 'customers', CUSTOMER_COLUMNS, 'name'),
     readTable(client, 'public', 'orders', ORDER_COLUMNS, 'date'),
@@ -531,6 +557,7 @@ export async function fetchVeWorkspace({ env = {}, token = '', today = todayIso(
     readTable(client, 'public', 've_bank_accounts', BANK_ACCOUNT_COLUMNS, 'label'),
     readTable(client, 'public', 've_bank_transactions', BANK_TXN_COLUMNS, 'txn_date'),
     readTable(client, 'public', 'account_agents', AGENT_COLUMNS, 'name'),
+    readScopedTable(client, 'public', 'vhpms_activities', 'id,business_id,task_id,event,after_value,created_at', 'created_at', [{ op: 'eq', column: 'business_id', value: 'VE' }, { op: 'eq', column: 'event', value: 've_family_reconciliation_v1' }]),
   ])
-  return buildWorkspace({ familyAccounts, customers, orders, expenses, marketing, marketingSpend, products, bankAccounts, bankTransactions, accountAgents }, today)
+  return buildWorkspace({ familyAccounts, customers, orders, expenses, marketing, marketingSpend, products, bankAccounts, bankTransactions, accountAgents, reconciliation }, today)
 }

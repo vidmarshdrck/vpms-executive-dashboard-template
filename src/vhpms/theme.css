@@ -483,6 +483,19 @@
 .vh-app .record-meta { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-muted); }
 .vh-app .family-cards,
 .vh-app .member-cards { display: none; }
+.vh-app .recon-status { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.vh-app .recon-filters { margin-top: 16px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.vh-app .recon-filters .field { min-width: 0; max-width: 100%; margin-bottom: 0; }
+.vh-app .recon-filters select { min-width: 0; max-width: 100%; }
+.vh-app .recon-card .record-line { flex-wrap: wrap; align-items: center; }
+.vh-app .recon-card .record-line strong { min-width: 0; overflow-wrap: anywhere; }
+.vh-app .recon-card .record-meta { white-space: normal; overflow-wrap: anywhere; }
+.vh-app .recon-table { max-width: 100%; min-width: 0; }
+.vh-app .recon-table .tbl-scroll { max-width: 100%; }
+.vh-app .recon-table td { white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .vh-app .recon-filters { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 480px) {
   .vh-app .family-accounts .family-table,
   .vh-app .vh-modal .member-table { display: none; }
