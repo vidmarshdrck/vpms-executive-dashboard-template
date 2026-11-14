@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Donut } from './Donut.jsx'
-import { balancesByAccount, closingBalances, formatMoney, formatRate } from './bankBudget.js'
-import { formatZmw, slicesBy } from './books.js'
-import { categoryShare, compactAmount, dailyAmounts, monthLabel, monthSummary, sourceAnalysis } from './fundsMonth.js'
+import { balancesByAccount, closingBalances, formatRate } from './bankBudget.js'
+import { slicesBy } from './books.js'
+import { categoryShare, dailyAmounts, monthLabel, monthSummary, sourceAnalysis } from './fundsMonth.js'
 import { NavIcon } from './icons.jsx'
 import { monthsInPeriod, rowsInPeriod, weekOverlapsPeriod } from './reportingPeriod.js'
 import { useReportingPeriod } from './TimeframePopover.jsx'
 import { COPY, acquisitionSummary, weeklyBudget } from './veData.js'
-import { SECTION_EMPTY, accountCaption, displayNote, formatThousands, isNeedsNote, moneyHidden, monthStripRows } from './workspaceCharts.js'
+import { EMPTY, accountCaption, formatAmount, formatDisplayDate, isNeedsNote, moneyHidden, monthStripRows, sentenceCase, sourceLine, statusLabel } from './workspaceCharts.js'
 
 export function Panel({ title, children, note }) {
   return (
@@ -25,20 +25,48 @@ export function Message({ children }) {
   return <p className="empty">{children}</p>
 }
 
-export function EmptyState({ icon = 'layers', children }) {
-  return <p className="empty-state"><NavIcon name={icon} /><span>{children}</span></p>
+export function EmptyState({ icon = 'layers', title, detail }) {
+  return (
+    <div className="empty-state">
+      <NavIcon name={icon} />
+      <div>
+        <strong>{title}</strong>
+        {detail ? <p className="empty-detail">{detail}</p> : null}
+      </div>
+    </div>
+  )
+}
+
+function EmptyCard({ icon, title, detail }) {
+  return (
+    <section className="card empty-card">
+      <div className="card-body">
+        <EmptyState icon={icon} title={title} detail={detail} />
+      </div>
+    </section>
+  )
+}
+
+function Money({ amount, currency = 'ZMW' }) {
+  const negative = Number(amount) < 0
+  return <span className={negative ? 'money-neg' : undefined}>{formatAmount(amount, currency)}</span>
+}
+
+function StatusPill({ status }) {
+  const label = statusLabel(status)
+  return <span className={`chip status-pill ${label === 'Connected' ? 'green' : 'na'}`}>{label}</span>
 }
 
 function SectionHeading({ icon, children }) {
   return <h2 className="section-title"><NavIcon name={icon} />{children}</h2>
 }
 
-function Stat({ label, value, quiet = false }) {
-  return <section className="card"><div className="card-body"><div className="stat-num" style={quiet ? { fontSize: 16, lineHeight: 1.35 } : { fontSize: 28 }}>{value}</div><div className="stat-desc">{label}</div></div></section>
+function Stat({ label, value, quiet = false, negative = false }) {
+  return <section className="card"><div className="card-body"><div className={`stat-num${negative ? ' money-neg' : ''}`} style={quiet ? { fontSize: 16, lineHeight: 1.35 } : { fontSize: 28 }}>{value}</div><div className="stat-desc">{label}</div></div></section>
 }
 
 function moneyTile(value) {
-  return value == null ? '—' : formatZmw(value)
+  return value == null ? '—' : formatAmount(value)
 }
 
 function StatusChip({ value }) {
@@ -60,28 +88,16 @@ function DataTable({ columns, rows, empty }) {
   )
 }
 
-function RankedSplit({ title, rows, center, empty, format = formatThousands }) {
-  const share = categoryShare(rows)
+function casedRows(rows) {
+  return (rows || []).map((row) => ({ ...row, category: sentenceCase(row.category) }))
+}
+
+function RankedSplit({ title, rows, center, empty }) {
+  const share = categoryShare(casedRows(rows))
   const slices = slicesBy(share.map((item) => ({ group: item.name, amount: item.amount })), 'group')
-  const max = Math.max(...share.map((item) => item.amount), 1)
   return (
     <Panel title={title}>
-      {share.length ? (
-        <>
-          <Donut items={slices} center={center} format={format} />
-          <ul className="vh-list" aria-label={`${title} ranking`}>
-            {share.map((item) => (
-              <li key={item.name}>
-                <div style={{ flex: 1 }}>
-                  <strong>{item.name}</strong>
-                  <span className="bar-track" style={{ marginTop: 6 }}><span className="bar-fill" style={{ width: `${(item.amount / max) * 100}%` }} /></span>
-                </div>
-                <b>{format(item.amount)} · {Math.round(item.pct)}%</b>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : <EmptyState icon="pie">{empty || `No ${center.toLowerCase()} rows were returned for this period.`}</EmptyState>}
+      {share.length ? <Donut items={slices} center={center} format={formatAmount} /> : <EmptyState icon="pie" title={empty.title} detail={empty.detail} />}
     </Panel>
   )
 }
@@ -114,39 +130,23 @@ export function AccountBars({ rows, label = 'Amount by item' }) {
         <div key={row.id} style={{ margin: '12px 0' }}>
           <strong>{row.title}</strong>
           <span className="bar-track" style={{ marginTop: 6, width: `${(Number(row.amount) / max) * 100}%`, background: 'var(--brand)' }} />
-          <small>{row.unit === 'USD' || row.unit === 'ZMW' ? formatMoney(row.amount, row.unit) : `${row.amount} ${row.unit || ''}`.trim()}</small>
+          <small>{row.unit === 'USD' || row.unit === 'ZMW' ? formatAmount(row.amount, row.unit) : `${row.amount} ${row.unit || ''}`.trim()}</small>
         </div>
       ))}
     </div>
   )
 }
 
-function StatusShare({ rows, empty, center }) {
+function StatusShare({ rows, empty, center, pills = false }) {
   const counts = new Map()
   for (const row of rows || []) {
-    const name = row.status || 'Unspecified'
+    const name = statusLabel(row.status)
     counts.set(name, (counts.get(name) || 0) + 1)
   }
   const share = [...counts.entries()].map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name))
-  const total = share.reduce((sum, item) => sum + item.amount, 0)
   const slices = slicesBy(share.map((item) => ({ group: item.name, amount: item.amount })), 'group')
-  if (!slices.length) return <EmptyState icon="activity">{empty}</EmptyState>
-  return (
-    <>
-      <Donut items={slices} center={center} format={(value) => String(value)} />
-      <ul className="vh-list" aria-label="Status ranking">
-        {share.map((item) => (
-          <li key={item.name}>
-            <div style={{ flex: 1 }}>
-              <strong>{item.name}</strong>
-              <span className="bar-track" style={{ marginTop: 6 }}><span className="bar-fill" style={{ width: `${(item.amount / total) * 100}%` }} /></span>
-            </div>
-            <b>{item.amount} · {Math.round((item.amount / total) * 100)}%</b>
-          </li>
-        ))}
-      </ul>
-    </>
-  )
+  if (!slices.length) return <EmptyState icon={empty.icon} title={empty.title} detail={empty.detail} />
+  return <Donut items={slices} center={center} format={(value) => String(value)} renderName={pills ? (item) => <StatusPill status={item.name} /> : undefined} />
 }
 
 function periodFinance(finance, incomeRows, expenseRows) {
@@ -166,8 +166,8 @@ function MonthStrip({ rows, months }) {
           return (
             <article key={item.month}>
               <span>{item.label}</span>
-              <strong>{quiet ? '—' : formatThousands(item.income - item.expense)}</strong>
-              {quiet ? <small>No movement</small> : <><small>In {formatThousands(item.income)}</small><small>Out {formatThousands(item.expense)}</small></>}
+              <strong className={!quiet && item.income - item.expense < 0 ? 'money-neg' : undefined}>{quiet ? '—' : formatAmount(item.income - item.expense)}</strong>
+              {quiet ? <small>No movement</small> : <><small>In {formatAmount(item.income)}</small><small>Out {formatAmount(item.expense)}</small></>}
             </article>
           )
         })}
@@ -177,43 +177,45 @@ function MonthStrip({ rows, months }) {
 }
 
 function DailyBars({ days }) {
-  const width = 720
   const height = 220
-  const padL = 72
+  const padL = 108
   const padB = 28
   const padT = 12
-  const plotW = width - padL - 8
+  const barW = 4
+  const slot = 14
   const plotH = height - padB - padT
+  const width = padL + Math.max(days.length, 1) * slot + 8
   const max = Math.max(...days.flatMap((day) => [day.income, day.expense]), 1)
-  const slot = plotW / Math.max(days.length, 1)
   const ticks = [max, max / 2, 0]
   return (
-    <Panel title="Daily bars">
-      <svg className="chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Daily bars">
-        {ticks.map((tick) => {
-          const y = padT + plotH - (tick / max) * plotH
-          return (
-            <g key={tick}>
-              <line x1={padL} x2={width - 8} y1={y} y2={y} stroke="var(--border)" />
-              <text x={padL - 8} y={y + 4} textAnchor="end" fontSize="11" fill="var(--text-muted)">{formatThousands(tick)}</text>
-            </g>
-          )
-        })}
-        {days.map((day, index) => {
-          const x = padL + index * slot
-          const barW = Math.max(slot * 0.28, 1)
-          const incomeH = (day.income / max) * plotH
-          const expenseH = (day.expense / max) * plotH
-          const showLabel = day.date.endsWith('-01') || day.date.endsWith('-15')
-          return (
-            <g key={day.date}>
-              <rect x={x} y={padT + plotH - incomeH} width={barW} height={Math.max(incomeH, 0)} fill="var(--rag-green)">{day.income ? <title>{`${day.date} income ${formatThousands(day.income)}`}</title> : null}</rect>
-              <rect x={x + barW + 1} y={padT + plotH - expenseH} width={barW} height={Math.max(expenseH, 0)} fill="var(--rag-red)">{day.expense ? <title>{`${day.date} expense ${formatThousands(day.expense)}`}</title> : null}</rect>
-              {showLabel ? <text x={x} y={height - 8} fontSize="10" fill="var(--text-muted)">{Number(day.date.slice(-2))}</text> : null}
-            </g>
-          )
-        })}
-      </svg>
+    <Panel title="Daily income & expense">
+      <div className="daily-scroll">
+        <svg className="chart-svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Daily income & expense">
+          {ticks.map((tick) => {
+            const y = padT + plotH - (tick / max) * plotH
+            return (
+              <g key={tick}>
+                <line x1={padL} x2={width - 8} y1={y} y2={y} stroke="var(--border)" />
+                <text x={padL - 8} y={y + 4} textAnchor="end" fontSize="11" fill="var(--text-muted)">{formatAmount(tick)}</text>
+              </g>
+            )
+          })}
+          {days.map((day, index) => {
+            const x = padL + index * slot
+            const incomeH = (day.income / max) * plotH
+            const expenseH = (day.expense / max) * plotH
+            const dayNum = Number(day.date.slice(-2))
+            const showLabel = [1, 8, 15, 22, 29].includes(dayNum)
+            return (
+              <g key={day.date}>
+                <rect x={x} y={padT + plotH - incomeH} width={barW} height={Math.max(incomeH, 0)} fill="var(--rag-green)">{day.income ? <title>{`${formatDisplayDate(day.date)} income ${formatAmount(day.income)}`}</title> : null}</rect>
+                <rect x={x + barW + 2} y={padT + plotH - expenseH} width={barW} height={Math.max(expenseH, 0)} fill="var(--rag-red)">{day.expense ? <title>{`${formatDisplayDate(day.date)} expense ${formatAmount(day.expense)}`}</title> : null}</rect>
+                {showLabel ? <text x={x + slot / 2} y={height - 8} textAnchor="middle" fontSize="10" fill="var(--text-muted)">{dayNum}</text> : null}
+              </g>
+            )
+          })}
+        </svg>
+      </div>
       <div className="legend"><span><i className="dot" style={{ background: 'var(--rag-green)' }} />Income</span><span><i className="dot" style={{ background: 'var(--rag-red)' }} />Expense</span></div>
     </Panel>
   )
@@ -226,9 +228,9 @@ function ByAccountBars({ rows }) {
       <div role="img" aria-label="By account">
         {rows.map((row) => (
           <div className="bar-row" key={row.id}>
-            <strong>{accountCaption(row)}</strong>
+            <strong className="bar-name" title={accountCaption(row)}>{accountCaption(row)}</strong>
             <span className="bar-track"><span className="bar-fill" style={{ width: `${(Math.abs(Number(row.amount)) / max) * 100}%` }} /></span>
-            <b className="bar-value">{formatThousands(row.amount, row.currency)}</b>
+            <b className={`bar-value${Number(row.amount) < 0 ? ' money-neg' : ''}`}>{formatAmount(row.amount, row.currency)}</b>
           </div>
         ))}
       </div>
@@ -236,32 +238,42 @@ function ByAccountBars({ rows }) {
   )
 }
 
-export function MonthCalendar({ days, month }) {
+export function MonthCalendar({ days, month, bare = false }) {
   const [year, number] = month.split('-').map(Number)
   const offset = (new Date(Date.UTC(year, number - 1, 1)).getUTCDay() + 6) % 7
+  const grid = (
+    <div className="vh-calendar-scroll" tabIndex="0" aria-label="Funds calendar">
+      <div className="vh-calendar">
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <strong key={day}>{day}</strong>)}
+        {Array.from({ length: offset }, (_, index) => <div key={`pad-${index}`} className="vh-day vh-blank" />)}
+        {days.map((day) => {
+          const active = day.income || day.expense
+          return <div key={day.date} className="vh-day"><span>{Number(day.date.slice(-2))}</span>{active ? <strong className={day.net < 0 ? 'money-neg' : undefined}>{formatAmount(day.net)}</strong> : null}</div>
+        })}
+      </div>
+    </div>
+  )
+  if (bare) return grid
   const label = new Date(Date.UTC(year, number - 1, 1)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
   return (
     <section className="card" style={{ marginBottom: 16 }}>
       <div className="card-head"><h2>{label}</h2></div>
-      <div className="card-body">
-        <div className="vh-calendar-scroll" tabIndex="0" aria-label="Funds calendar">
-          <div className="vh-calendar">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <strong key={day}>{day}</strong>)}
-            {Array.from({ length: offset }, (_, index) => <div key={`pad-${index}`} className="vh-day vh-blank" />)}
-            {days.map((day) => {
-              const active = day.income || day.expense
-              const tone = day.net < 0 ? 'var(--rag-red)' : 'var(--rag-green)'
-              return <div key={day.date} className="vh-day"><span>{Number(day.date.slice(-2))}</span>{active ? <strong style={{ color: tone }}>{compactAmount(day.net)}</strong> : null}</div>
-            })}
-          </div>
-        </div>
-      </div>
+      <div className="card-body">{grid}</div>
     </section>
   )
 }
 
-function uniqueNotes(notes) {
-  return [...new Set(notes.filter(Boolean))]
+function ClientList({ clients }) {
+  const [open, setOpen] = useState(false)
+  const shown = open ? clients : clients.slice(0, 5)
+  return (
+    <>
+      <ul className="vh-list" aria-label="Clients">
+        {shown.map((row) => <li key={row.id}><div><strong>{row.name}</strong></div><StatusPill status={row.status} /></li>)}
+      </ul>
+      {clients.length > 5 ? <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen((current) => !current)}>{open ? 'Show less' : `Show all ${clients.length}`}</button> : null}
+    </>
+  )
 }
 
 export function StandardOverview({ model }) {
@@ -272,17 +284,13 @@ export function StandardOverview({ model }) {
   const bankBlocked = Boolean(model.bankNote)
   const balances = bankBlocked ? [] : closingBalances(model.bankAccounts, model.bankTransactions, period.end)
   const accountRows = bankBlocked ? [] : balancesByAccount(model.bankAccounts, model.bankTransactions, period.end)
-  const balanceText = bankBlocked ? '—' : (balances.length ? balances.map((line) => formatMoney(line.amount, line.currency)).join(' · ') : 'No bank account connected')
+  const balanceText = bankBlocked ? '—' : (balances.length ? balances.map((line) => formatAmount(line.amount, line.currency)).join(' · ') : 'No bank account connected')
   const moneyRows = [...incomeRows, ...expenseRows]
-  const showCharts = moneyRows.length > 0 || accountRows.length > 0
   const categoryRows = expenseRows.length ? expenseRows : incomeRows
   const categoryTitle = expenseRows.length ? 'Expenses by category' : 'Income by category'
-  const quietNotes = uniqueNotes([
-    moneyHidden(model.incomeNote) ? displayNote(model.incomeNote, SECTION_EMPTY.income) : '',
-    moneyHidden(model.expenseNote) ? displayNote(model.expenseNote, SECTION_EMPTY.expenses) : '',
-    model.bankNote || '',
-  ])
   const months = monthsInPeriod(period)
+  const next = model.upcoming?.[0]
+  const financeDetail = sourceLine(model.expenseNote) || sourceLine(model.incomeNote) || sourceLine(model.bankNote)
   return (
     <>
       <h2 className="sr-only">Overview</h2>
@@ -292,45 +300,37 @@ export function StandardOverview({ model }) {
           <Stat label="Total spent" value={moneyTile(finance.expenses)} />
           <Stat label="Income" value={moneyTile(finance.income)} />
           <Stat label="Balance on hand" value={balanceText} quiet={!bankBlocked && !balances.length} />
-          <Stat label="Profit generated" value={moneyTile(finance.profit)} />
+          <Stat label="Profit generated" value={moneyTile(finance.profit)} negative={Number(finance.profit) < 0} />
         </div>
-        {quietNotes.map((note) => <EmptyState key={note} icon="wallet">{note}</EmptyState>)}
-        {showCharts && moneyRows.length ? (
+        {bankBlocked ? <EmptyCard icon="landmark" title="Bank accounts are not visible" detail={sourceLine(model.bankNote)} /> : null}
+        {moneyRows.length ? (
           <>
             <MonthStrip rows={moneyRows} months={months} />
-            <div className="grid">
-              <RankedSplit title={categoryTitle} rows={categoryRows} center={expenseRows.length ? 'Expenses' : 'Income'} empty="No categories were returned for this period." />
+            <div className="chart-split">
+              <RankedSplit title={categoryTitle} rows={categoryRows} center={expenseRows.length ? 'Expenses' : 'Income'} empty={expenseRows.length ? EMPTY.expenses : EMPTY.income} />
               <DailyBars days={months.flatMap((month) => dailyAmounts(moneyRows, month))} />
             </div>
           </>
-        ) : null}
-        {showCharts && accountRows.length ? <ByAccountBars rows={accountRows} /> : null}
-        {showCharts && moneyRows.length && !accountRows.length ? <EmptyState icon="landmark">{SECTION_EMPTY.accounts}</EmptyState> : null}
-        {!showCharts && !quietNotes.length ? <EmptyState icon="wallet">{displayNote(model.expenseNote || model.incomeNote, 'No income or expenses were returned for this period.') || 'No income or expenses were returned for this period.'}</EmptyState> : null}
+        ) : (!bankBlocked && <EmptyCard icon={EMPTY.finances.icon} title={EMPTY.finances.title} detail={financeDetail} />)}
+        {accountRows.length ? <ByAccountBars rows={accountRows} /> : null}
       </section>
       <section aria-label="Operations">
         <SectionHeading icon="activity">Operations</SectionHeading>
         {model.operations.length ? (
           <Panel title="Status">
-            <StatusShare rows={model.operations} center="Status" empty={displayNote(model.operationsNote, SECTION_EMPTY.operations)} />
-            {model.upcoming.length ? (
-              <ul className="vh-list" aria-label="Upcoming due items">
-                {model.upcoming.slice(0, 5).map((row) => <li key={row.id}><div><strong>{row.title}</strong><small>Due {row.due}</small></div></li>)}
-              </ul>
-            ) : null}
+            <StatusShare rows={model.operations} center="Status" empty={EMPTY.operations} />
+            {next ? <div className="next-renewal"><h3>Next renewal</h3><strong>{next.title}</strong><p>{formatDisplayDate(next.due)}</p></div> : null}
           </Panel>
-        ) : <EmptyState icon="activity">{displayNote(model.operationsNote, SECTION_EMPTY.operations) || SECTION_EMPTY.operations}</EmptyState>}
+        ) : <EmptyCard icon={EMPTY.operations.icon} title={EMPTY.operations.title} detail={sourceLine(model.operationsNote)} />}
       </section>
       <section aria-label="Clients">
         <SectionHeading icon="users">Clients</SectionHeading>
         {model.clients.length ? (
           <Panel title="Status">
-            <StatusShare rows={model.clients} center="Status" empty={displayNote(model.clientsNote, SECTION_EMPTY.clients)} />
-            <ul className="vh-list" aria-label="Clients">
-              {model.clients.slice(0, 8).map((row) => <li key={row.id}><div><strong>{row.name}</strong><small>{row.status}</small></div></li>)}
-            </ul>
+            <StatusShare rows={model.clients} center="Status" empty={EMPTY.clients} pills />
+            <ClientList clients={model.clients} />
           </Panel>
-        ) : <EmptyState icon="users">{displayNote(model.clientsNote, SECTION_EMPTY.clients) || SECTION_EMPTY.clients}</EmptyState>}
+        ) : <EmptyCard icon={EMPTY.clients.icon} title={EMPTY.clients.title} detail={sourceLine(model.clientsNote)} />}
       </section>
     </>
   )
@@ -344,32 +344,28 @@ export function StandardFunds({ model }) {
   const receivedValue = moneyHidden(model.incomeNote) && !rows.some((row) => row.kind === 'income') ? null : summary.income
   const months = monthsInPeriod(period)
   const days = months.flatMap((month) => dailyAmounts(rows, month))
-  const sources = sourceAnalysis(rows)
+  const sources = sourceAnalysis(casedRows(rows))
   const maxSource = Math.max(...sources.flatMap((item) => [item.income, item.expense]), 1)
-  const incomeLine = displayNote(model.incomeNote, SECTION_EMPTY.income)
-  const expenseLine = displayNote(model.expenseNote, SECTION_EMPTY.expenses)
   const bothNeeds = isNeedsNote(model.incomeNote) && isNeedsNote(model.expenseNote)
   return (
     <>
       <h2 className="sr-only">Funds</h2>
-      {bothNeeds ? <EmptyState icon="wallet">{SECTION_EMPTY.funds}</EmptyState> : (
+      {bothNeeds ? <EmptyCard icon={EMPTY.funds.icon} title={EMPTY.funds.title} detail={sourceLine(model.incomeNote) || sourceLine(model.expenseNote)} /> : (
         <>
-          {moneyHidden(model.incomeNote) && incomeLine && <EmptyState icon="wallet">{incomeLine}</EmptyState>}
-          {moneyHidden(model.expenseNote) && expenseLine && expenseLine !== incomeLine && <EmptyState icon="receipt">{expenseLine}</EmptyState>}
+          {moneyHidden(model.incomeNote) && !rows.some((row) => row.kind === 'income') ? <EmptyCard icon={EMPTY.income.icon} title={EMPTY.income.title} detail={sourceLine(model.incomeNote)} /> : null}
+          {moneyHidden(model.expenseNote) && !rows.some((row) => row.kind === 'expense') && sourceLine(model.expenseNote) !== sourceLine(model.incomeNote) ? <EmptyCard icon={EMPTY.expenses.icon} title={EMPTY.expenses.title} detail={sourceLine(model.expenseNote)} /> : null}
+          <div className="grid-3 funds-totals" style={{ marginBottom: 16 }}>
+            <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-red)' }}>{expenseValue == null ? '—' : formatAmount(expenseValue)}</div><div className="stat-desc">Expense</div></div></section>
+            <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{receivedValue == null ? '—' : formatAmount(receivedValue)}</div><div className="stat-desc">Total received</div></div></section>
+          </div>
         </>
       )}
-      {!bothNeeds && (
-        <div className="grid-3 funds-totals" style={{ marginBottom: 16 }}>
-          <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-red)' }}>{expenseValue == null ? '—' : formatZmw(expenseValue)}</div><div className="stat-desc">Expense</div></div></section>
-          <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{receivedValue == null ? '—' : formatZmw(receivedValue)}</div><div className="stat-desc">Total received</div></div></section>
-        </div>
-      )}
-      {!moneyHidden(model.expenseNote) && model.expenseNote && <EmptyState icon="receipt">{expenseLine}</EmptyState>}
+      {!moneyHidden(model.expenseNote) && model.expenseNote && !rows.some((row) => row.kind === 'expense') ? <EmptyCard icon={EMPTY.expenses.icon} title={EMPTY.expenses.title} detail={sourceLine(model.expenseNote) || COPY.expensesEmpty} /> : null}
       {rows.length ? (
         <>
           <div className="grid">
-            <RankedSplit title="Expense overview" rows={rows.filter((row) => row.kind === 'expense')} center="Expenses" format={formatZmw} />
-            <RankedSplit title="Income overview" rows={rows.filter((row) => row.kind === 'income')} center="Income" format={formatZmw} />
+            <RankedSplit title="Expense overview" rows={rows.filter((row) => row.kind === 'expense')} center="Expenses" empty={EMPTY.expenses} />
+            <RankedSplit title="Income overview" rows={rows.filter((row) => row.kind === 'income')} center="Income" empty={EMPTY.income} />
           </div>
           <div className="grid">
             <FlowChart title="Expense flow" days={days} field="expense" color="var(--rag-red)" />
@@ -378,21 +374,40 @@ export function StandardFunds({ model }) {
           <Panel title="Account analysis">
             <div role="img" aria-label="Expense and income by source">
               {sources.map((item) => (
-                <div key={item.name} style={{ margin: '12px 0' }}>
-                  <strong>{item.name}</strong>
-                  <span className="bar-track" style={{ marginTop: 6, width: `${(item.expense / maxSource) * 100}%`, background: 'var(--rag-red)' }} />
-                  <span className="bar-track" style={{ marginTop: 4, width: `${(item.income / maxSource) * 100}%`, background: 'var(--rag-green)' }} />
+                <div key={item.name} style={{ margin: '12px 0 16px' }}>
+                  <div className="account-line"><strong>{item.name}</strong><span>Expense {formatAmount(item.expense)} · Income {formatAmount(item.income)}</span></div>
+                  <span className="bar-track" style={{ marginTop: 8 }}><span className="bar-fill" style={{ width: `${(item.expense / maxSource) * 100}%`, background: 'var(--rag-red)' }} /></span>
+                  <span className="bar-track" style={{ marginTop: 4 }}><span className="bar-fill" style={{ width: `${(item.income / maxSource) * 100}%`, background: 'var(--rag-green)' }} /></span>
                 </div>
               ))}
             </div>
-            <ul className="vh-list">
-              {sources.map((item) => <li key={item.name}><div><strong>{item.name}</strong><small>Expense {formatZmw(item.expense)} · Income {formatZmw(item.income)}</small></div></li>)}
-            </ul>
+            <div className="legend"><span><i className="dot" style={{ background: 'var(--rag-red)' }} />Expense</span><span><i className="dot" style={{ background: 'var(--rag-green)' }} />Income</span></div>
           </Panel>
         </>
-      ) : (!bothNeeds && <Message>{COPY.fundsEmpty}</Message>)}
-      {!bothNeeds && months.map((month) => <MonthCalendar key={month} month={month} days={dailyAmounts(rows, month)} />)}
+      ) : (!bothNeeds && !model.expenseNote && !model.incomeNote && <EmptyCard icon={EMPTY.funds.icon} title={EMPTY.funds.title} detail={COPY.fundsEmpty} />)}
+      {!bothNeeds && <FundsMonth months={months} rows={rows} />}
     </>
+  )
+}
+
+function FundsMonth({ months, rows }) {
+  const movement = months.filter((month) => dailyAmounts(rows, month).some((day) => day.income || day.expense))
+  const fallback = movement.at(-1) || months.at(-1) || ''
+  const [month, setMonth] = useState(fallback)
+  const selected = months.includes(month) ? month : fallback
+  const index = Math.max(months.indexOf(selected), 0)
+  if (!selected) return null
+  return (
+    <section className="card" style={{ marginBottom: 16 }}>
+      <div className="card-head month-nav">
+        <button type="button" className="btn btn-ghost btn-sm" aria-label="Previous month" disabled={index <= 0} onClick={() => setMonth(months[index - 1])}>‹</button>
+        <h2>{monthLabel(selected)}</h2>
+        <button type="button" className="btn btn-ghost btn-sm" aria-label="Next month" disabled={index >= months.length - 1} onClick={() => setMonth(months[index + 1])}>›</button>
+      </div>
+      <div className="card-body">
+        <MonthCalendar month={selected} days={dailyAmounts(rows, selected)} bare />
+      </div>
+    </section>
   )
 }
 
@@ -406,7 +421,7 @@ function bankTxnMessage(access) {
 
 function BudgetProjection({ budget, access, period }) {
   const blocked = bankTxnMessage(access)
-  if (access !== 'ok' && access !== 'empty') return <EmptyState icon="landmark">{blocked}</EmptyState>
+  if (access !== 'ok' && access !== 'empty') return <EmptyCard icon="landmark" title="Bank accounts are not visible" detail={blocked} />
   const months = new Set(monthsInPeriod(period))
   return (
     <>
@@ -417,13 +432,13 @@ function BudgetProjection({ budget, access, period }) {
           <div className="stat-desc">Current FX rate, ZMW per USD{budget.fx.month ? `, ${monthLabel(budget.fx.month)}` : ''}</div>
         </div></section>
         <section className="card"><div className="card-body">
-          <div className="stat-num" style={{ fontSize: 28 }}>{budget.projection == null ? 'Not recorded' : formatZmw(budget.projection)}</div>
+          <div className="stat-num" style={{ fontSize: 28 }}>{budget.projection == null ? 'Not recorded' : formatAmount(budget.projection)}</div>
           <div className="stat-desc">Projected monthly cost</div>
         </div></section>
         <section className="card"><div className="card-body">
-          <div className="stat-num" style={{ fontSize: 28 }}>{budget.gapLatest == null ? 'Not recorded' : formatZmw(budget.gapLatest)}</div>
+          <div className="stat-num" style={{ fontSize: 28 }}>{budget.gapLatest == null ? 'Not recorded' : formatAmount(budget.gapLatest)}</div>
           <div className="stat-desc">Gap against the latest month</div>
-          {budget.gapAverage != null && <p className="stat-desc">Gap against the 12-month average: {formatZmw(budget.gapAverage)}</p>}
+          {budget.gapAverage != null && <p className="stat-desc">Gap against the 12-month average: {formatAmount(budget.gapAverage)}</p>}
         </div></section>
       </div>
       <Panel title="Plan prices">
@@ -443,31 +458,31 @@ function BudgetProjection({ budget, access, period }) {
               empty="No active family accounts."
               columns={[
                 { key: 'plan', label: 'Plan', cell: (row) => `${row.plan} (${row.count} active)` },
-                { key: 'price', label: 'Typical price', cell: (row) => (row.currency === 'USD' && row.unitUsd != null ? formatMoney(row.unitUsd, 'USD') : row.currency === 'ZMW' && row.unitZmw != null ? formatZmw(row.unitZmw) : 'Not recorded') },
-                { key: 'each', label: 'Each account', cell: (row) => (row.unitZmw == null ? 'Not recorded' : formatZmw(row.unitZmw)) },
-                { key: 'total', label: 'Monthly', cell: (row) => (row.total == null ? 'Left out' : formatZmw(row.total)) },
+                { key: 'price', label: 'Typical price', cell: (row) => (row.currency === 'USD' && row.unitUsd != null ? formatAmount(row.unitUsd, 'USD') : row.currency === 'ZMW' && row.unitZmw != null ? formatAmount(row.unitZmw) : 'Not recorded') },
+                { key: 'each', label: 'Each account', cell: (row) => (row.unitZmw == null ? 'Not recorded' : formatAmount(row.unitZmw)) },
+                { key: 'total', label: 'Monthly', cell: (row) => (row.total == null ? 'Left out' : formatAmount(row.total)) },
               ]}
             />
           </>
-        ) : <EmptyState icon="calculator">No active family accounts, so there are no plan prices in the projection.</EmptyState>}
-        <p className="stat-desc">USD plans converted {formatZmw(budget.usdConverted)}. Kwacha-billed plans {formatZmw(budget.kwachaBilled)}. Average monthly bank charges {formatZmw(budget.charges.average)}.</p>
+        ) : <EmptyState icon="calculator" title="No plan prices recorded" detail="No active family accounts are in the projection." />}
+        <p className="stat-desc">USD plans converted {formatAmount(budget.usdConverted)}. Kwacha-billed plans {formatAmount(budget.kwachaBilled)}. Average monthly bank charges {formatAmount(budget.charges.average)}.</p>
         {!budget.complete && <p className="stat-desc">Plans with no matched price are left out of the projected total.</p>}
       </Panel>
       <Panel title="Actual provider subscriptions">
         {budget.actual.latest ? (
           <>
-            <p>Latest month, {monthLabel(budget.actual.latest.month)}: {formatZmw(budget.actual.latest.amount)}</p>
-            <p>12-month average: {formatZmw(budget.actual.average)}</p>
+            <p>Latest month, {monthLabel(budget.actual.latest.month)}: {formatAmount(budget.actual.latest.amount)}</p>
+            <p>12-month average: {formatAmount(budget.actual.average)}</p>
             <DataTable
               rows={budget.actual.months.filter((row) => months.has(row.month)).map((row) => ({ ...row, id: row.month }))}
               empty={COPY.bankTxnsEmpty}
               columns={[
                 { key: 'month', label: 'Month', cell: (row) => monthLabel(row.month) },
-                { key: 'amount', label: 'VE provider subscriptions', cell: (row) => formatZmw(row.amount) },
+                { key: 'amount', label: 'VE provider subscriptions', cell: (row) => formatAmount(row.amount) },
               ]}
             />
           </>
-        ) : <EmptyState icon="landmark">{budget.actual.source}</EmptyState>}
+        ) : <EmptyState icon="landmark" title="No provider subscriptions recorded" detail={budget.actual.source} />}
       </Panel>
     </>
   )
@@ -475,7 +490,10 @@ function BudgetProjection({ budget, access, period }) {
 
 function categoryTotals(rows) {
   const totals = new Map()
-  for (const row of rows) totals.set(row.category, (totals.get(row.category) || 0) + row.amount)
+  for (const row of rows) {
+    const name = sentenceCase(row.category)
+    totals.set(name, (totals.get(name) || 0) + row.amount)
+  }
   return [...totals.entries()].map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name))
 }
 
@@ -487,11 +505,11 @@ function CategoryTable({ title, rows, empty }) {
           rows={rows.map((row) => ({ ...row, id: row.name }))}
           empty={empty}
           columns={[
-            { key: 'name', label: 'Category', cell: (row) => row.name },
-            { key: 'amount', label: 'Amount', cell: (row) => formatZmw(row.amount) },
+            { key: 'name', label: 'Category', cell: (row) => sentenceCase(row.name) },
+            { key: 'amount', label: 'Amount', cell: (row) => formatAmount(row.amount) },
           ]}
         />
-      ) : <EmptyState icon="calculator">{empty}</EmptyState>}
+      ) : <EmptyState icon="calculator" title={empty?.title || EMPTY.expenses.title} detail={empty?.detail || empty} />}
     </Panel>
   )
 }
@@ -503,34 +521,34 @@ export function StandardBudget({ model }) {
   const weeks = weeklyBudget(expenses).filter((item) => weekOverlapsPeriod(item.week, period))
   const [week, setWeek] = useState(weeks.at(-1)?.week || '')
   const selected = weeks.find((item) => item.week === week) || weeks.at(-1) || null
-  const expenseMessage = moneyHidden(model.expenseNote) ? displayNote(model.expenseNote, SECTION_EMPTY.budget) : (model.expenseNote || '')
-  const incomeMessage = moneyHidden(model.incomeNote) ? displayNote(model.incomeNote, SECTION_EMPTY.income) : (model.incomeNote || 'No income was returned for this account.')
   const needsBudget = isNeedsNote(model.expenseNote) && !model.budget && !expenses.length
   return (
     <>
       <h2 className="sr-only">Budget</h2>
       {model.budget ? <BudgetProjection budget={model.budget} access={model.bankTxnAccess || 'empty'} period={period} /> : null}
-      {needsBudget ? <EmptyState icon="calculator">{SECTION_EMPTY.budget}</EmptyState> : (
-        expenseMessage && !expenses.length ? <EmptyState icon="calculator">{expenseMessage}</EmptyState> : (
+      {needsBudget ? <EmptyCard icon={EMPTY.budget.icon} title={EMPTY.budget.title} detail={sourceLine(model.expenseNote)} /> : (
+        !expenses.length ? <EmptyCard icon={EMPTY.expenses.icon} title={EMPTY.expenses.title} detail={sourceLine(model.expenseNote) || COPY.expensesEmpty} /> : (
           <Panel title="Weekly expense budget">
             {weeks.length > 0 && (
               <div className="field" style={{ maxWidth: 240 }}>
                 <label>Week
                   <select aria-label="Budget week" value={selected?.week || ''} onChange={(event) => setWeek(event.target.value)}>
-                    {weeks.map((item) => <option key={item.week} value={item.week}>Week of {item.week}</option>)}
+                    {weeks.map((item) => <option key={item.week} value={item.week}>Week of {formatDisplayDate(item.week)}</option>)}
                   </select>
                 </label>
               </div>
             )}
-            {selected ? <DataTable rows={selected.categories.map((row) => ({ ...row, id: row.name }))} empty={COPY.budgetEmpty} columns={[{ key: 'name', label: 'Category', cell: (row) => row.name }, { key: 'amount', label: 'Recorded', cell: (row) => formatZmw(row.amount) }]} /> : <EmptyState icon="calculator">{COPY.budgetEmpty}</EmptyState>}
-            {selected && <p className="stat-desc">Week total {formatZmw(selected.total)}</p>}
+            {selected ? <DataTable rows={selected.categories.map((row) => ({ ...row, id: row.name }))} empty={COPY.budgetEmpty} columns={[{ key: 'name', label: 'Category', cell: (row) => sentenceCase(row.name) }, { key: 'amount', label: 'Recorded', cell: (row) => formatAmount(row.amount) }]} /> : <EmptyState icon="calculator" title={EMPTY.budget.title} detail={COPY.budgetEmpty} />}
+            {selected && <p className="stat-desc">Week total {formatAmount(selected.total)}</p>}
           </Panel>
         )
       )}
-      <div className="grid">
-        <CategoryTable title="Income categories" rows={categoryTotals(income)} empty={incomeMessage || 'No income was returned for this account.'} />
-        <CategoryTable title="Expense categories" rows={categoryTotals(expenses)} empty={expenseMessage || COPY.expensesEmpty} />
-      </div>
+      {!needsBudget && expenses.length ? (
+        <div className="grid">
+          <CategoryTable title="Income categories" rows={categoryTotals(income)} empty={{ title: EMPTY.income.title, detail: sourceLine(model.incomeNote) || 'No income was returned for this account.' }} />
+          <CategoryTable title="Expense categories" rows={categoryTotals(expenses)} empty={{ title: EMPTY.expenses.title, detail: sourceLine(model.expenseNote) || COPY.expensesEmpty }} />
+        </div>
+      ) : null}
     </>
   )
 }
@@ -541,24 +559,24 @@ export function StandardMarketing({ model }) {
   const spend = rowsInPeriod(model.spend || [], period)
   const postsNote = model.postsNote != null ? model.postsNote : (isNeedsNote(model.marketingNote) ? model.marketingNote : '')
   const spendNote = model.spendNote != null ? model.spendNote : (isNeedsNote(model.marketingNote) ? model.marketingNote : '')
-  if (!posts.length && !spend.length && isNeedsNote(postsNote) && isNeedsNote(spendNote)) {
-    return <><h2 className="sr-only">Marketing</h2><EmptyState icon="megaphone">{SECTION_EMPTY.marketing}</EmptyState></>
+  if (!posts.length && !spend.length && (isNeedsNote(postsNote) || isNeedsNote(model.marketingNote)) && (isNeedsNote(spendNote) || isNeedsNote(model.marketingNote))) {
+    return <><h2 className="sr-only">Marketing</h2><EmptyCard icon={EMPTY.marketing.icon} title={EMPTY.marketing.title} detail={sourceLine(model.marketingNote || postsNote)} /></>
   }
   const acquisition = acquisitionSummary(spend)
-  const postsMessage = displayNote(postsNote, SECTION_EMPTY.marketing) || (!posts.length ? COPY.postsEmpty : '')
-  const spendMessage = displayNote(spendNote, SECTION_EMPTY.marketing) || (!spend.length ? COPY.cacEmpty : '')
-  const cac = acquisition.value == null ? 'Not recorded' : formatZmw(acquisition.value)
+  const postsDetail = isNeedsNote(postsNote) ? sourceLine(postsNote) : (postsNote || COPY.postsEmpty)
+  const spendDetail = isNeedsNote(spendNote) ? sourceLine(spendNote) : (spendNote || COPY.cacEmpty)
+  const cac = acquisition.value == null ? 'Not recorded' : formatAmount(acquisition.value)
   return (
     <>
       <h2 className="sr-only">Marketing</h2>
       <div className="grid">
         <Panel title="Scheduled posts">
-          {postsMessage && !posts.length ? <EmptyState icon="megaphone">{postsMessage}</EmptyState> : (
+          {!posts.length ? <EmptyState icon="megaphone" title={EMPTY.posts.title} detail={postsDetail} /> : (
             <DataTable
               rows={posts}
               empty={COPY.postsEmpty}
               columns={[
-                { key: 'date', label: 'Scheduled for', cell: (row) => row.date },
+                { key: 'date', label: 'Scheduled for', cell: (row) => formatDisplayDate(row.date) },
                 { key: 'channel', label: 'Channel', cell: (row) => row.channel },
                 { key: 'post', label: 'Post', cell: (row) => row.post },
                 { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.status} /> },
@@ -567,19 +585,19 @@ export function StandardMarketing({ model }) {
           )}
         </Panel>
         <Panel title="Customer acquisition cost (CAC)">
-          {spendMessage && !spend.length ? <EmptyState icon="megaphone">{spendMessage}</EmptyState> : (
+          {!spend.length ? <EmptyState icon="megaphone" title={EMPTY.spend.title} detail={spendDetail} /> : (
             <>
               <div className="stat-num" style={{ fontSize: 28 }}>CAC {cac}</div>
               <DataTable
                 rows={spend}
                 empty={COPY.cacEmpty}
                 columns={[
-                  { key: 'date', label: 'Date', cell: (row) => row.date },
+                  { key: 'date', label: 'Date', cell: (row) => formatDisplayDate(row.date) },
                   { key: 'channel', label: 'Channel', cell: (row) => row.channel },
                   { key: 'campaign', label: 'Campaign', cell: (row) => row.campaign },
-                  { key: 'amount', label: 'Spend', cell: (row) => formatZmw(row.amount) },
+                  { key: 'amount', label: 'Spend', cell: (row) => formatAmount(row.amount) },
                   { key: 'conversions', label: 'Conversions', cell: (row) => (row.conversions == null ? '—' : row.conversions) },
-                  { key: 'cac', label: 'CAC', cell: (row) => row.cacLabel || (row.computed == null ? 'Not recorded' : formatZmw(row.computed)) },
+                  { key: 'cac', label: 'CAC', cell: (row) => row.cacLabel || (row.computed == null ? 'Not recorded' : formatAmount(row.computed)) },
                 ]}
               />
             </>

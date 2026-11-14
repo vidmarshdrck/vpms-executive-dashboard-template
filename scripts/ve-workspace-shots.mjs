@@ -139,7 +139,7 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('http://127.0.0.1:4317/?business=vai')
   await page.getByRole('tab', { name: 'Overview', exact: true }).waitFor()
-  await page.getByRole('region', { name: 'Finances' }).getByText('Expenses recorded for this business will appear here.').waitFor()
+  await page.getByRole('region', { name: 'Finances' }).getByText('ZMW 2,500.00').waitFor()
   const vaiPages = ['Overview', 'Funds', 'Marketing', 'Budget']
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })

@@ -1,25 +1,33 @@
 import { MONTHS } from './reportingPeriod.js'
 import { monthRows, monthSummary } from './fundsMonth.js'
 
-export const SECTION_EMPTY = {
-  finances: 'Income, expenses, and account balances for this business will appear here.',
-  operations: 'Operations for this business will appear here.',
-  clients: 'Clients for this business will appear here.',
-  funds: 'Income and expenses for this business will appear here.',
-  marketing: 'Scheduled posts and acquisition spend for this business will appear here.',
-  budget: 'The weekly expense budget for this business will appear here.',
-  accounts: 'Balances for each bank account will appear here.',
-  income: 'Income recorded for this business will appear here.',
-  expenses: 'Expenses recorded for this business will appear here.',
+const MINUS = '\u2212'
+
+export const EMPTY = {
+  budget: { title: 'No expense budget set', icon: 'calculator' },
+  income: { title: 'No income recorded', icon: 'wallet' },
+  expenses: { title: 'No expenses recorded', icon: 'receipt' },
+  finances: { title: 'No finances recorded', icon: 'wallet' },
+  operations: { title: 'No operations recorded', icon: 'activity' },
+  clients: { title: 'No clients recorded', icon: 'users' },
+  marketing: { title: 'No marketing recorded', icon: 'megaphone' },
+  posts: { title: 'No scheduled posts', icon: 'megaphone' },
+  spend: { title: 'No acquisition spend recorded', icon: 'megaphone' },
+  accounts: { title: 'No bank account connected', icon: 'landmark' },
+  funds: { title: 'No income or expenses recorded', icon: 'wallet' },
 }
 
 export function isNeedsNote(note) {
   return /No data connected yet\./.test(String(note || ''))
 }
 
-export function displayNote(note, sentence) {
-  if (!note) return ''
-  return isNeedsNote(note) ? sentence : note
+export function sourceLine(note) {
+  const text = String(note || '').trim()
+  if (!text || /will appear here/i.test(text)) return ''
+  if (!isNeedsNote(text)) return text
+  const body = text.replace(/^No data connected yet\.\s*Needs\s+/i, '').replace(/\.\s*$/, '')
+  const source = body.replace(/\s*\([^)]*\)\s*$/, '').trim()
+  return source ? `From ${source}.` : ''
 }
 
 export function moneyHidden(note) {
@@ -28,22 +36,32 @@ export function moneyHidden(note) {
   return /not visible|Could not load|Sign in|not configured/i.test(note)
 }
 
-export function formatThousands(amount, currency = 'ZMW') {
+export function formatAmount(amount, currency = 'ZMW') {
   const number = Number(amount)
   if (!Number.isFinite(number)) return '—'
-  const sign = number < 0 ? '-' : ''
-  const absolute = Math.abs(number)
+  const absolute = Math.abs(number).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   const prefix = currency === 'USD' ? 'USD ' : currency === 'ZMW' ? 'ZMW ' : `${currency} `
-  let body
-  if (absolute >= 1000) {
-    const thousands = Math.round((absolute / 1000) * 10) / 10
-    body = `${thousands.toFixed(1).replace(/\.0$/, '')}K`
-  } else if (absolute >= 100 || Number.isInteger(absolute)) {
-    body = String(Math.round(absolute))
-  } else {
-    body = absolute.toFixed(1).replace(/\.0$/, '')
-  }
-  return `${prefix}${sign}${body}`
+  return number < 0 ? `${prefix}${MINUS}${absolute}` : `${prefix}${absolute}`
+}
+
+export function sentenceCase(value) {
+  const text = String(value || '').trim()
+  if (!text) return 'Unspecified'
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
+}
+
+export function statusLabel(value) {
+  const text = String(value || '').trim()
+  if (!text) return 'Unspecified'
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
+}
+
+export function formatDisplayDate(value) {
+  const iso = String(value || '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return String(value || '')
+  const month = Number(iso.slice(5, 7))
+  const day = Number(iso.slice(8, 10))
+  return `${day} ${MONTHS[month - 1]} ${iso.slice(0, 4)}`
 }
 
 export function accountCaption(account) {

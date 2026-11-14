@@ -283,7 +283,8 @@
 .vh-app .gm .donut-row, .vh-app .biz .donut-row { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
 .vh-app .gm .donut-row .dl, .vh-app .biz .donut-row .dl { display: flex; flex-direction: column; gap: 9px; font-size: 12.5px; min-width: 180px; flex: 0 1 280px; }
 .vh-app .gm .donut-row .dl div, .vh-app .biz .donut-row .dl div { display: flex; align-items: center; gap: 8px; }
-.vh-app .gm .donut-row .dl b, .vh-app .biz .donut-row .dl b { margin-left: auto; padding-left: 14px; font-variant-numeric: tabular-nums; }
+.vh-app .gm .donut-row .dl b, .vh-app .biz .donut-row .dl b { margin-left: auto; padding-left: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; }
+.vh-app .biz .donut-row .dl span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vh-app .gm .donut-row .dl i, .vh-app .biz .donut-row .dl i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
 .vh-app .empty { padding: 26px 8px; text-align: center; color: var(--text-muted); font-size: 13px; }
 .vh-app .total-row td { font-weight: 700; color: var(--text-primary); border-top: 1px solid var(--border); }

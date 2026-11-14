@@ -3,15 +3,18 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { balancesByAccount } from './bankBudget.js'
 import { BUSINESS_SEED } from './books.js'
-import { accountCaption, displayNote, formatThousands, isNeedsNote, monthStripRows, SECTION_EMPTY } from './workspaceCharts.js'
+import { EMPTY, accountCaption, formatAmount, formatDisplayDate, isNeedsNote, monthStripRows, sentenceCase, sourceLine, statusLabel } from './workspaceCharts.js'
 
-test('chart amounts use the currency and K from one thousand', () => {
-  assert.equal(formatThousands(1500), 'ZMW 1.5K')
-  assert.equal(formatThousands(12000), 'ZMW 12K')
-  assert.equal(formatThousands(288.95), 'ZMW 289')
-  assert.equal(formatThousands(30), 'ZMW 30')
-  assert.equal(formatThousands(15.99, 'USD'), 'USD 16')
-  assert.equal(formatThousands(-2400, 'USD'), 'USD -2.4K')
+const MINUS = '\u2212'
+
+test('money uses one currency format, two decimals, and a real minus sign', () => {
+  assert.equal(formatAmount(1500), 'ZMW 1,500.00')
+  assert.equal(formatAmount(600.75), 'ZMW 600.75')
+  assert.equal(formatAmount(288.95), 'ZMW 288.95')
+  assert.equal(formatAmount(-165), `ZMW ${MINUS}165.00`)
+  assert.equal(formatAmount(15.99, 'USD'), 'USD 15.99')
+  assert.equal(formatAmount(-2400, 'USD'), `USD ${MINUS}2,400.00`)
+  assert.equal(formatAmount(-165).includes('-'), false)
 })
 
 test('bank captions keep the name and the last four digits', () => {
@@ -21,12 +24,22 @@ test('bank captions keep the name and the last four digits', () => {
   assert.equal(accountCaption({ label: 'Operating', last4: '' }), 'Operating')
 })
 
-test('a missing source becomes one plain sentence', () => {
+test('a missing source names the table and does not say it will appear', () => {
   assert.equal(isNeedsNote('No data connected yet. Needs public.vt_income.'), true)
-  assert.equal(displayNote('No data connected yet. Needs public.vt_income.', SECTION_EMPTY.income), SECTION_EMPTY.income)
-  assert.equal(displayNote('Expenses are not visible to this account.', SECTION_EMPTY.expenses), 'Expenses are not visible to this account.')
-  assert.match(SECTION_EMPTY.finances, /will appear here/)
-  assert.equal(/\b(draft|demo|sample|placeholder|coming soon)\b/i.test(Object.values(SECTION_EMPTY).join(' ')), false)
+  assert.equal(sourceLine('No data connected yet. Needs public.vt_income.'), 'From public.vt_income.')
+  assert.equal(sourceLine('No data connected yet. Needs a VAI expense table (none exists in the vai schema).'), 'From a VAI expense table.')
+  assert.equal(sourceLine('Expenses are not visible to this account.'), 'Expenses are not visible to this account.')
+  assert.equal(EMPTY.budget.title, 'No expense budget set')
+  assert.equal(/will appear here/i.test(Object.values(EMPTY).map((item) => item.title).join(' ')), false)
+  assert.equal(/\b(draft|demo|sample|placeholder|coming soon)\b/i.test(Object.values(EMPTY).map((item) => item.title).join(' ')), false)
+})
+
+test('dates and category names use one readable form', () => {
+  assert.equal(formatDisplayDate('2026-12-05'), '5 Dec 2026')
+  assert.equal(sentenceCase('cash'), 'Cash')
+  assert.equal(sentenceCase('Boost Post'), 'Boost post')
+  assert.equal(statusLabel('CONNECTED'), 'Connected')
+  assert.equal(statusLabel('DISCONNECTED'), 'Disconnected')
 })
 
 test('the month strip labels every month in the period', () => {

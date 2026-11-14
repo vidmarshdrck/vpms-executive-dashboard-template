@@ -9,7 +9,7 @@ import { emptyActivities } from './activities.js'
 import { findAccount } from './directory.js'
 import { COPY, buildWorkspace } from './veData.js'
 import { CORE_BUSINESS_IDS, buildAdapterModel } from './businessSources.js'
-import { SECTION_EMPTY } from './workspaceCharts.js'
+import { EMPTY } from './workspaceCharts.js'
 
 const bundle = await build({
   stdin: { contents: "export { BusinessHome } from './src/vhpms/BusinessHome.jsx'\nexport { default as BusinessWorkspace } from './src/vhpms/BusinessWorkspace.jsx'\nexport { default as VeWorkspace, FamilyModal } from './src/vhpms/VeWorkspace.jsx'\nexport { default as ActivitiesBoard } from './src/vhpms/ActivitiesBoard.jsx'\nexport { default as Shell } from './src/vhpms/Shell.jsx'\nexport { TimeframePopover } from './src/vhpms/TimeframePopover.jsx'", resolveDir: process.cwd() },
@@ -110,10 +110,13 @@ test('the VE pages render mapped records', () => {
   assert.match(html, /Finances/)
   assert.match(html, /aria-label="Month strip"/)
   assert.match(html, /Expenses by category/)
-  assert.match(html, /aria-label="Daily bars"/)
+  assert.match(html, /Daily income &(?:amp;)? expense/)
   assert.match(html, /aria-label="By account"/)
-  assert.match(html, /ZMW 1\.5K|ZMW 289|1583/)
-  assert.match(html, /1\.5K|ZMW 289/)
+  assert.match(html, /1583/)
+  assert.match(html, /Next renewal/)
+  assert.match(html, /5 Dec 2026/)
+  assert.match(html, /Connected/)
+  assert.doesNotMatch(html, /Expenses by category ranking|Status ranking/)
   assert.match(html, /aria-label="Operations"/)
   assert.match(html, /aria-label="Clients"/)
   assert.match(html, /Total spent/)
@@ -135,9 +138,9 @@ test('the VE pages render mapped records', () => {
   assert.match(html, /Expense flow/)
   assert.match(html, /Income flow/)
   assert.match(html, /aria-label="Funds calendar"/)
-  assert.match(html, /October 2026/)
-  assert.match(html, /December 2026/)
-  assert.doesNotMatch(html, /Previous month/)
+  assert.match(html, /November 2026/)
+  assert.match(html, /aria-label="Previous month"/)
+  assert.match(html, /aria-label="Next month"/)
   assert.match(html, /Account analysis/)
   assert.match(html, /Last payment/)
   assert.match(html, /FNB Lifestart Student \(ZMW\)/)
@@ -156,7 +159,7 @@ test('the VE pages render mapped records', () => {
   assert.doesNotMatch(html, /The tiles are the totals|Where this comes from|Active means the due date/)
   assert.equal((html.match(/November 2026/g) || []).length >= 2, true)
   assert.match(html, /Weekly expense budget/)
-  assert.match(html, /Week of 2026-11-02/)
+  assert.match(html, /Week of 2 Nov 2026/)
   assert.match(html, /ZMW 30\.00/)
   assert.match(html, /December renewals/)
   assert.match(html, /No scheduled posts yet|December renewals/)
@@ -225,7 +228,8 @@ test('VE ignores planner entries and every live business uses the same four page
     assert.doesNotMatch(html, /<span>Expenses<\/span><\/button>|<span>Income<\/span><\/button>|<span>Counts<\/span><\/button>/)
     assert.doesNotMatch(html, /Planner income must not appear|Other business must not leak|type="submit"/)
     assert.doesNotMatch(html, /No data connected yet|coming soon|placeholder|draft|demo/i)
-    assert.match(html, /will appear here/)
+    assert.match(html, /No expense budget set|No marketing recorded|No finances recorded|No operations recorded/)
+    assert.doesNotMatch(html, /will appear here/)
     assert.match(html, /Powered by/)
   }
 })
@@ -245,21 +249,25 @@ test('the shared template paints stubbed rows and a finished empty state', () =>
   assert.match(html, /aria-label="Operations"/)
   assert.match(html, /aria-label="Clients"/)
   assert.match(html, /aria-label="Month strip"/)
-  assert.match(html, /aria-label="Daily bars"/)
-  assert.match(html, /ZMW 2\.5K/)
+  assert.match(html, /Daily income &(?:amp;)? expense/)
+  assert.match(html, /ZMW 2,500\.00/)
   assert.match(html, /Acme/)
-  assert.match(html, new RegExp(SECTION_EMPTY.budget))
-  assert.match(html, new RegExp(SECTION_EMPTY.marketing))
-  assert.doesNotMatch(html, /No data connected yet|coming soon|placeholder|\bdemo\b|\bdraft\b/i)
+  assert.match(html, /status-pill/)
+  assert.match(html, />Active</)
+  assert.match(html, new RegExp(EMPTY.budget.title))
+  assert.match(html, /From a VAI expense table/)
+  assert.match(html, new RegExp(EMPTY.marketing.title))
+  assert.doesNotMatch(html, /will appear here|No data connected yet|coming soon|placeholder|\bdemo\b|\bdraft\b/i)
   const empty = renderToStaticMarkup(createElement(BusinessWorkspace, {
     business: { id: 'vt', name: 'Vidmar Transport (VT)', code: 'VT' },
     model: buildAdapterModel('vt', {}, TODAY),
     today: TODAY,
   }))
-  for (const sentence of [SECTION_EMPTY.income, SECTION_EMPTY.expenses, SECTION_EMPTY.operations, SECTION_EMPTY.clients, SECTION_EMPTY.funds, SECTION_EMPTY.marketing, SECTION_EMPTY.budget]) {
-    assert.match(empty, new RegExp(sentence))
+  for (const item of [EMPTY.finances, EMPTY.operations, EMPTY.clients, EMPTY.funds, EMPTY.marketing, EMPTY.budget]) {
+    assert.match(empty, new RegExp(item.title))
   }
-  assert.doesNotMatch(empty, /ZMW 0|No data connected yet|1234/)
+  assert.match(empty, /From public\.vt_income/)
+  assert.doesNotMatch(empty, /will appear here|ZMW 0\.00|No data connected yet|1234/)
   assert.match(empty, /Powered by/)
 })
 
