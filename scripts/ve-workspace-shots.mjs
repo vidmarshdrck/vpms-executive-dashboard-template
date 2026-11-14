@@ -85,6 +85,10 @@ try {
       }, name)
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)
       if (!overflow) throw new Error(`${name} ${label} overflows`)
+      if (width === 1440 && name === 'Overview') {
+        const cover = await page.evaluate(() => ({ side: document.querySelector('.sidebar').offsetHeight, doc: document.documentElement.scrollHeight }))
+        if (cover.side + 1 < cover.doc) throw new Error(`sidebar ${cover.side}px stops short of the ${cover.doc}px page`)
+      }
       await page.screenshot({ path: `${outDir}/${name.toLowerCase().replaceAll(' ', '-')}-${label}.png`, fullPage: true })
     }
   }
@@ -139,12 +143,113 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('http://127.0.0.1:4317/?business=vai')
   await page.getByRole('tab', { name: 'Overview', exact: true }).waitFor()
-  await page.getByText('No data connected yet').first().waitFor()
-  await page.screenshot({ path: `${outDir}/vai-overview-desktop.png`, fullPage: true })
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.screenshot({ path: `${outDir}/vai-overview-mobile.png`, fullPage: true })
+  await page.getByRole('heading', { name: 'Vidmar AI (VAI)' }).waitFor()
+  await page.getByRole('img', { name: 'Month strip' }).first().waitFor()
+  const vaiPages = ['Overview', 'Funds', 'Marketing', 'Budget']
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    const label = width === 1440 ? 'desktop' : 'mobile'
+    for (const name of vaiPages) {
+      await page.getByRole('tab', { name, exact: true }).click()
+      await page.waitForFunction((tabName) => {
+        const tab = [...document.querySelectorAll('[aria-label="Business sections"] [role="tab"]')].find((item) => item.textContent === tabName)
+        const panel = document.getElementById(tab?.getAttribute('aria-controls') || '')
+        if (!panel) return false
+        const view = panel.closest('.slide-viewport').getBoundingClientRect()
+        return Math.abs(panel.getBoundingClientRect().x - view.x) < 2
+      }, name)
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)
+      if (!overflow) throw new Error(`VAI ${name} ${label} overflows`)
+      await page.screenshot({ path: `${outDir}/vai-${name.toLowerCase()}-${label}.png`, fullPage: true })
+    }
+  }
+  await page.goto('http://127.0.0.1:4317/')
+  await page.getByRole('tab', { name: 'Overview', exact: true }).waitFor()
+  const measures = []
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    for (const [tab, plot] of [['Overview', 'Daily income & expense'], ['Funds', 'Expense flow']]) {
+      await page.getByRole('tab', { name: tab, exact: true }).click()
+      const block = page.locator(`[data-plot="${plot}"]`)
+      await block.waitFor()
+      await page.waitForFunction(({ name, width: viewport }) => {
+        const root = document.querySelector(`[data-plot="${name}"]`)
+        const scroll = root?.querySelector('.plot-scroll')
+        const svg = root?.querySelector('.plot-svg')
+        const bar = root?.querySelector('.plot-bar')
+        if (!root || !scroll || !svg || !bar) return false
+        const fitted = Math.abs(svg.getBoundingClientRect().width - scroll.clientWidth) < 2
+        const slots = Number(root.dataset.slots)
+        const barW = bar.getBoundingClientRect().width
+        if (!fitted) return false
+        const weekly = root.dataset.scale === 'week' && slots >= 12 && slots <= 16
+        const barOk = root.dataset.series === '1' ? barW >= 5 && barW <= 12.5 : barW >= 4.5 && barW <= 5.5
+        return viewport > 600 ? root.dataset.scale === 'day' && slots >= 90 && barW >= 3.5 && barW <= 4.5 : weekly && barOk
+      }, { name: plot, width })
+      const measured = await page.evaluate((name) => {
+        const root = document.querySelector(`[data-plot="${name}"]`)
+        const scroll = root.querySelector('.plot-scroll')
+        const svg = root.querySelector('.plot-svg')
+        const label = root.querySelector('.plot-y .plot-label')
+        const bars = [...root.querySelectorAll('.plot-bar')]
+        const bar = bars.find((item) => item.getBoundingClientRect().height > 0) || bars[0]
+        const labelBox = label.getBoundingClientRect()
+        const barBox = bar.getBoundingClientRect()
+        const rootBox = root.getBoundingClientRect()
+        const scrollBox = scroll.getBoundingClientRect()
+        const months = [...root.querySelectorAll('.plot-month')].map((item) => item.textContent)
+        const dec = [...root.querySelectorAll('.plot-month')].find((item) => item.textContent === 'Dec')
+        const decBox = dec ? dec.getBoundingClientRect() : null
+        const firstTick = root.querySelector('.plot-tick, .plot-month')
+        const firstBox = firstTick ? firstTick.getBoundingClientRect() : null
+        const slots = Number(root.dataset.slots)
+        const placed = bars.map((item) => item.getBoundingClientRect()).sort((a, b) => a.x - b.x || a.y - b.y)
+        const seriesCount = Number(root.dataset.series)
+        const innerGaps = []
+        const weekGaps = []
+        for (let index = 0; index < placed.length; index += seriesCount) {
+          if (seriesCount > 1 && placed[index + 1]) innerGaps.push(placed[index + 1].x - placed[index].x - placed[index].width)
+          const next = placed[index + seriesCount]
+          const last = placed[index + seriesCount - 1]
+          if (next && last) weekGaps.push(next.x - last.x - last.width)
+        }
+        const labels = [...root.querySelectorAll('.plot-y .plot-label')].map((item) => item.textContent)
+        return {
+          fontSize: getComputedStyle(label).fontSize,
+          labelHeight: Math.round(labelBox.height * 10) / 10,
+          barWidth: Math.round(barBox.width * 100) / 100,
+          innerGap: innerGaps.length ? Math.round(Math.min(...innerGaps) * 100) / 100 : null,
+          weekGap: weekGaps.length ? Math.round(Math.min(...weekGaps) * 100) / 100 : null,
+          axis: labels,
+          slotWidth: Math.round((svg.getBoundingClientRect().width / slots) * 100) / 100,
+          slots,
+          scale: root.dataset.scale,
+          plotHeight: Math.round(rootBox.height * 10) / 10,
+          scrolls: scroll.scrollWidth > scroll.clientWidth + 2,
+          months,
+          decInside: Boolean(decBox && decBox.left >= scrollBox.left - 1 && decBox.right <= scrollBox.right + 1),
+          topInset: Math.round((labelBox.top - rootBox.top) * 10) / 10,
+          firstTickLeft: firstBox ? Math.round((firstBox.left - scrollBox.left) * 10) / 10 : null,
+        }
+      }, plot)
+      measures.push({ width, plot, ...measured })
+      await block.scrollIntoViewIfNeeded()
+      const file = `${plot === 'Daily income & expense' ? 'daily-chart' : 'expense-flow'}-${width}.png`
+      const box = await block.boundingBox()
+      await page.screenshot({ path: `${outDir}/${file}`, clip: { x: Math.max(box.x, 0), y: Math.max(box.y, 0), width: box.width, height: box.height } })
+    }
+  }
+  const bad = measures.filter((item) => {
+    const daily = item.width > 600
+    const barOk = daily ? item.barWidth >= 3.5 && item.barWidth <= 4.5 : (item.axis[0] && (item.plot === 'Expense flow' ? item.barWidth >= 5 && item.barWidth <= 12.5 : item.barWidth >= 4.5 && item.barWidth <= 5.5 && item.innerGap >= 1.5 && item.innerGap <= 2.5))
+    const gapOk = daily || item.weekGap >= 5.5
+    const scaleOk = daily ? item.scale === 'day' && item.slots >= 90 : item.scale === 'week' && item.slots >= 12 && item.slots <= 16
+    const headroom = daily ? item.axis[0] === 'ZMW 250.00' && item.axis[1] === 'ZMW 125.00' : item.axis[0] === 'ZMW 400.00' && item.axis[1] === 'ZMW 200.00'
+    return parseFloat(item.fontSize) !== 11 || !barOk || !gapOk || !scaleOk || !headroom || item.scrolls || !item.decInside || item.topInset < 8 || item.firstTickLeft < 0
+  })
+  if (bad.length) throw new Error(`chart pixels ${JSON.stringify(measures)}`)
   if (errors.length) throw new Error(errors.join('\n'))
-  console.log(JSON.stringify({ outDir, pages: pages.length, widths: [1440, 390] }))
+  console.log(JSON.stringify({ outDir, pages: pages.length, widths: [1440, 390], measures }))
 } finally {
   await browser.close()
   server.kill()

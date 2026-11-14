@@ -97,6 +97,7 @@ function ShellFrame({ user, view, menu, setMenu, mode, books, businessId, inboxC
   return (
     <div className={`vh-app${retracted ? ' sidebar-retracted' : ''}`}>
       <aside className={`sidebar ${menu ? 'open' : ''}`} id="sidebar">
+        <div className="sidebar-sticky">
         <button type="button" className="sidebar-brand" aria-controls="sidebar" aria-expanded={menu || !retracted} aria-label={retracted && !menu ? 'Expand sidebar' : 'Collapse sidebar'} onClick={toggleSidebar}>
           <span className="brand-logo" aria-hidden="true"><NavIcon name="hexagon" /></span>
           <span className="brand-text"><span className="brand-name">Vidmar Holdings</span><span className="brand-sub">VHPMS</span></span>
@@ -132,6 +133,7 @@ function ShellFrame({ user, view, menu, setMenu, mode, books, businessId, inboxC
               </select>
             </label>
           )}
+        </div>
         </div>
       </aside>
       <div className="scrim" onClick={() => setMenu(false)} />

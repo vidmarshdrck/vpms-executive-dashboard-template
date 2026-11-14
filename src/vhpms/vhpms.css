@@ -24,6 +24,77 @@
 .vh-app .vh-evidence dt { font-weight: 600; }
 .vh-app .vh-evidence dd { margin: 0; color: var(--text-secondary); }
 .vh-app .vh-status { min-height: 22px; margin: 8px 0; font-size: 13px; color: var(--text-secondary); }
+.vh-app h2.section-title { display: flex; align-items: center; gap: 8px; }
+.vh-app h2.section-title svg { color: var(--brand); flex: none; }
+.vh-app .empty-card { margin-bottom: 16px; }
+.vh-app .empty-state { display: flex; align-items: flex-start; gap: 12px; margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.45; }
+.vh-app .empty-state svg { color: var(--brand); flex: none; margin-top: 2px; }
+.vh-app .empty-state strong { display: block; color: var(--text-primary); font-size: 15px; font-weight: 600; }
+.vh-app .empty-detail { margin: 4px 0 0; color: var(--text-muted); font-size: 13px; }
+.vh-app .chart-split { display: grid; grid-template-columns: 1fr 1.618fr; align-items: stretch; gap: 16px; margin-bottom: 16px; }
+.vh-app .chart-split > .card { height: 100%; margin-bottom: 0; display: flex; flex-direction: column; }
+.vh-app .chart-split > .card .card-body { flex: 1; display: flex; flex-direction: column; }
+.vh-app .plot-block { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: stretch; height: 220px; }
+.vh-app .plot-y { display: flex; flex-direction: column; justify-content: space-between; height: 220px; padding-top: 8px; padding-bottom: 34px; }
+.vh-app .plot-scroll { min-width: 0; height: 220px; overflow: hidden; }
+.vh-app .plot-svg { display: block; }
+.vh-app .plot-x { position: relative; height: 34px; }
+.vh-app .plot-label { font-size: 11px; line-height: 11px; font-variant-numeric: tabular-nums; color: var(--text-muted); white-space: nowrap; }
+.vh-app .plot-tick, .vh-app .plot-month { position: absolute; top: 2px; transform: translateX(-50%); }
+.vh-app .plot-tick.is-first, .vh-app .plot-month.is-first { transform: none; }
+.vh-app .plot-tick.is-last, .vh-app .plot-month.is-last { transform: translateX(-100%); }
+.vh-app .plot-month { top: 16px; }
+.vh-app .chart-split .plot-block, .vh-app .chart-split .plot-y, .vh-app .chart-split .plot-scroll { height: 280px; }
+@media (max-width: 480px) {
+  .vh-app .plot-block, .vh-app .plot-y, .vh-app .plot-scroll,
+  .vh-app .chart-split .plot-block, .vh-app .chart-split .plot-y, .vh-app .chart-split .plot-scroll { height: 160px; max-height: 160px; }
+}
+.vh-app .day-list { display: none; list-style: none; margin: 0; padding: 0; }
+.vh-app .day-list li { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.vh-app .day-list strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vh-app .kpi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+.vh-app .kpi-figure { white-space: nowrap; }
+.vh-app .stat-num.is-quiet { font-size: 16px; line-height: 1.35; white-space: normal; }
+.vh-app .money-pos { color: var(--rag-green); }
+.vh-app .money-neg { color: var(--rag-red); }
+.vh-app .chip.status-pill { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; border-radius: 99px; }
+.vh-app .bar-name { display: block; width: 240px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vh-app .account-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; white-space: nowrap; }
+.vh-app .account-line strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.vh-app .account-line span, .vh-app .account-figures { margin-left: auto; text-align: right; font-variant-numeric: tabular-nums; }
+.vh-app .month-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.vh-app .next-renewal h3 { margin: 16px 0 4px; font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.vh-app .next-renewal p { margin: 2px 0 0; color: var(--text-muted); font-size: 13px; }
+@media (max-width: 720px) {
+  .vh-app .chart-split { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .vh-app .vh-calendar-scroll { display: none; }
+  .vh-app .day-list { display: block; }
+  .vh-app .account-line { flex-direction: column; align-items: stretch; white-space: normal; }
+  .vh-app .account-line strong { overflow: visible; text-overflow: clip; }
+  .vh-app .account-line span { margin-left: 0; text-align: left; font-size: 13px; white-space: normal; }
+  .vh-app .bar-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .vh-app .bar-row .bar-track { grid-column: 1 / -1; }
+  .vh-app .bar-name { width: auto; max-width: 100%; }
+  .vh-app .card:has(.plot-block) .card-head,
+  .vh-app .card:has(.plot-block) .card-body { padding-left: 12px; padding-right: 12px; }
+  .vh-app .plot-block { gap: 4px; }
+}
+@media (max-width: 480px) {
+  .vh-app .kpi-figure,
+  .vh-app .month-strip strong { font-size: 21px; white-space: nowrap; }
+}
+.vh-app .month-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.vh-app .month-strip article { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; background: var(--surface-2); min-width: 0; }
+.vh-app .month-strip span { display: block; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.vh-app .month-strip strong { display: block; margin-top: 6px; font-variant-numeric: tabular-nums; font-size: 22px; color: var(--text-primary); }
+.vh-app .month-strip small { display: block; margin-top: 4px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.vh-app .bar-track { display: block; height: 10px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.vh-app .bar-fill { display: block; height: 100%; border-radius: 99px; background: var(--brand); }
+.vh-app .bar-row { display: grid; grid-template-columns: 240px minmax(0, 1fr) auto; gap: 12px; align-items: center; margin: 10px 0; }
+.vh-app .bar-value { font-variant-numeric: tabular-nums; font-size: 13px; white-space: nowrap; }
+.vh-app .legend { margin-top: 8px; }
 @media (max-width: 900px) {
   .vh-app .vh-form { grid-template-columns: 1fr; }
   .vh-app .vh-evidence > div { grid-template-columns: 1fr; gap: 4px; }

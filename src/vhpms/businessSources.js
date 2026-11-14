@@ -370,8 +370,8 @@ export function glanceFromVe(model) {
     amount: row.slotsTaken,
     unit: 'slots',
   }))
-  const incomeNote = model.access?.orders === 'blocked' ? 'Order income is not visible to this account.' : model.access?.orders === 'signed-out' ? 'Sign in with Supabase to load these records.' : ''
-  const expenseNote = model.access?.expenses === 'blocked' ? 'Expenses are not visible to this account.' : model.access?.expenses === 'signed-out' ? 'Sign in with Supabase to load these records.' : ''
+  const incomeNote = veSideNote(model.access?.orders, COPY.ordersBlocked)
+  const expenseNote = veSideNote(model.access?.expenses, COPY.expensesBlocked, COPY.expensesEmpty)
   const bankNotes = []
   if (model.access?.bankAccounts === 'blocked') bankNotes.push(COPY.bankAccountsBlocked)
   if (model.access?.bankTransactions === 'blocked') bankNotes.push(COPY.bankTxnsBlocked)
@@ -395,9 +395,22 @@ export function glanceFromVe(model) {
     bankNote: bankNotes.join(' '),
     posts: model.posts || [],
     spend: model.spend || [],
+    postsNote: veSideNote(model.access?.marketing, COPY.postsBlocked, COPY.postsEmpty),
+    spendNote: veSideNote(model.access?.marketingSpend, COPY.cacBlocked, COPY.cacEmpty),
     marketingNote: '',
+    budget: model.budget,
+    bankTxnAccess: model.access?.bankTransactions || 'empty',
     weeks: model.weeks || [],
   }
+}
+
+function veSideNote(access, blocked, empty = '') {
+  if (access === 'blocked') return blocked
+  if (access === 'error') return COPY.loadError
+  if (access === 'signed-out') return COPY.signedOut
+  if (access === 'unconfigured') return COPY.unconfigured
+  if (access === 'empty') return empty
+  return ''
 }
 
 export async function fetchBusinessWorkspace({ businessId, env = {}, token = '', today, createClient: factory } = {}) {

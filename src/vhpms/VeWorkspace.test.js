@@ -8,9 +8,11 @@ import { emptyBooks } from './books.js'
 import { emptyActivities } from './activities.js'
 import { findAccount } from './directory.js'
 import { COPY, buildWorkspace } from './veData.js'
+import { CORE_BUSINESS_IDS, buildAdapterModel } from './businessSources.js'
+import { EMPTY } from './workspaceCharts.js'
 
 const bundle = await build({
-  stdin: { contents: "export { BusinessHome } from './src/vhpms/BusinessHome.jsx'\nexport { default as VeWorkspace, FamilyModal } from './src/vhpms/VeWorkspace.jsx'\nexport { default as ActivitiesBoard } from './src/vhpms/ActivitiesBoard.jsx'\nexport { default as Shell } from './src/vhpms/Shell.jsx'\nexport { TimeframePopover } from './src/vhpms/TimeframePopover.jsx'", resolveDir: process.cwd() },
+  stdin: { contents: "export { BusinessHome } from './src/vhpms/BusinessHome.jsx'\nexport { default as BusinessWorkspace } from './src/vhpms/BusinessWorkspace.jsx'\nexport { default as VeWorkspace, FamilyModal } from './src/vhpms/VeWorkspace.jsx'\nexport { default as ActivitiesBoard } from './src/vhpms/ActivitiesBoard.jsx'\nexport { default as Shell } from './src/vhpms/Shell.jsx'\nexport { TimeframePopover } from './src/vhpms/TimeframePopover.jsx'", resolveDir: process.cwd() },
   bundle: true,
   write: false,
   platform: 'node',
@@ -25,7 +27,7 @@ const code = bundle.outputFiles[0].text.replace(/from "([^"]+)"/g, (_, name) => 
   if (name.startsWith('react') || name.startsWith('@supabase/') || name === 'lucide-react') return `from "file://${require.resolve(name)}"`
   return `from "${name}"`
 })
-const { BusinessHome, VeWorkspace, FamilyModal, ActivitiesBoard, Shell, TimeframePopover } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
+const { BusinessHome, BusinessWorkspace, VeWorkspace, FamilyModal, ActivitiesBoard, Shell, TimeframePopover } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
 
 const TODAY = '2026-11-08'
 const SECRET = 'super-secret-value'
@@ -109,9 +111,16 @@ test('the VE pages render mapped records', () => {
   assert.match(dialog, /ZMW 120\.00/)
   assert.match(html, />Email</)
   assert.match(html, /aria-label="Email not recorded"/)
-  assert.match(html, /Income and expenses/)
+  assert.match(html, /Finances/)
+  assert.match(html, /aria-label="Month strip"/)
   assert.match(html, /Expenses by category/)
-  assert.match(html, /Monthly flow/)
+  assert.match(html, /Daily income &(?:amp;)? expense/)
+  assert.match(html, /aria-label="By account"/)
+  assert.match(html, /1583/)
+  assert.match(html, /Next renewal/)
+  assert.match(html, /5 Dec 2026/)
+  assert.match(html, /Connected/)
+  assert.doesNotMatch(html, /Expenses by category ranking|Status ranking/)
   assert.match(html, /aria-label="Operations"/)
   assert.match(html, /aria-label="Clients"/)
   assert.match(html, /Total spent/)
@@ -133,9 +142,9 @@ test('the VE pages render mapped records', () => {
   assert.match(html, /Expense flow/)
   assert.match(html, /Income flow/)
   assert.match(html, /aria-label="Funds calendar"/)
-  assert.match(html, /October 2026/)
-  assert.match(html, /December 2026/)
-  assert.doesNotMatch(html, /Previous month/)
+  assert.match(html, /November 2026/)
+  assert.match(html, /aria-label="Previous month"/)
+  assert.match(html, /aria-label="Next month"/)
   assert.match(html, /Account analysis/)
   assert.match(html, /Last payment/)
   assert.match(html, /FNB Lifestart Student \(ZMW\)/)
@@ -154,7 +163,7 @@ test('the VE pages render mapped records', () => {
   assert.doesNotMatch(html, /The tiles are the totals|Where this comes from|Active means the due date/)
   assert.equal((html.match(/November 2026/g) || []).length >= 2, true)
   assert.match(html, /Weekly expense budget/)
-  assert.match(html, /Week of 2026-11-02/)
+  assert.match(html, /Week of 2 Nov 2026/)
   assert.match(html, /ZMW 30\.00/)
   assert.match(html, /December renewals/)
   assert.match(html, /No scheduled posts yet|December renewals/)
@@ -184,8 +193,8 @@ test('empty and blocked pages use finished copy', () => {
   assert.match(html, /class="stat-num">—</)
   assert.match(html, new RegExp(COPY.customersBlocked))
   assert.match(html, new RegExp(COPY.ordersBlocked))
-  assert.match(html, new RegExp(COPY.expensesEmpty))
-  assert.match(html, new RegExp(COPY.postsEmpty))
+  assert.match(html, /Record expenses to see VE spending for this period/)
+  assert.match(html, /Schedule a post to plan VE marketing/)
   assert.match(html, new RegExp(COPY.cacBlocked))
   assert.match(html, /No bank account connected/)
   assert.match(html, /No ZMW account was returned/)
@@ -207,7 +216,7 @@ test('empty and blocked pages use finished copy', () => {
   assert.equal(/\b(draft|demo|sample|placeholder|coming soon)\b/i.test(html), false)
 })
 
-test('VE ignores planner entries and other businesses keep their books', () => {
+test('VE ignores planner entries and every live business uses the same four pages', () => {
   const books = emptyBooks()
   books.entries = [
     { id: 'planner', businessId: 've', kind: 'income', title: 'Planner income must not appear', group: 'Local', amount: 10, date: '2026-11-08', status: 'Pending' },
@@ -217,18 +226,55 @@ test('VE ignores planner entries and other businesses keep their books', () => {
   assert.match(ve, /<span>Marketing<\/span><\/button>/)
   assert.match(ve, new RegExp(COPY.signedOut))
   assert.doesNotMatch(ve, /Planner income must not appear|Other business must not leak/)
-  const vai = renderHome('vai', books)
-  assert.match(vai, /<span>Overview<\/span><\/button>/)
-  assert.match(vai, /<span>Funds<\/span><\/button>/)
-  assert.match(vai, /<span>Marketing<\/span><\/button>/)
-  assert.match(vai, /<span>Budget<\/span><\/button>/)
-  assert.match(vai, /<span>Expenses<\/span><\/button>/)
-  assert.match(vai, /<span>Income<\/span><\/button>/)
-  assert.match(vai, /<span>Counts<\/span><\/button>/)
-  assert.match(vai, /No data connected yet/)
-  assert.match(vai, /type="submit"/)
-  assert.match(vai, /Other business must not leak/)
-  assert.doesNotMatch(vai, /Family Accounts|Weekly expense budget|Planner income/)
+  for (const id of ['vai', 'rez', 'bsg', 'vt', 'eunique', 'digital']) {
+    const html = renderHome(id, books)
+    for (const tab of ['Overview', 'Funds', 'Marketing', 'Budget']) assert.match(html, new RegExp(`<span>${tab}</span></button>`))
+    assert.doesNotMatch(html, /<span>Expenses<\/span><\/button>|<span>Income<\/span><\/button>|<span>Counts<\/span><\/button>/)
+    assert.doesNotMatch(html, /Planner income must not appear|Other business must not leak|type="submit"/)
+    assert.doesNotMatch(html, /No data connected yet|coming soon|placeholder|draft|demo/i)
+    assert.match(html, /No expense budget set|No marketing recorded|No finances recorded|No operations recorded/)
+    assert.doesNotMatch(html, /will appear here/)
+    assert.match(html, /Powered by/)
+  }
+})
+
+test('the shared template paints stubbed rows and a finished empty state', () => {
+  const filled = buildAdapterModel('vai', {
+    [`finance.invoices.${CORE_BUSINESS_IDS.vai}`]: { access: 'ok', rows: [{ id: 'i1', invoice_number: 'VAI-1', client_name: 'Acme', issue_date: '2026-11-02', due_date: '2026-11-20', total: '2500.00', status: 'sent' }], message: '' },
+    'vai.clients': { access: 'ok', rows: [{ id: 'c1', business_name: 'Acme', status: 'active', start_date: '2026-09-01' }], message: '' },
+    'vai.prospects': { access: 'empty', rows: [], message: '' },
+    'vai.contracts': { access: 'ok', rows: [{ id: 'k1', title: 'Support', status: 'active', end_date: '2026-11-18', monthly_value_zmw: 400 }], message: '' },
+    'vai.services': { access: 'empty', rows: [], message: '' },
+    [`pms.tasks.${CORE_BUSINESS_IDS.vai}`]: { access: 'empty', rows: [], message: '' },
+    [`pms.projects.${CORE_BUSINESS_IDS.vai}`]: { access: 'empty', rows: [], message: '' },
+  }, TODAY)
+  const html = renderToStaticMarkup(createElement(BusinessWorkspace, { business: { id: 'vai', name: 'Vidmar AI (VAI)', code: 'VAI' }, model: filled, today: TODAY }))
+  assert.match(html, /aria-label="Finances"/)
+  assert.match(html, /aria-label="Operations"/)
+  assert.match(html, /aria-label="Clients"/)
+  assert.match(html, /aria-label="Month strip"/)
+  assert.match(html, /Daily income &(?:amp;)? expense/)
+  assert.match(html, /ZMW 2,500\.00/)
+  assert.match(html, /Acme/)
+  assert.match(html, /status-pill/)
+  assert.match(html, />Active</)
+  assert.match(html, new RegExp(EMPTY.budget.title))
+  assert.match(html, /Set a budget to track VAI spending against it/)
+  assert.doesNotMatch(html, /From a VAI expense table/)
+  assert.match(html, new RegExp(EMPTY.marketing.title))
+  assert.doesNotMatch(html, /will appear here|No data connected yet|coming soon|placeholder|\bdemo\b|\bdraft\b/i)
+  const empty = renderToStaticMarkup(createElement(BusinessWorkspace, {
+    business: { id: 'vt', name: 'Vidmar Transport (VT)', code: 'VT' },
+    model: buildAdapterModel('vt', {}, TODAY),
+    today: TODAY,
+  }))
+  for (const item of [EMPTY.finances, EMPTY.operations, EMPTY.clients, EMPTY.funds, EMPTY.marketing, EMPTY.budget]) {
+    assert.match(empty, new RegExp(item.title))
+  }
+  assert.match(empty, /Record income and expenses to follow VT for this period/)
+  assert.match(empty, /Set a budget to track VT spending against it/)
+  assert.doesNotMatch(empty, /will appear here|ZMW 0\.00|No data connected yet|1234/)
+  assert.match(empty, /Powered by/)
 })
 
 test('activities, inbox, and sms stay on their own screens', () => {
@@ -253,6 +299,8 @@ test('activities, inbox, and sms stay on their own screens', () => {
     user: findAccount('shadrickvidmar'), view: 'business', menu: false, setMenu: () => {}, mode: 'businesses', books: emptyBooks(), businessId: 've', title: 'Vidmar Entertainment (VE)', today: '2026-11-10',
     onOpen: () => {}, onLive: () => {}, onBack: () => {}, onBusiness: () => {}, onRole: () => {},
   }, createElement('p', null, 'Business body')))
+  assert.match(businessShell, /lucide-hexagon/)
+  assert.doesNotMatch(businessShell, /fill="#2563EB"/)
   assert.match(businessShell, /Select reporting period/)
   assert.match(businessShell, /Oct – Dec 2026/)
   assert.match(businessShell, /<details class="hod-header-popover hod-timeframe-popover">/)

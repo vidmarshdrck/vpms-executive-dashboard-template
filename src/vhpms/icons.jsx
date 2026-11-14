@@ -1,6 +1,6 @@
 import {
-  Activity, Building2, Calculator, Calendar, ClipboardList, Clapperboard, Cpu, Eye, EyeOff, Hexagon,
-  House, Inbox, Landmark, Layers, LayoutDashboard, Mail, Megaphone, MessageCircle, Package,
+  Activity, BarChart3, Building2, Calculator, Calendar, ClipboardList, Clapperboard, Cpu, Eye, EyeOff, Hexagon,
+  House, Inbox, Landmark, Layers, LayoutDashboard, Mail, Megaphone, MessageCircle, Package, PieChart,
   Receipt, Shield, Shirt, Smartphone, Target, Truck, Upload, UserRound, Users, Wallet,
 } from 'lucide-react'
 
@@ -34,6 +34,8 @@ const ICONS = {
   hexagon: Hexagon,
   eye: Eye,
   'eye-off': EyeOff,
+  bars: BarChart3,
+  pie: PieChart,
 }
 
 export const BUSINESS_ICONS = {

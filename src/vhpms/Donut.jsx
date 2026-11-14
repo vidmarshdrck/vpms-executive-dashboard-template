@@ -1,4 +1,4 @@
-export function Donut({ items, center, format }) {
+export function Donut({ items, center, format, renderName }) {
   const total = items.reduce((sum, item) => sum + item.value, 0)
   if (!total) return null
   const radius = 50
@@ -20,7 +20,7 @@ export function Donut({ items, center, format }) {
       </svg>
       <div className="dl">
         {items.map((item) => (
-          <div key={item.name}><i style={{ background: item.color }} /><span>{item.name}</span><b>{format(item.value)} · {Math.round(100 * item.value / total)}%</b></div>
+          <div key={item.name}><i style={{ background: item.color }} />{renderName ? renderName(item) : <span>{item.name}</span>}<b>{format(item.value)} · {Math.round(100 * item.value / total)}%</b></div>
         ))}
       </div>
     </div>
