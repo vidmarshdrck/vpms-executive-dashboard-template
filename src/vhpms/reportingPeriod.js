@@ -100,3 +100,10 @@ export function writeStoredPeriod(storage, userId, period, today) {
   }
   return safe
 }
+
+// Sign-in overwrites a saved range with the current calendar quarter, the same
+// way a new pms_app session discards the previous reporting preference.
+export function resetPeriodOnSignIn(storage, userId, today) {
+  try { storage?.removeItem(periodStorageKey(userId)) } catch { /* private mode */ }
+  return writeStoredPeriod(storage, userId, defaultPeriod(today), today)
+}
