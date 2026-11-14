@@ -10,9 +10,9 @@ const PERIOD_HIDDEN = new Set(['profile', 'activities', 'inbox', 'sms'])
 
 const LOGIN_SLIDES = [
   ['business.webp', 'Glass office towers'],
-  ['markets.webp', 'A trading chart'],
+  ['markets.webp', 'A rising trading chart'],
   ['estate.webp', 'A house and keys'],
-  ['transport.webp', 'Mountains above a road'],
+  ['transport.webp', 'An airplane wing above the clouds'],
   ['tech.webp', 'A computer circuit board'],
   ['classical.webp', 'The Colosseum, a ring of classical arches'],
 ]

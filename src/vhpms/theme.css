@@ -387,7 +387,7 @@
 }
 .vh-app .login-card > * { position: relative; z-index: 1; }
 .vh-app .login-mark { width: 32px; height: 32px; flex: none; display: block; }
-.vh-app .login-card .login-brand { margin-bottom: 65px; }
+.vh-app .login-card .login-brand { margin-bottom: 40px; }
 .vh-app .login-card h1,
 .vh-app .login-card label,
 .vh-app .login-card .brand-name { color: #101820; }
