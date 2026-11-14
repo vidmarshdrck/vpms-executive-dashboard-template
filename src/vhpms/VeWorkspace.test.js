@@ -72,15 +72,22 @@ test('the VE pages render mapped records', () => {
   assert.match(html, /Account owner/)
   assert.doesNotMatch(html, /Account \/ Names/)
   assert.match(html, /Amara Banda/)
+  assert.doesNotMatch(html, />Amara Banda<\/button>/)
   assert.match(html, /Twaambo Banda/)
+  assert.match(html, /Same as owner/)
+  assert.match(html, /Account paid/)
+  assert.doesNotMatch(html, /Paid status/)
+  assert.match(html, /aria-label="Slots for Twaambo Banda, 1\/5"/)
   assert.match(html, /Active \(1\)/)
   assert.match(html, /Inactive \(1\)/)
-  assert.match(html, /1 of 5/)
+  assert.match(html, />1\/5</)
+  assert.doesNotMatch(html, /1 of 5/)
+  assert.match(html, /Received · Oct – Dec 2026/)
   assert.match(html, /Total received/)
   assert.doesNotMatch(html, /role="dialog"/)
   const dialog = renderToStaticMarkup(createElement(FamilyModal, {
     account: {
-      id: '7', owner: 'Amara Banda', plan: 'Netflix',
+      id: '7', owner: 'Amara Banda', plan: 'Netflix', slotsTaken: 2, slotsTotal: 5,
       members: [
         { slot: 1, cid: 'C1', name: 'Amara Banda', lastPayment: { date: '2026-11-08', amount: 120 } },
         { slot: 2, cid: 'C2', name: 'Lombe Phiri', lastPayment: null },
@@ -89,8 +96,12 @@ test('the VE pages render mapped records', () => {
     onClose: () => {},
   }))
   assert.match(dialog, /role="dialog"/)
+  assert.match(dialog, /family-modal-title/)
+  assert.match(dialog, /Owner · Amara Banda · 2 of 5 slots/)
   assert.match(dialog, /Lombe Phiri/)
-  assert.match(dialog, /No payment recorded/)
+  assert.match(dialog, /Slot 2 · No payment recorded/)
+  assert.match(dialog, /8 Nov 2026/)
+  assert.match(dialog, /class="num"/)
   assert.match(dialog, /ZMW 120\.00/)
   assert.match(html, />Email</)
   assert.match(html, /aria-label="Email not recorded"/)
@@ -165,6 +176,8 @@ test('empty and blocked pages use finished copy', () => {
   }, TODAY)
   const html = renderWorkspace(empty)
   assert.match(html, new RegExp(COPY.familyEmpty))
+  assert.match(html, /Received · Oct – Dec 2026/)
+  assert.match(html, /class="stat-num">—</)
   assert.match(html, new RegExp(COPY.customersBlocked))
   assert.match(html, new RegExp(COPY.ordersBlocked))
   assert.match(html, new RegExp(COPY.expensesEmpty))

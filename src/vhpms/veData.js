@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { projectBudget } from './bankBudget.js'
 import { slicesBy } from './books.js'
+import { periodBounds } from './reportingPeriod.js'
 export { VE_UPCOMING } from './veUpcoming.js'
 
 export const FAMILY_COLUMNS = 'fid,aaid,product,due_date,paid_status,slots_total,slots_taken,slot_1,slot_2,slot_3,slot_4,slot_5'
@@ -186,6 +187,12 @@ export function latestPayments(orders) {
   return byCustomer
 }
 
+export function personName(value) {
+  const name = String(value || '').trim()
+  if (!name || name.toLowerCase() === 'nan') return ''
+  return name
+}
+
 function mapAccount(row, customers, today, agents) {
   const byId = new Map(customers.map((customer) => [customer.id, customer]))
   const members = [1, 2, 3, 4, 5].flatMap((slot) => {
@@ -196,7 +203,7 @@ function mapAccount(row, customers, today, agents) {
   })
   const recordedEmail = String(row.email || '').trim()
   const agentId = String(row.aaid || '').trim()
-  const holder = members.find((member) => member.slot === 1)
+  const holder = personName(agents.get(agentId))
   return {
     id: String(row.fid ?? ''),
     plan: String(row.product || '').trim() || 'Unspecified plan',
@@ -206,11 +213,39 @@ function mapAccount(row, customers, today, agents) {
     slotsTotal: Number(row.slots_total) || 0,
     slotsTaken: Number(row.slots_taken) || 0,
     email: recordedEmail.includes('@') ? recordedEmail : '',
-    owner: holder?.name || 'Not recorded',
+    owner: holder || 'Not recorded',
     names: members.map((member) => member.name).join(', '),
-    agent: agents.get(agentId) || agentId,
+    agent: holder,
     members,
   }
+}
+
+export function seatedCustomerIds(accounts) {
+  const ids = new Set()
+  for (const account of accounts || []) {
+    for (const member of account.members || []) {
+      const cid = String(member.cid || '').trim()
+      if (cid) ids.add(cid)
+    }
+  }
+  return ids
+}
+
+export function sumReceived(rows, { start = '', end = '', cids = null } = {}) {
+  const allowed = cids ? new Set([...cids].map((id) => String(id || '').trim()).filter(Boolean)) : null
+  return (rows || []).reduce((sum, row) => {
+    const date = isoDate(row?.date)
+    if (start && (!date || date < start)) return sum
+    if (end && (!date || date > end)) return sum
+    if (allowed && !allowed.has(String(row?.cid || '').trim())) return sum
+    return sum + amountOrZero(row?.amount)
+  }, 0)
+}
+
+export function receivedInPeriod(rows, period) {
+  if (!period) return sumReceived(rows)
+  const { start, end } = periodBounds(period)
+  return sumReceived(rows, { start, end })
 }
 
 function mapIncome(row, customers) {
@@ -219,6 +254,7 @@ function mapIncome(row, customers) {
   const customer = byId.get(cid)
   return {
     id: `order-${row.oid}`,
+    cid,
     date: isoDate(row.date),
     kind: 'income',
     title: customer?.name || (cid ? cid : 'Order'),

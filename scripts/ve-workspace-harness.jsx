@@ -16,13 +16,19 @@ const model = buildWorkspace({
     access: 'ok',
     rows: [
       { fid: 12, aaid: 'AG1', product: 'Netflix', due_date: '2026-12-05', paid_status: 'Unpaid', slots_total: 5, slots_taken: 3, slot_1: 'C1', slot_2: 'C2', slot_3: 'C3', password: 'must-not-render' },
-      { fid: 18, product: 'Apple Music', due_date: '2027-01-15', paid_status: 'Unpaid', slots_total: 5, slots_taken: 1, slot_1: 'C4' },
-      { fid: 4, product: 'Spotify', due_date: '2026-08-06', paid_status: 'Unpaid', slots_total: 5, slots_taken: 2, slot_1: 'C5', slot_2: 'C6' },
-      { fid: 9, product: 'Prime Video', due_date: '2026-05-24', paid_status: 'Unpaid', slots_total: 5, slots_taken: 0 },
-      { fid: 21, product: 'Starlink', due_date: '2026-12-20', paid_status: 'Unpaid', slots_total: 1, slots_taken: 1, slot_1: 'C2' },
+      { fid: 18, aaid: 'AG2', product: 'Apple Music', due_date: '2027-01-15', paid_status: 'Unpaid', slots_total: 5, slots_taken: 1, slot_1: 'C4' },
+      { fid: 4, aaid: 'AG3', product: 'Spotify', due_date: '2026-08-06', paid_status: 'Unpaid', slots_total: 5, slots_taken: 2, slot_1: 'C5', slot_2: 'C6' },
+      { fid: 9, aaid: 'AG4', product: 'Prime Video', due_date: '2026-05-24', paid_status: 'Unpaid', slots_total: 5, slots_taken: 0 },
+      { fid: 21, aaid: 'AG5', product: 'Starlink', due_date: '2026-12-20', paid_status: 'Unpaid', slots_total: 1, slots_taken: 1, slot_1: 'C2' },
     ],
   },
-  accountAgents: { access: 'ok', rows: [{ aaid: 'AG1', name: 'Twaambo Banda' }] },
+  accountAgents: { access: 'ok', rows: [
+    { aaid: 'AG1', name: 'Twaambo Banda' },
+    { aaid: 'AG2', name: 'Imani Zulu' },
+    { aaid: 'AG3', name: 'Mutale Phiri' },
+    { aaid: 'AG4', name: 'Bupe Mwansa' },
+    { aaid: 'AG5', name: 'Kondwani Banda' },
+  ] },
   customers: {
     access: 'ok',
     rows: [
