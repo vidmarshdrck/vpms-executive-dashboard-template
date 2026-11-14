@@ -95,6 +95,7 @@ try {
       }
       const summaryBox = summary.getBoundingClientRect()
       const panelBox = panel.getBoundingClientRect()
+      const headerBox = document.querySelector('.app-header').getBoundingClientRect()
       return {
         summary: pick(summary), icon: pick(icon), chevron: pick(chevron), panel: pick(panel),
         help: pick(help), select: pick(select), cancel: pick(cancel), apply: pick(apply),
@@ -102,6 +103,8 @@ try {
         rightDelta: (summaryBox.right - panelBox.right),
         panelTop: panelBox.top,
         panelRight: window.innerWidth - panelBox.right,
+        headerHeight: headerBox.height,
+        pillTop: summaryBox.top - headerBox.top,
         label: summary.querySelector('span').textContent,
         helpText: help.textContent,
       }
@@ -150,13 +153,16 @@ try {
     if (styles.select.borderColor !== 'rgb(214, 211, 209)') failures.push(`${width} select border ${styles.select.borderColor}`)
     if (styles.cancel.background !== 'rgba(0, 0, 0, 0)' || styles.cancel.color !== 'rgb(120, 113, 108)') failures.push(`${width} cancel ${styles.cancel.background} ${styles.cancel.color}`)
     if (styles.apply.background !== 'rgb(20, 84, 192)' || styles.apply.color !== 'rgb(255, 255, 255)') failures.push(`${width} apply ${styles.apply.background} ${styles.apply.color}`)
+    if (styles.summary.background !== 'rgb(255, 255, 255)') failures.push(`${width} open pill fill ${styles.summary.background}`)
     if (width === 1440) {
+      assertClose(styles.headerHeight, 61, '1440 header height', failures, 1)
+      assertClose(styles.pillTop, 27, '1440 pill offset', failures, 1)
       assertClose(styles.gap, 8, 'panel gap', failures)
       assertClose(styles.rightDelta, 0, 'panel right alignment', failures, 1)
       if (styles.panel.position !== 'absolute') failures.push(`1440 panel position ${styles.panel.position}`)
     } else {
-      if (styles.panel.position !== 'fixed') failures.push(`390 panel position ${styles.panel.position}`)
-      assertClose(styles.panelTop, 126, '390 panel top', failures, 1)
+      if (styles.panel.position !== 'absolute') failures.push(`390 panel position ${styles.panel.position}`)
+      assertClose(styles.gap, 8, '390 panel gap', failures, 1)
       assertClose(styles.panelRight, 12, '390 panel right', failures, 1)
     }
     await shot(`vhpms-${width}-open`)
@@ -208,17 +214,22 @@ try {
   if (failures.length) throw new Error(failures.join('\n'))
 
   const compare = await browser.newPage({ viewport: { width: 1400, height: 980 } })
-  for (const width of [1440, 390]) {
-    const html = `<!doctype html><meta charset="utf-8"><title>Timeframe ${width}</title>
-      <style>body{margin:0;background:#fff;font:600 14px/1.4 "Inter Tight Variable",sans-serif;color:#1C1917} .row{display:flex;align-items:flex-start;gap:16px;padding:16px} figure{margin:0} figcaption{margin:0 0 8px} img{display:block;border:1px solid #E4E1DB;height:860px;width:auto}</style>
+  const pairs = [
+    ['1440-closed', 'vhpms-1440-closed.png', 'VHPMS closed 1440'],
+    ['1440-open', 'vhpms-1440-open.png', 'VHPMS open 1440'],
+    ['390-open', 'vhpms-390-open.png', 'VHPMS open 390'],
+  ]
+  for (const [name, file, caption] of pairs) {
+    const html = `<!doctype html><meta charset="utf-8"><title>${caption}</title>
+      <style>body{margin:0;background:#fff;font:600 14px/1.4 "Inter Tight Variable",sans-serif;color:#1C1917} .row{display:flex;align-items:flex-start;gap:16px;padding:16px} figure{margin:0} figcaption{margin:0 0 8px} img{display:block;border:1px solid #E4E1DB}</style>
       <div class="row">
-        <figure><figcaption>VHPMS closed ${width}</figcaption><img src="/shot/vhpms-${width}-closed.png"></figure>
-        <figure><figcaption>VHPMS open ${width}</figcaption><img src="/shot/vhpms-${width}-open.png"></figure>
+        <figure><figcaption>${caption}</figcaption><img src="/shot/${file}"></figure>
         <figure><figcaption>selector.png</figcaption><img src="/shot/selector.png"></figure>
       </div>`
-    await writeFile(`${outDir}/compare-${width}.html`, html)
-    await compare.goto(`http://127.0.0.1:4318/compare-${width}.html`, { waitUntil: 'networkidle' })
-    await compare.screenshot({ path: `${artifactDir}/timeframe-${width}-closed-open-vs-reference.png`, fullPage: true })
+    await writeFile(`${outDir}/compare-${name}.html`, html)
+    await compare.setViewportSize({ width: 3000, height: 1000 })
+    await compare.goto(`http://127.0.0.1:4318/compare-${name}.html`, { waitUntil: 'networkidle' })
+    await compare.screenshot({ path: `${artifactDir}/timeframe-${name}-vs-reference.png`, fullPage: true })
   }
   await compare.close()
 } finally {
