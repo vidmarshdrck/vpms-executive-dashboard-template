@@ -64,6 +64,22 @@ function paymentDate(value) {
   return `${day} ${PAYMENT_MONTHS[month - 1]} ${year}`
 }
 
+function displayDate(value) {
+  return paymentDate(value) || value
+}
+
+function sentenceCase(value) {
+  const text = String(value || '').trim()
+  if (!text) return ''
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
+}
+
+function agentPlain(row) {
+  if (!row.agent) return '—'
+  if (row.agent === row.owner) return 'Same as owner'
+  return row.agent
+}
+
 function agentLabel(row) {
   if (!row.agent) return '—'
   if (row.agent === row.owner) return <span className="same-owner">Same as owner</span>
@@ -171,11 +187,8 @@ export function FamilyModal({ account, onClose }) {
   return createPortal(dialog, document.querySelector('.vh-app') || document.body)
 }
 
-function accountMeta(row) {
-  const parts = [row.activity, row.plan, `Due ${row.dueDate}`, `Account paid: ${row.paidStatus}`]
-  if (row.email) parts.push(row.email)
-  parts.push(row.agent && row.agent !== row.owner ? row.agent : row.agent ? 'Same as owner' : 'No agent recorded')
-  return parts.join(' · ')
+function accountCardLine(row) {
+  return [row.plan, displayDate(row.dueDate), agentPlain(row)].join(' · ')
 }
 
 function AccountTable({ accounts, empty, onOpen }) {
@@ -184,7 +197,7 @@ function AccountTable({ accounts, empty, onOpen }) {
     { key: 'owner', label: <ColumnLabel icon="users">Account owner</ColumnLabel>, cell: (row) => row.owner },
     { key: 'status', label: <ColumnLabel icon="activity">Status</ColumnLabel>, cell: (row) => <StatusChip value={row.activity} /> },
     { key: 'plan', label: <ColumnLabel icon="package">Plan</ColumnLabel>, cell: (row) => row.plan },
-    { key: 'due', label: <ColumnLabel icon="calendar">Due date</ColumnLabel>, cell: (row) => row.dueDate },
+    { key: 'due', label: <ColumnLabel icon="calendar">Due date</ColumnLabel>, cell: (row) => displayDate(row.dueDate) },
     { key: 'email', label: <ColumnLabel icon="mail">Email</ColumnLabel>, cell: (row) => row.email || <span aria-label="Email not recorded" /> },
     { key: 'slots', label: <ColumnLabel icon="layers">Slots</ColumnLabel>, cell: (row) => slotButton(row, onOpen) },
     { key: 'paid', label: <ColumnLabel icon="receipt">Account paid</ColumnLabel>, cell: (row) => <StatusChip value={row.paidStatus} /> },
@@ -195,9 +208,16 @@ function AccountTable({ accounts, empty, onOpen }) {
       <div className="family-table"><DataTable rows={accounts} empty={empty} columns={columns} /></div>
       <ul className="family-cards record-cards">
         {accounts.map((row) => (
-          <li key={row.id} className="record-card">
-            <div className="record-line"><strong>{row.owner}</strong>{slotButton(row, onOpen)}</div>
-            <p className="record-meta">{accountMeta(row)}</p>
+          <li key={row.id} className="record-card account-card">
+            <div className="record-line">
+              <div className="record-title">
+                <strong>{row.owner}</strong>
+                <StatusChip value={row.activity} />
+                <StatusChip value={row.paidStatus} />
+              </div>
+              {slotButton(row, onOpen)}
+            </div>
+            <p className="record-meta">{accountCardLine(row)}</p>
           </li>
         ))}
       </ul>
@@ -250,7 +270,7 @@ function FamilyAccounts({ model }) {
                 empty={COPY.plansEmpty}
                 columns={[
                   { key: 'name', label: 'Plan', cell: (row) => row.name },
-                  { key: 'category', label: 'Category', cell: (row) => row.category },
+                  { key: 'category', label: 'Category', cell: (row) => sentenceCase(row.category) },
                   { key: 'slots', label: 'Slots', cell: (row) => (row.shared ? `${row.slots ?? '—'} shared` : 'Not shared') },
                   { key: 'price', className: 'num', label: 'Price', cell: (row) => (row.price == null ? 'Not recorded' : formatZmw(row.price)) },
                   { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.active ? 'Active' : 'Inactive'} /> },
@@ -264,7 +284,7 @@ function FamilyAccounts({ model }) {
                     <strong>{row.name}</strong>
                     <span className="num">{row.price == null ? 'Not recorded' : formatZmw(row.price)}</span>
                   </div>
-                  <p className="record-meta">{row.category} · {row.shared ? `${row.slots ?? '—'} shared` : 'Not shared'} · {row.active ? 'Active' : 'Inactive'}</p>
+                  <p className="record-meta">{sentenceCase(row.category)} · {row.shared ? `${row.slots ?? '—'} shared` : 'Not shared'} · {row.active ? 'Active' : 'Inactive'}</p>
                 </li>
               ))}
             </ul>

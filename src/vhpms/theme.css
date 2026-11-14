@@ -419,8 +419,12 @@
 .vh-app .record-cards { list-style: none; margin: 0; padding: 0; }
 .vh-app .record-card { padding: 10px 0; border-bottom: 1px solid var(--border); }
 .vh-app .record-card:last-child { border-bottom: none; }
-.vh-app .record-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.vh-app .record-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.vh-app .record-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.vh-app .record-title .chip { flex: none; }
 .vh-app .record-line strong { min-width: 0; color: var(--text-primary); font-weight: 600; }
+.vh-app .account-card .record-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vh-app .account-card .record-meta { white-space: nowrap; }
 .vh-app .record-line .num,
 .vh-app .record-line .slot-count { flex: none; }
 .vh-app .record-meta { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-muted); }
