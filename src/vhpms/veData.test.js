@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   AGENT_COLUMNS, BANK_ACCOUNT_COLUMNS, BANK_TXN_COLUMNS, CUSTOMER_COLUMNS, EXPENSE_COLUMNS, FAMILY_COLUMNS, MARKETING_COLUMNS, ORDER_COLUMNS, PRODUCT_COLUMNS, SPEND_COLUMNS,
-  buildWorkspace, classifyResult, createVeClient, fetchVeWorkspace, filterCustomers, filterFunds, financeSummary, fundsByMonth, weekStart, weeklyBudget, whatsappHref, whatsappNumber,
+  buildWorkspace, classifyResult, createVeClient, fetchVeWorkspace, filterCustomers, filterFunds, financeSummary, fundsByMonth, receivedInPeriod, seatedCustomerIds, sumReceived, weekStart, weeklyBudget, whatsappHref, whatsappNumber,
 } from './veData.js'
 
 const TODAY = '2026-11-08'
@@ -40,14 +40,23 @@ test('family accounts map connected names and leave email blank when none is sto
   assert.equal(model.activeAccounts.length, 1)
   assert.equal(model.inactiveAccounts.length, 2)
   assert.equal(model.activeAccounts[0].plan, 'Netflix')
-  assert.equal(model.activeAccounts[0].owner, 'Amara Banda')
-  assert.equal(model.activeAccounts[0].agent, 'AG1')
+  assert.equal(model.activeAccounts[0].owner, 'Not recorded')
+  assert.equal(model.activeAccounts[0].agent, '')
+  assert.equal(model.activeAccounts[0].members[0].name, 'Amara Banda')
   const named = buildWorkspace(sources({
     familyAccounts: { access: 'ok', rows: accounts, message: '' },
     customers: { access: 'ok', rows: customers, message: '' },
     accountAgents: { access: 'ok', rows: [{ aaid: 'AG1', name: 'Twaambo Banda', email: 'agent@example.com' }] },
   }), TODAY)
+  assert.equal(named.activeAccounts[0].owner, 'Twaambo Banda')
   assert.equal(named.activeAccounts[0].agent, 'Twaambo Banda')
+  assert.notEqual(named.activeAccounts[0].owner, named.activeAccounts[0].members[0].name)
+  const blankName = buildWorkspace(sources({
+    familyAccounts: { access: 'ok', rows: accounts, message: '' },
+    accountAgents: { access: 'ok', rows: [{ aaid: 'AG1', name: 'nan' }] },
+  }), TODAY)
+  assert.equal(blankName.activeAccounts[0].owner, 'Not recorded')
+  assert.equal(blankName.activeAccounts[0].agent, '')
   assert.equal(JSON.stringify(named).includes('agent@example.com'), false)
   assert.equal(model.activeAccounts[0].names, 'Amara Banda, Lombe Phiri')
   assert.equal(model.activeAccounts[0].email, '')
@@ -58,6 +67,23 @@ test('family accounts map connected names and leave email blank when none is sto
   assert.equal(packed.includes(OTHER_SECRET), false)
   assert.equal(packed.includes('password'), false)
   assert.equal(model.customers.find((row) => row.id === 'C1').phone, '260970000000')
+})
+
+test('received totals follow a period, and family-seated orders are a separate slice', () => {
+  const orders = [
+    { date: '2026-03-02', amount: 100, cid: 'C1' },
+    { date: '2026-03-18', amount: 40, cid: 'C9' },
+    { date: '2026-10-04', amount: 25, cid: 'C1' },
+    { date: '2026-11-02', amount: 10, cid: 'C2' },
+  ]
+  const accounts = [{ members: [{ cid: 'C1' }, { cid: 'C2' }] }]
+  const seated = seatedCustomerIds(accounts)
+  assert.equal(receivedInPeriod(orders, { year: 2026, from: 3, to: 3 }), 140)
+  assert.equal(receivedInPeriod(orders, { year: 2026, from: 10, to: 10 }), 25)
+  assert.equal(receivedInPeriod(orders, { year: 2026, from: 10, to: 12 }), 35)
+  assert.equal(sumReceived(orders), 175)
+  assert.equal(sumReceived(orders, { cids: seated }), 135)
+  assert.equal(sumReceived(orders, { cids: seated, start: '2026-03-01', end: '2026-03-31' }), 100)
 })
 
 test('customers, orders, and expenses keep the fields the pages show', () => {

@@ -88,20 +88,26 @@ try {
       await page.screenshot({ path: `${outDir}/${name.toLowerCase().replaceAll(' ', '-')}-${label}.png`, fullPage: true })
     }
   }
-  await page.setViewportSize({ width: 1440, height: 1000 })
-  await page.getByRole('tab', { name: 'Family Accounts', exact: true }).click()
-  await page.waitForFunction((label) => {
-    const tab = [...document.querySelectorAll('[aria-label="VE sections"] [role="tab"]')].find((item) => item.textContent === label)
-    const panel = document.getElementById(tab?.getAttribute('aria-controls') || '')
-    if (!panel) return false
-    const view = panel.closest('.slide-viewport').getBoundingClientRect()
-    return Math.abs(panel.getBoundingClientRect().x - view.x) < 2
-  }, 'Family Accounts')
-  await page.getByRole('button', { name: /Slots for / }).first().click()
-  await page.getByRole('dialog').waitFor()
-  await page.screenshot({ path: `${outDir}/family-accounts-popup-desktop.png`, fullPage: false })
-  await page.keyboard.press('Escape')
-  await page.getByRole('dialog').waitFor({ state: 'hidden' })
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    await page.getByRole('tab', { name: 'Family Accounts', exact: true }).click()
+    await page.waitForFunction((label) => {
+      const tab = [...document.querySelectorAll('[aria-label="VE sections"] [role="tab"]')].find((item) => item.textContent === label)
+      const panel = document.getElementById(tab?.getAttribute('aria-controls') || '')
+      if (!panel) return false
+      const view = panel.closest('.slide-viewport').getBoundingClientRect()
+      return Math.abs(panel.getBoundingClientRect().x - view.x) < 2
+    }, 'Family Accounts')
+    const tableName = width === 1440 ? 'family-accounts-table-1440.png' : 'family-accounts-table-390.png'
+    await page.screenshot({ path: `${outDir}/${tableName}`, fullPage: true })
+    await page.getByRole('button', { name: /Slots for / }).first().click()
+    await page.getByRole('dialog').waitFor()
+    const popupName = width === 1440 ? 'family-accounts-members-1440.png' : 'family-accounts-members-390.png'
+    await page.screenshot({ path: `${outDir}/${popupName}`, fullPage: false })
+    if (width === 1440) await page.screenshot({ path: `${outDir}/family-accounts-popup-desktop.png`, fullPage: false })
+    await page.keyboard.press('Escape')
+    await page.getByRole('dialog').waitFor({ state: 'hidden' })
+  }
   const secret = await page.locator('body').innerText()
   if (secret.includes('must-not-render')) throw new Error('secret rendered')
   await page.setViewportSize({ width: 1440, height: 1000 })

@@ -404,6 +404,12 @@
 @media (prefers-reduced-motion: reduce) { .vh-app .login-slides img { transition: none; } }
 .vh-app .funds-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .vh-app .segmented { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.vh-app .family-received { margin-bottom: 16px; }
+.vh-app .family-received .card-body { padding-top: 14px; padding-bottom: 14px; }
+.vh-app .family-received .stat-num { font-size: 28px; }
+.vh-app .family-accounts table.data th,
+.vh-app .family-accounts table.data td { padding: 6px 10px; }
+.vh-app .slot-count { color: var(--brand); font-variant-numeric: tabular-nums; font-weight: 600; }
 .vh-app table.data tbody tr.is-clickable { cursor: pointer; }
 .vh-app .vh-modal { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 24px; }
 .vh-app .vh-modal-backdrop { position: absolute; inset: 0; margin: 0; padding: 0; border: 0; background: rgba(16, 24, 32, 0.55); cursor: pointer; }

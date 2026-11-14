@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import SlideTabs from './SlideTabs.jsx'
 import { Donut, PageFooter } from './Donut.jsx'
@@ -10,7 +10,7 @@ import { AccountBars, MonthCalendar, StandardOverview } from './businessPanels.j
 import { glanceFromVe } from './businessSources.js'
 import { monthsInPeriod, rowsInPeriod, weekOverlapsPeriod } from './reportingPeriod.js'
 import { useReportingPeriod } from './TimeframePopover.jsx'
-import { COPY, acquisitionSummary, buildWorkspace, emptySources, fetchVeWorkspace, filterCustomers, todayIso, weeklyBudget, whatsappHref } from './veData.js'
+import { COPY, acquisitionSummary, buildWorkspace, emptySources, fetchVeWorkspace, filterCustomers, receivedInPeriod, todayIso, weeklyBudget, whatsappHref } from './veData.js'
 
 function Panel({ title, children, note }) {
   return (
@@ -65,18 +65,45 @@ function accessMessage(access, empty, blocked) {
 }
 
 export function FamilyModal({ account, onClose }) {
+  const panelRef = useRef(null)
   useEffect(() => {
     if (!account) return undefined
-    function onKey(event) { if (event.key === 'Escape') onClose() }
+    const opener = document.activeElement
+    const panel = panelRef.current
+    const closeButton = panel?.querySelector('[data-family-close]')
+    closeButton?.focus()
+    function onKey(event) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+        return
+      }
+      if (event.key !== 'Tab' || !panel) return
+      const focusable = [...panel.querySelectorAll('button, [href], input, select, textarea')].filter((node) => !node.hasAttribute('disabled'))
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      if (opener instanceof HTMLElement) opener.focus()
+    }
   }, [account, onClose])
   if (!account) return null
+  const titleId = `family-members-${account.id || 'account'}`
   const dialog = (
     <div className="vh-modal">
-      <button type="button" className="vh-modal-backdrop" aria-label="Close" onClick={onClose} />
-      <section className="card vh-modal-panel" role="dialog" aria-modal="true" aria-label={`${account.owner} family`}>
-        <div className="card-head"><h2>{account.plan}</h2><button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>Close</button></div>
+      <button type="button" className="vh-modal-backdrop" aria-label="Close family members" onClick={onClose} />
+      <section ref={panelRef} className="card vh-modal-panel" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <div className="card-head"><h2 id={titleId}>{account.plan}</h2><button type="button" className="btn btn-ghost btn-sm" data-family-close onClick={onClose}>Close</button></div>
         <div className="card-body">
           <p className="stat-desc" style={{ marginTop: 0 }}>{account.owner}</p>
           {account.members.length ? (
@@ -109,14 +136,16 @@ function AccountTable({ accounts, empty, onOpen }) {
     <DataTable
       rows={accounts}
       empty={empty}
-      onRow={onOpen}
       columns={[
         { key: 'owner', label: <ColumnLabel icon="users">Account owner</ColumnLabel>, cell: (row) => row.owner },
         { key: 'status', label: <ColumnLabel icon="activity">Status</ColumnLabel>, cell: (row) => <StatusChip value={row.activity} /> },
         { key: 'plan', label: <ColumnLabel icon="package">Plan</ColumnLabel>, cell: (row) => row.plan },
         { key: 'due', label: <ColumnLabel icon="calendar">Due date</ColumnLabel>, cell: (row) => row.dueDate },
         { key: 'email', label: <ColumnLabel icon="mail">Email</ColumnLabel>, cell: (row) => row.email || <span aria-label="Email not recorded" /> },
-        { key: 'slots', label: <ColumnLabel icon="layers">Slots</ColumnLabel>, cell: (row) => <button type="button" className="btn btn-ghost btn-sm" aria-label={`Slots for ${row.owner}`} onClick={(event) => { event.stopPropagation(); onOpen(row) }}>{row.slotsTaken} of {row.slotsTotal}</button> },
+        { key: 'slots', label: <ColumnLabel icon="layers">Slots</ColumnLabel>, cell: (row) => {
+          const count = `${row.slotsTaken}/${row.slotsTotal}`
+          return <button type="button" className="btn btn-ghost btn-sm slot-count" aria-haspopup="dialog" aria-label={`Slots for ${row.owner}, ${count}`} onClick={() => onOpen(row)}>{count}</button>
+        } },
         { key: 'paid', label: <ColumnLabel icon="receipt">Paid status</ColumnLabel>, cell: (row) => <StatusChip value={row.paidStatus} /> },
         { key: 'agent', label: <ColumnLabel icon="user">Agent</ColumnLabel>, cell: (row) => row.agent || '—' },
       ]}
@@ -131,13 +160,24 @@ function Overview({ model }) {
 function FamilyAccounts({ model }) {
   const [account, setAccount] = useState(null)
   const [group, setGroup] = useState('active')
+  const closeAccount = useCallback(() => setAccount(null), [])
+  const period = useReportingPeriod(model.today)
+  const ordersReadable = model.access.orders === 'ok' || model.access.orders === 'empty'
+  const received = ordersReadable ? receivedInPeriod(model.income, period) : null
   const message = accessMessage(model.access.familyAccounts, COPY.familyEmpty, COPY.familyBlocked)
   const plansMessage = accessMessage(model.access.products, COPY.plansEmpty, COPY.plansEmpty)
   const rows = group === 'active' ? model.activeAccounts : model.inactiveAccounts
   return (
-    <>
+    <div className="family-accounts">
       <h2 className="sr-only">Family accounts</h2>
-      <FamilyModal account={account} onClose={() => setAccount(null)} />
+      <section className="card family-received">
+        <div className="card-body">
+          <div className="stat-num">{received == null ? '—' : formatZmw(received)}</div>
+          <div className="stat-desc">Received · {period.label}</div>
+          {!ordersReadable && <p className="stat-desc">{accessMessage(model.access.orders, '', COPY.ordersBlocked)}</p>}
+        </div>
+      </section>
+      <FamilyModal account={account} onClose={closeAccount} />
       {message ? <Message>{message}</Message> : (
         <>
           <div className="segmented" role="tablist" aria-label="Account activity">
@@ -164,7 +204,7 @@ function FamilyAccounts({ model }) {
           />
         )}
       </Panel>
-    </>
+    </div>
   )
 }
 
