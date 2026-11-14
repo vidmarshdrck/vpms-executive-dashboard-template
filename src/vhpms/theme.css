@@ -386,12 +386,12 @@
   }
 }
 .vh-app .login-card > * { position: relative; z-index: 1; }
+.vh-app .login-mark { width: 32px; height: 32px; flex: none; display: block; }
+.vh-app .login-card .login-brand { margin-bottom: 65px; }
 .vh-app .login-card h1,
 .vh-app .login-card label,
 .vh-app .login-card .brand-name { color: #101820; }
-.vh-app .login-card .brand-eyebrow { color: #1454c0; }
 .vh-app .login-card .sub,
-.vh-app .login-card .brand-sub,
 .vh-app .login-card .login-foot,
 .vh-app .login-card .vidmar-credit { color: #292524; }
 .vh-app .login-card input { background: #fff; color: #1C1917; border: 1px solid #44403C; }
@@ -401,7 +401,7 @@
 .vh-app .password-toggle svg { width: 18px; height: 18px; stroke: currentColor; fill: none; }
 @media (max-width: 800px) {
   .vh-app .login-layout { grid-template-columns: 1fr; grid-template-rows: 1fr auto; align-items: end; }
-  .vh-app .login-card { margin: 16px 16px 24px; }
+  .vh-app .login-card { margin: 16px 16px calc(env(safe-area-inset-bottom) + 16px); }
   .vh-app .header-tools { gap: 6px; }
 }
 @media (prefers-reduced-motion: reduce) { .vh-app .login-slides img { transition: none; } }

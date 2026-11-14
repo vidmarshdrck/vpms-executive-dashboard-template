@@ -12,7 +12,7 @@ const LOGIN_SLIDES = [
   ['business.webp', 'Glass office towers'],
   ['markets.webp', 'A trading chart'],
   ['estate.webp', 'A house and keys'],
-  ['transport.webp', 'A freight truck on a mountain road'],
+  ['transport.webp', 'Mountains above a road'],
   ['tech.webp', 'A computer circuit board'],
   ['classical.webp', 'The Colosseum, a ring of classical arches'],
 ]
@@ -39,10 +39,9 @@ export function LoginScreen({ error, busy, onSubmit }) {
           <div className="login-stage" />
           <div className="login-card">
             <div className="login-brand">
-              <span className="brand-logo" aria-hidden="true"><NavIcon name="hexagon" /></span>
-              <span className="brand-text"><span className="brand-name">VHPMS</span><span className="brand-sub">Performance</span></span>
+              <img className="login-mark" src={`${base}vh-submark-on-light.svg`} alt="" width={32} height={32} />
+              <span className="brand-name">VHPMS</span>
             </div>
-            <p className="brand-eyebrow">VHPMS</p>
             <h1>Performance Management System</h1>
             <p className="sub">Sign in with your PMS account.</p>
             {error && <div className="form-msg error">{error}</div>}
