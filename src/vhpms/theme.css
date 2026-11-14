@@ -56,10 +56,14 @@
 .vh-app button, .vh-app input, .vh-app select, .vh-app textarea { font: inherit; }
 .vh-app button:focus-visible, .vh-app a:focus-visible, .vh-app select:focus-visible { outline: 3px solid #F59E0B; outline-offset: 2px; }
 
+.vh-app:has(.sidebar) { display: flex; align-items: stretch; min-height: 100vh; }
 .vh-app .sidebar {
-  position: fixed; inset: 0 auto 0 0; width: var(--sidebar-w); height: 100vh; z-index: 50;
+  position: relative; flex: 0 0 var(--sidebar-w); width: var(--sidebar-w); min-height: 100vh; height: auto; align-self: stretch; z-index: 50;
   background: #fff; border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; transition: transform .3s ease, width .2s ease;
+  transition: transform .3s ease, width .2s ease;
+}
+.vh-app .sidebar-sticky {
+  position: sticky; top: 0; display: flex; flex-direction: column; height: 100vh; max-height: 100vh;
 }
 .vh-app .sidebar-brand {
   display: flex; align-items: center; gap: 12px; padding: 20px 16px; border: 0; border-bottom: 1px solid var(--border);
@@ -71,8 +75,6 @@
   background: var(--brand); color: #fff; display: grid; place-items: center;
 }
 .vh-app .brand-logo svg { width: 22px; height: 22px; stroke: #fff; }
-.vh-app .sidebar-brand .brand-logo { background: #fff; }
-.vh-app .sidebar-brand .brand-logo svg { width: 28px; height: 28px; stroke: none; }
 .vh-app .brand-text { min-width: 0; }
 .vh-app .brand-name { display: block; font: 700 14px/1.2 var(--font-sans); letter-spacing: -.01em; color: var(--text-primary); white-space: nowrap; }
 .vh-app .brand-sub { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); margin-top: 2px; }
@@ -113,7 +115,7 @@
   font-size: 12px; font-weight: 600; color: var(--text-muted);
 }
 .vh-app .side-user button.logout:hover { color: var(--rag-red); }
-.vh-app .app-main { margin-left: var(--sidebar-w); min-height: 100vh; display: flex; flex-direction: column; transition: margin-left .2s ease; }
+.vh-app .app-main { flex: 1 1 auto; min-width: 0; margin-left: 0; min-height: 100vh; display: flex; flex-direction: column; transition: margin-left .2s ease; }
 @media (min-width: 1024px) {
   .vh-app.sidebar-retracted { --sidebar-w: 76px; }
   .vh-app.sidebar-retracted .brand-text,
@@ -142,7 +144,7 @@
 .vh-app .scrim { display: none; position: fixed; inset: 0; z-index: 40; background: rgba(15, 23, 42, .3); }
 .vh-app .app-content { flex: 1; }
 @media (max-width: 1023px) {
-  .vh-app .sidebar { transform: translateX(-100%); }
+  .vh-app .sidebar { position: fixed; inset: 0 auto 0 0; height: 100vh; min-height: 0; flex: none; transform: translateX(-100%); }
   .vh-app .sidebar.open { transform: none; }
   .vh-app .sidebar.open ~ .scrim { display: block; }
   .vh-app .app-main { margin-left: 0; }

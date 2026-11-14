@@ -85,6 +85,10 @@ try {
       }, name)
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)
       if (!overflow) throw new Error(`${name} ${label} overflows`)
+      if (width === 1440 && name === 'Overview') {
+        const cover = await page.evaluate(() => ({ side: document.querySelector('.sidebar').offsetHeight, doc: document.documentElement.scrollHeight }))
+        if (cover.side + 1 < cover.doc) throw new Error(`sidebar ${cover.side}px stops short of the ${cover.doc}px page`)
+      }
       await page.screenshot({ path: `${outDir}/${name.toLowerCase().replaceAll(' ', '-')}-${label}.png`, fullPage: true })
     }
   }
@@ -139,7 +143,8 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('http://127.0.0.1:4317/?business=vai')
   await page.getByRole('tab', { name: 'Overview', exact: true }).waitFor()
-  await page.getByRole('region', { name: 'Finances' }).getByText('ZMW 2,500.00').waitFor()
+  await page.getByRole('heading', { name: 'Vidmar AI (VAI)' }).waitFor()
+  await page.getByRole('img', { name: 'Month strip' }).first().waitFor()
   const vaiPages = ['Overview', 'Funds', 'Marketing', 'Budget']
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
