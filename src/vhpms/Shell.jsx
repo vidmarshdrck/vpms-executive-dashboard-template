@@ -65,6 +65,15 @@ export function LoginScreen({ error, busy, onSubmit }) {
   )
 }
 
+function VidmarSubmark() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M10 12 L28 52 L24 52 L6 12 Z" fill="#2563EB" />
+      <path d="M54 12 L36 52 L32 52 L48 14 L54 12 Z" fill="#1F2937" />
+    </svg>
+  )
+}
+
 function NavButton({ item, current, onOpen }) {
   return <button type="button" aria-current={current === item.id ? 'page' : undefined} onClick={() => onOpen(item.id)}><NavIcon name={item.icon} /><span className="nav-label">{item.label}</span></button>
 }
@@ -99,7 +108,7 @@ function ShellFrame({ user, view, menu, setMenu, mode, books, businessId, inboxC
     <div className={`vh-app${retracted ? ' sidebar-retracted' : ''}`}>
       <aside className={`sidebar ${menu ? 'open' : ''}`} id="sidebar">
         <button type="button" className="sidebar-brand" aria-controls="sidebar" aria-expanded={menu || !retracted} aria-label={retracted && !menu ? 'Expand sidebar' : 'Collapse sidebar'} onClick={toggleSidebar}>
-          <span className="brand-logo" aria-hidden="true"><NavIcon name="hexagon" /></span>
+          <span className="brand-logo" aria-hidden="true"><VidmarSubmark /></span>
           <span className="brand-text"><span className="brand-name">Vidmar Holdings</span><span className="brand-sub">VHPMS</span></span>
         </button>
         <nav className="side-nav" aria-label="Primary navigation">

@@ -71,6 +71,8 @@
   background: var(--brand); color: #fff; display: grid; place-items: center;
 }
 .vh-app .brand-logo svg { width: 22px; height: 22px; stroke: #fff; }
+.vh-app .sidebar-brand .brand-logo { background: #fff; }
+.vh-app .sidebar-brand .brand-logo svg { width: 28px; height: 28px; stroke: none; }
 .vh-app .brand-text { min-width: 0; }
 .vh-app .brand-name { display: block; font: 700 14px/1.2 var(--font-sans); letter-spacing: -.01em; color: var(--text-primary); white-space: nowrap; }
 .vh-app .brand-sub { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); margin-top: 2px; }

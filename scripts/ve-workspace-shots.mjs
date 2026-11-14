@@ -139,10 +139,25 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('http://127.0.0.1:4317/?business=vai')
   await page.getByRole('tab', { name: 'Overview', exact: true }).waitFor()
-  await page.getByText('No data connected yet').first().waitFor()
-  await page.screenshot({ path: `${outDir}/vai-overview-desktop.png`, fullPage: true })
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.screenshot({ path: `${outDir}/vai-overview-mobile.png`, fullPage: true })
+  await page.getByRole('region', { name: 'Finances' }).getByText('Expenses recorded for this business will appear here.').waitFor()
+  const vaiPages = ['Overview', 'Funds', 'Marketing', 'Budget']
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    const label = width === 1440 ? 'desktop' : 'mobile'
+    for (const name of vaiPages) {
+      await page.getByRole('tab', { name, exact: true }).click()
+      await page.waitForFunction((tabName) => {
+        const tab = [...document.querySelectorAll('[aria-label="Business sections"] [role="tab"]')].find((item) => item.textContent === tabName)
+        const panel = document.getElementById(tab?.getAttribute('aria-controls') || '')
+        if (!panel) return false
+        const view = panel.closest('.slide-viewport').getBoundingClientRect()
+        return Math.abs(panel.getBoundingClientRect().x - view.x) < 2
+      }, name)
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)
+      if (!overflow) throw new Error(`VAI ${name} ${label} overflows`)
+      await page.screenshot({ path: `${outDir}/vai-${name.toLowerCase()}-${label}.png`, fullPage: true })
+    }
+  }
   if (errors.length) throw new Error(errors.join('\n'))
   console.log(JSON.stringify({ outDir, pages: pages.length, widths: [1440, 390] }))
 } finally {

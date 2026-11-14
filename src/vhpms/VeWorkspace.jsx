@@ -355,6 +355,115 @@ function RankedSplit({ title, rows, center, format = formatZmw }) {
 }
 
 
+function BalanceChart({ title, points, currency }) {
+  const width = 640
+  const height = 180
+  const values = points.map((point) => point.balance)
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const span = max - min || 1
+  const coords = points.map((point, index) => {
+    const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * width
+    const y = height - 16 - ((point.balance - min) / span) * (height - 32)
+    return { ...point, x, y }
+  })
+  return (
+    <Panel title={title}>
+      <svg className="chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title}>
+        <polyline fill="none" stroke="var(--brand)" strokeWidth="3" points={coords.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ')} />
+        {coords.map((point) => <circle key={point.id} cx={point.x} cy={point.y} r="3.5" fill="var(--brand)"><title>{point.date}: {formatMoney(point.balance, currency)}</title></circle>)}
+      </svg>
+    </Panel>
+  )
+}
+
+function BankAccountBlock({ account, model, range, query, category }) {
+  const period = accountPeriod(account, model.bankTransactions, range)
+  const own = model.bankTransactions.filter((row) => row.accountId === account.id)
+  const trail = filterBankTransactions(own, { start: range.start, end: range.end, query, category })
+  const spend = filterBankTransactions(own, { start: range.start, end: range.end }).filter((row) => row.amount < 0).map((row) => ({ category: categoryLabel(row.category), amount: -row.amount }))
+  const money = (amount) => formatMoney(amount, account.currency)
+  return (
+    <>
+      <article className="card" style={{ marginBottom: 16 }}>
+        <div className="card-head">
+          <h2>{account.label}</h2>
+          <span className="chip na">{account.last4 ? `Ending ${account.last4}` : account.currency}</span>
+        </div>
+        <div className="card-body">
+          {account.bank && <p className="stat-desc">{account.bank}</p>}
+          <div className="grid-3">
+            <div><div className="stat-num" style={{ fontSize: 28 }}>{money(period.current)}</div><div className="stat-desc">Current balance</div></div>
+            <div><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-green)' }}>{money(period.moneyIn)}</div><div className="stat-desc">In this period</div></div>
+            <div><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-red)' }}>{money(period.moneyOut)}</div><div className="stat-desc">Out this period</div></div>
+          </div>
+          {account.openingBalance != null && <p className="stat-desc">Opening balance {money(account.openingBalance)}</p>}
+        </div>
+      </article>
+      {period.points.length ? <BalanceChart title="Balance over time" points={period.points} currency={account.currency} /> : <Panel title="Balance over time"><Message>No balance points in this period.</Message></Panel>}
+      <RankedSplit title="Spending by category" rows={spend} center="Spending" format={money} />
+      <Panel title="Transactions">
+        {own.length ? (
+          <DataTable
+            rows={trail}
+            empty={COPY.bankTrailEmpty}
+            columns={[
+              { key: 'date', label: 'Date', cell: (row) => row.date },
+              { key: 'description', label: 'Description', cell: (row) => <>{row.description || '—'}{row.reference ? <small style={{ display: 'block' }}>{row.reference}</small> : null}</> },
+              { key: 'category', label: 'Category', cell: (row) => categoryLabel(row.category) },
+              { key: 'amount', label: 'Amount', cell: (row) => <span style={{ color: row.amount < 0 ? 'var(--rag-red)' : 'var(--rag-green)' }}>{money(row.amount)}</span> },
+              { key: 'balance', label: 'Balance', cell: (row) => (row.balance == null ? '—' : money(row.balance)) },
+              { key: 'fx', label: 'USD and FX', cell: (row) => fxText(row) || '—' },
+            ]}
+          />
+        ) : <Message>No transactions were returned for this account.</Message>}
+      </Panel>
+    </>
+  )
+}
+
+function Accounts({ model }) {
+  const reporting = useReportingPeriod(model.today)
+  const range = { start: reporting.start, end: reporting.end }
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState('All')
+  const access = model.access.bankAccounts
+  const readable = access === 'ok' || access === 'empty'
+  const monthCategories = [...new Set(model.bankTransactions.filter((row) => row.date >= range.start && row.date <= range.end).map((row) => row.category))].sort()
+  const selectedCategory = monthCategories.includes(category) ? category : 'All'
+  const groups = accountsByCurrency(model.bankAccounts)
+  return (
+    <>
+      <h2 className="sr-only">Accounts</h2>
+      {!readable ? <Message>{accessMessage(access, '', COPY.bankAccountsBlocked)}</Message> : (
+        <>
+          {model.bankAccounts.length > 0 && (
+            <div className="vh-actions" style={{ marginBottom: 16 }}>
+              <div className="field" style={{ margin: 0, minWidth: 180, maxWidth: 260 }}>
+                <label htmlFor="ve-bank-search">Search</label>
+                <input id="ve-bank-search" aria-label="Search transactions" type="search" value={query} onChange={(event) => setQuery(event.target.value)} />
+              </div>
+              <div className="field" style={{ margin: 0, minWidth: 180, maxWidth: 260 }}>
+                <label htmlFor="ve-bank-category">Category</label>
+                <select id="ve-bank-category" aria-label="Transaction category" value={selectedCategory} onChange={(event) => setCategory(event.target.value)}>
+                  <option>All</option>
+                  {monthCategories.map((item) => <option key={item} value={item}>{categoryLabel(item)}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+          {groups.map((group) => (
+            <section key={group.currency} style={{ marginBottom: 8 }}>
+              <h3 className="section-title" style={{ fontSize: 18, margin: '18px 0 8px' }}>{group.currency}</h3>
+              {group.accounts.length ? group.accounts.map((account) => <BankAccountBlock key={account.id} account={account} model={model} range={range} query={query} category={selectedCategory} />) : <Message>No {group.currency} account was returned.</Message>}
+            </section>
+          ))}
+        </>
+      )}
+    </>
+  )
+}
+
 function Funds({ model }) {
   return <StandardFunds model={glanceFromVe(model)} />
 }

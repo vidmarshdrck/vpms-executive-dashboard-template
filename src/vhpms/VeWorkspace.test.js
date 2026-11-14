@@ -285,6 +285,9 @@ test('activities, inbox, and sms stay on their own screens', () => {
     user: findAccount('shadrickvidmar'), view: 'business', menu: false, setMenu: () => {}, mode: 'businesses', books: emptyBooks(), businessId: 've', title: 'Vidmar Entertainment (VE)', today: '2026-11-10',
     onOpen: () => {}, onLive: () => {}, onBack: () => {}, onBusiness: () => {}, onRole: () => {},
   }, createElement('p', null, 'Business body')))
+  assert.match(businessShell, /fill="#2563EB"/)
+  assert.match(businessShell, /fill="#1F2937"/)
+  assert.doesNotMatch(businessShell, /lucide-hexagon/)
   assert.match(businessShell, /Select reporting period/)
   assert.match(businessShell, /Oct – Dec 2026/)
   assert.doesNotMatch(businessShell, /Reporting period · Vidmar Entertainment/)

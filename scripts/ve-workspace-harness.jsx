@@ -2,13 +2,14 @@ import { createElement, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import Shell, { LoginScreen } from '../src/vhpms/Shell.jsx'
 import VeWorkspace from '../src/vhpms/VeWorkspace.jsx'
-import { BusinessHome } from '../src/vhpms/BusinessHome.jsx'
 import ProfilePage from '../src/vhpms/ProfilePage.jsx'
 import ActivitiesBoard from '../src/vhpms/ActivitiesBoard.jsx'
 import { emptyBooks } from '../src/vhpms/books.js'
 import { emptyActivities } from '../src/vhpms/activities.js'
 import { findAccount } from '../src/vhpms/directory.js'
 import { buildWorkspace } from '../src/vhpms/veData.js'
+import BusinessWorkspace from '../src/vhpms/BusinessWorkspace.jsx'
+import { CORE_BUSINESS_IDS, buildAdapterModel } from '../src/vhpms/businessSources.js'
 
 const TODAY = '2026-11-08'
 const model = buildWorkspace({
@@ -104,6 +105,16 @@ const model = buildWorkspace({
   },
 }, TODAY)
 
+const vaiModel = buildAdapterModel('vai', {
+  [`finance.invoices.${CORE_BUSINESS_IDS.vai}`]: { access: 'ok', rows: [{ id: 'i1', invoice_number: 'VAI-14', client_name: 'Acme Mining', issue_date: '2026-11-02', due_date: '2026-11-20', total: '2500.00', status: 'sent' }, { id: 'i2', invoice_number: 'VAI-15', client_name: 'Kafue Grid', issue_date: '2026-10-12', due_date: '2026-10-30', total: '1800.00', status: 'paid' }], message: '' },
+  'vai.clients': { access: 'ok', rows: [{ id: 'c1', business_name: 'Acme Mining', status: 'active', start_date: '2026-09-01' }], message: '' },
+  'vai.prospects': { access: 'ok', rows: [{ id: 'p1', business_name: 'Lusaka Mills', pipeline_stage: 'proposal', created_at: '2026-11-01' }], message: '' },
+  'vai.contracts': { access: 'ok', rows: [{ id: 'k1', title: 'Support retainer', status: 'active', end_date: '2026-11-18', monthly_value_zmw: 400 }], message: '' },
+  'vai.services': { access: 'empty', rows: [], message: '' },
+  [`pms.tasks.${CORE_BUSINESS_IDS.vai}`]: { access: 'ok', rows: [{ id: 't1', title: 'Model review', status: 'open', due_at: '2026-11-16' }], message: '' },
+  [`pms.projects.${CORE_BUSINESS_IDS.vai}`]: { access: 'empty', rows: [], message: '' },
+}, TODAY)
+
 const books = emptyBooks()
 books.entries = [{ id: 'local-1', businessId: 'vai', kind: 'expense', title: 'Browser expense line', group: 'Local', amount: 15, date: '2026-11-02', status: 'Paid' }]
 const user = findAccount('shadrickvidmar')
@@ -137,7 +148,7 @@ export function Harness() {
     onBusiness: () => { setView('business'); setMenu(false) },
     onRole: () => {},
   }, businessId === 'vai'
-    ? createElement(BusinessHome, { books, businessId: 'vai', token: '', onChange: () => {} })
+    ? createElement(BusinessWorkspace, { business, model: vaiModel, today: TODAY })
     : view === 'profile'
     ? createElement(ProfilePage, { user, onLogout: () => {} })
     : view === 'activities'

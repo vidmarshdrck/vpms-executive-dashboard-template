@@ -161,14 +161,16 @@ function MonthStrip({ rows, months }) {
   return (
     <Panel title="Month strip">
       <div className="month-strip" role="img" aria-label="Month strip">
-        {items.map((item) => (
-          <article key={item.month}>
-            <span>{item.label}</span>
-            <strong>{formatThousands(item.income - item.expense)}</strong>
-            <small>In {formatThousands(item.income)}</small>
-            <small>Out {formatThousands(item.expense)}</small>
-          </article>
-        ))}
+        {items.map((item) => {
+          const quiet = !item.income && !item.expense
+          return (
+            <article key={item.month}>
+              <span>{item.label}</span>
+              <strong>{quiet ? '—' : formatThousands(item.income - item.expense)}</strong>
+              {quiet ? <small>No movement</small> : <><small>In {formatThousands(item.income)}</small><small>Out {formatThousands(item.expense)}</small></>}
+            </article>
+          )
+        })}
       </div>
     </Panel>
   )
@@ -205,8 +207,8 @@ function DailyBars({ days }) {
           const showLabel = day.date.endsWith('-01') || day.date.endsWith('-15')
           return (
             <g key={day.date}>
-              <rect x={x} y={padT + plotH - incomeH} width={barW} height={Math.max(incomeH, 0)} fill="var(--rag-green)"><title>{`${day.date} income ${formatThousands(day.income)}`}</title></rect>
-              <rect x={x + barW + 1} y={padT + plotH - expenseH} width={barW} height={Math.max(expenseH, 0)} fill="var(--rag-red)"><title>{`${day.date} expense ${formatThousands(day.expense)}`}</title></rect>
+              <rect x={x} y={padT + plotH - incomeH} width={barW} height={Math.max(incomeH, 0)} fill="var(--rag-green)">{day.income ? <title>{`${day.date} income ${formatThousands(day.income)}`}</title> : null}</rect>
+              <rect x={x + barW + 1} y={padT + plotH - expenseH} width={barW} height={Math.max(expenseH, 0)} fill="var(--rag-red)">{day.expense ? <title>{`${day.date} expense ${formatThousands(day.expense)}`}</title> : null}</rect>
               {showLabel ? <text x={x} y={height - 8} fontSize="10" fill="var(--text-muted)">{Number(day.date.slice(-2))}</text> : null}
             </g>
           )
@@ -324,6 +326,9 @@ export function StandardOverview({ model }) {
         {model.clients.length ? (
           <Panel title="Status">
             <StatusShare rows={model.clients} center="Status" empty={displayNote(model.clientsNote, SECTION_EMPTY.clients)} />
+            <ul className="vh-list" aria-label="Clients">
+              {model.clients.slice(0, 8).map((row) => <li key={row.id}><div><strong>{row.name}</strong><small>{row.status}</small></div></li>)}
+            </ul>
           </Panel>
         ) : <EmptyState icon="users">{displayNote(model.clientsNote, SECTION_EMPTY.clients) || SECTION_EMPTY.clients}</EmptyState>}
       </section>
