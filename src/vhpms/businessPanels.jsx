@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Donut } from './Donut.jsx'
 import { balancesByAccount, closingBalances, formatRate } from './bankBudget.js'
 import { slicesBy } from './books.js'
@@ -102,15 +102,25 @@ function RankedSplit({ title, rows, center, empty }) {
   )
 }
 
-function plotMetrics(days, seriesCount) {
-  const height = 220
-  const padL = 112
-  const padB = 42
-  const padT = 16
-  const slot = seriesCount > 1 ? 16 : 12
-  const width = padL + Math.max(days.length, 1) * slot + 12
-  const plotH = height - padB - padT
-  return { height, padL, padB, padT, slot, width, plotH }
+function usePlotBox() {
+  const ref = useRef(null)
+  const [box, setBox] = useState({ width: 640, height: 220 })
+  useEffect(() => {
+    const node = ref.current
+    if (!node) return undefined
+    const measure = () => {
+      const rect = node.getBoundingClientRect()
+      const width = Math.max(1, Math.round(rect.width))
+      const height = Math.max(1, Math.round(rect.height))
+      setBox((current) => (Math.abs(current.width - width) < 2 && Math.abs(current.height - height) < 2 ? current : { width, height }))
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const observer = new ResizeObserver(measure)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+  return [ref, box]
 }
 
 function monthBlocks(days) {
@@ -124,30 +134,46 @@ function monthBlocks(days) {
   return blocks
 }
 
-function PlotFrame({ title, days, max, children, slot, legend = null }) {
-  const metrics = plotMetrics(days, slot > 12 ? 2 : 1)
-  const { height, padL, padT, plotH } = metrics
-  const usedSlot = slot || metrics.slot
-  const usedWidth = padL + Math.max(days.length, 1) * usedSlot + 12
+function PixelPlot({ title, days, series, legend = null }) {
+  const [scrollRef, box] = usePlotBox()
+  const barW = 4
+  const slot = series.length > 1 ? 14 : 10
+  const axisH = 34
+  const plotH = Math.max(48, box.height - axisH)
+  const contentWidth = Math.max(days.length, 1) * slot
+  const svgWidth = Math.max(box.width, contentWidth)
+  const max = Math.max(...days.flatMap((day) => series.map((item) => Number(day[item.field]) || 0)), 1)
   const ticks = [max, max / 2, 0]
   return (
     <Panel title={title}>
-      <div className="plot-scroll">
-        <svg className="plot-svg" width={usedWidth} height="100%" viewBox={`0 0 ${usedWidth} ${height}`} preserveAspectRatio="none" role="img" aria-label={title}>
-          {ticks.map((tick) => {
-            const y = padT + plotH - (max ? (tick / max) * plotH : 0)
-            return (
-              <g key={tick}>
-                <line x1={padL} x2={usedWidth - 8} y1={y} y2={y} stroke="var(--border)" />
-                <text x={padL - 8} y={y + 4} textAnchor="end">{formatAmount(tick)}</text>
-              </g>
-            )
-          })}
-          {children({ padL, padT, plotH, usedSlot, height })}
-          {monthBlocks(days).map((block) => (
-            <text key={block.month} x={padL + (block.start + block.count / 2) * usedSlot} y={height - 6} textAnchor="middle">{MONTHS[Number(block.month.slice(5)) - 1]}</text>
-          ))}
-        </svg>
+      <div className="plot-block" data-plot={title}>
+        <div className="plot-y" aria-hidden="true">
+          {ticks.map((tick) => <span key={tick} className="plot-label">{formatAmount(tick)}</span>)}
+        </div>
+        <div className="plot-scroll" ref={scrollRef}>
+          <svg className="plot-svg" width={svgWidth} height={plotH} viewBox={`0 0 ${svgWidth} ${plotH}`} role="img" aria-label={title}>
+            {ticks.map((tick, index) => {
+              const y = plotH - (tick / max) * (plotH - 1)
+              return <line key={index} x1="0" x2={svgWidth} y1={y} y2={y} stroke="var(--border)" />
+            })}
+            {days.map((day, index) => series.map((item, seriesIndex) => {
+              const value = Number(day[item.field]) || 0
+              const height = (value / max) * (plotH - 1)
+              const x = index * slot + seriesIndex * (barW + 2)
+              return <rect key={`${day.date}-${item.field}`} className="plot-bar" x={x} y={plotH - height} width={barW} height={Math.max(height, 0)} fill={item.color}><title>{`${formatDisplayDate(day.date)} ${formatAmount(value)}`}</title></rect>
+            }))}
+          </svg>
+          <div className="plot-x" style={{ width: svgWidth }} aria-hidden="true">
+            {days.map((day, index) => {
+              const dayNum = Number(day.date.slice(-2))
+              if (![1, 8, 15, 22, 29].includes(dayNum)) return null
+              return <span key={day.date} className="plot-label plot-tick" style={{ left: index * slot }}>{dayNum}</span>
+            })}
+            {monthBlocks(days).map((block) => (
+              <span key={block.month} className="plot-label plot-month" style={{ left: (block.start + block.count / 2) * slot }}>{MONTHS[Number(block.month.slice(5)) - 1]}</span>
+            ))}
+          </div>
+        </div>
       </div>
       {legend}
     </Panel>
@@ -211,49 +237,18 @@ function MonthStrip({ rows, months }) {
 }
 
 function DailyBars({ days }) {
-  const max = Math.max(...days.flatMap((day) => [day.income, day.expense]), 1)
   return (
-    <PlotFrame title="Daily income & expense" days={days} max={max} slot={16} legend={<div className="legend"><span><i className="dot" style={{ background: 'var(--rag-green)' }} />Income</span><span><i className="dot" style={{ background: 'var(--rag-red)' }} />Expense</span></div>}>
-      {({ padL, padT, plotH, usedSlot }) => days.map((day, index) => {
-        const x = padL + index * usedSlot
-        const incomeH = (day.income / max) * plotH
-        const expenseH = (day.expense / max) * plotH
-        const dayNum = Number(day.date.slice(-2))
-        const showLabel = [1, 8, 15, 22, 29].includes(dayNum)
-        return (
-          <g key={day.date}>
-            <rect x={x} y={padT + plotH - incomeH} width={4} height={Math.max(incomeH, 0)} fill="var(--rag-green)">{day.income ? <title>{`${formatDisplayDate(day.date)} income ${formatAmount(day.income)}`}</title> : null}</rect>
-            <rect x={x + 6} y={padT + plotH - expenseH} width={4} height={Math.max(expenseH, 0)} fill="var(--rag-red)">{day.expense ? <title>{`${formatDisplayDate(day.date)} expense ${formatAmount(day.expense)}`}</title> : null}</rect>
-            {showLabel ? <text x={x + usedSlot / 2} y={178} textAnchor="middle">{dayNum}</text> : null}
-          </g>
-        )
-      })}
-    </PlotFrame>
+    <PixelPlot
+      title="Daily income & expense"
+      days={days}
+      series={[{ field: 'income', color: 'var(--rag-green)' }, { field: 'expense', color: 'var(--rag-red)' }]}
+      legend={<div className="legend"><span><i className="dot" style={{ background: 'var(--rag-green)' }} />Income</span><span><i className="dot" style={{ background: 'var(--rag-red)' }} />Expense</span></div>}
+    />
   )
 }
 
 function FlowChart({ title, days, field, color }) {
-  const max = Math.max(...days.map((day) => day[field]), 1)
-  return (
-    <PlotFrame title={title} days={days} max={max} slot={12}>
-      {({ padL, padT, plotH, usedSlot }) => {
-        const points = days.map((day, index) => {
-          const x = padL + index * usedSlot + 4
-          const y = padT + plotH - (day[field] / max) * plotH
-          return `${x.toFixed(1)},${y.toFixed(1)}`
-        }).join(' ')
-        return (
-          <g>
-            <polyline fill="none" stroke={color} strokeWidth="3" points={points} />
-            {days.map((day, index) => {
-              const dayNum = Number(day.date.slice(-2))
-              return [1, 8, 15, 22, 29].includes(dayNum) ? <text key={day.date} x={padL + index * usedSlot + 4} y={178} textAnchor="middle">{dayNum}</text> : null
-            })}
-          </g>
-        )
-      }}
-    </PlotFrame>
-  )
+  return <PixelPlot title={title} days={days} series={[{ field, color }]} />
 }
 
 function ByAccountBars({ rows }) {

@@ -139,6 +139,7 @@
   background: rgba(255, 255, 255, .88); backdrop-filter: saturate(1.2) blur(8px); border-bottom: 1px solid var(--border);
 }
 .vh-app .app-header .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--brand); }
+@media (max-width: 480px) { .vh-app .app-header .eyebrow { display: none; } }
 .vh-app .app-header .page-title { font: 700 18px/1.2 var(--font-sans); letter-spacing: -.015em; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .vh-app .menu-btn { display: none; background: none; border: 0; padding: 4px; color: var(--text-secondary); cursor: pointer; }
 .vh-app .menu-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }

@@ -163,8 +163,44 @@ try {
       await page.screenshot({ path: `${outDir}/vai-${name.toLowerCase()}-${label}.png`, fullPage: true })
     }
   }
+  await page.goto('http://127.0.0.1:4317/')
+  await page.getByRole('tab', { name: 'Overview', exact: true }).waitFor()
+  const measures = []
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    for (const [tab, plot] of [['Overview', 'Daily income & expense'], ['Funds', 'Expense flow']]) {
+      await page.getByRole('tab', { name: tab, exact: true }).click()
+      const block = page.locator(`[data-plot="${plot}"]`)
+      await block.waitFor()
+      await page.waitForFunction((name) => {
+        const bars = [...document.querySelectorAll(`[data-plot="${name}"] .plot-bar`)]
+        return bars.some((bar) => bar.getBoundingClientRect().width >= 4)
+      }, plot)
+      const measured = await page.evaluate((name) => {
+        const root = document.querySelector(`[data-plot="${name}"]`)
+        const label = root.querySelector('.plot-label')
+        const bars = [...root.querySelectorAll('.plot-bar')]
+        const bar = bars.find((item) => item.getBoundingClientRect().height > 0) || bars[0]
+        const labelBox = label.getBoundingClientRect()
+        const barBox = bar.getBoundingClientRect()
+        return {
+          fontSize: getComputedStyle(label).fontSize,
+          labelHeight: Math.round(labelBox.height * 10) / 10,
+          barWidth: Math.round(barBox.width * 100) / 100,
+          plotHeight: Math.round(root.getBoundingClientRect().height * 10) / 10,
+        }
+      }, plot)
+      measures.push({ width, plot, ...measured })
+      await block.scrollIntoViewIfNeeded()
+      const file = `${plot === 'Daily income & expense' ? 'daily-chart' : 'expense-flow'}-${width}.png`
+      const box = await block.boundingBox()
+      await page.screenshot({ path: `${outDir}/${file}`, clip: { x: Math.max(box.x, 0), y: Math.max(box.y, 0), width: box.width, height: box.height } })
+    }
+  }
+  const bad = measures.filter((item) => parseFloat(item.fontSize) !== 11 || item.barWidth < 4)
+  if (bad.length) throw new Error(`chart pixels ${JSON.stringify(measures)}`)
   if (errors.length) throw new Error(errors.join('\n'))
-  console.log(JSON.stringify({ outDir, pages: pages.length, widths: [1440, 390] }))
+  console.log(JSON.stringify({ outDir, pages: pages.length, widths: [1440, 390], measures }))
 } finally {
   await browser.close()
   server.kill()
