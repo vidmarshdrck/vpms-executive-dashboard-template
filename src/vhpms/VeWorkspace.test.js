@@ -279,10 +279,18 @@ test('activities, inbox, and sms stay on their own screens', () => {
 
 test('the sign-in slideshow stays sharp and the credentials card is frosted', () => {
   const css = readFileSync(new URL('./theme.css', import.meta.url), 'utf8')
+  const slides = css.slice(css.indexOf('.vh-app .login-slides {'), css.indexOf('.vh-app .login-layout'))
+  const card = css.slice(css.indexOf('.vh-app .login-card {'), css.indexOf('.vh-app .password-field'))
   assert.match(css, /\.login-slides img[\s\S]*object-fit: cover/)
   assert.match(css, /-webkit-backdrop-filter: blur\(18px\) saturate\(140%\)/)
   assert.match(css, /backdrop-filter: blur\(18px\) saturate\(140%\)/)
   assert.equal(css.includes('blur(28px)'), false)
   assert.equal(css.includes('scale(1.12)'), false)
   assert.equal(css.includes('inset: -12%'), false)
+  assert.equal(/blur\(/.test(slides), false)
+  assert.match(card, /background:\s*#f0f5fc/)
+  assert.match(card, /@supports \(\(-webkit-backdrop-filter: blur\(1px\)\) or \(backdrop-filter: blur\(1px\)\)\)/)
+  assert.match(card, /background:\s*rgba\(240,\s*245,\s*252,\s*0\.86\)/)
+  assert.equal(card.includes('rgba(16, 24, 32, 0.72)'), false)
+  assert.match(card, /border:\s*1px solid rgba\(255,\s*255,\s*255,\s*0\.72\)/)
 })
