@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { balancesByAccount } from './bankBudget.js'
 import { BUSINESS_SEED } from './books.js'
-import { EMPTY, accountCaption, formatAmount, formatDisplayDate, isNeedsNote, monthStripRows, sentenceCase, sourceLine, statusLabel } from './workspaceCharts.js'
+import { EMPTY, accountCaption, emptyDetail, formatAmount, formatDayHeading, formatDisplayDate, isNeedsNote, monthStripRows, sectionDetail, sentenceCase, sourceLine, statusLabel } from './workspaceCharts.js'
 
 const MINUS = '\u2212'
 
@@ -30,6 +30,11 @@ test('a missing source names the table and does not say it will appear', () => {
   assert.equal(sourceLine('No data connected yet. Needs a VAI expense table (none exists in the vai schema).'), 'From a VAI expense table.')
   assert.equal(sourceLine('Expenses are not visible to this account.'), 'Expenses are not visible to this account.')
   assert.equal(EMPTY.budget.title, 'No expense budget set')
+  assert.equal(emptyDetail('budget', 'vai'), 'Set a budget to track VAI spending against it.')
+  assert.equal(sectionDetail('No data connected yet. Needs public.vt_income.', 'income', 'vt'), 'Record income to see what VT received in this period.')
+  assert.equal(sectionDetail('Expenses are not visible to this account.', 'expenses', 've'), 'Expenses are not visible to this account.')
+  assert.equal(formatDayHeading('2026-11-02'), 'Mon 2 Nov')
+  assert.equal(/will appear here/i.test(emptyDetail('budget', 'vai')), false)
   assert.equal(/will appear here/i.test(Object.values(EMPTY).map((item) => item.title).join(' ')), false)
   assert.equal(/\b(draft|demo|sample|placeholder|coming soon)\b/i.test(Object.values(EMPTY).map((item) => item.title).join(' ')), false)
 })

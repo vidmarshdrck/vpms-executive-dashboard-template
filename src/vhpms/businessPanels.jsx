@@ -4,10 +4,10 @@ import { balancesByAccount, closingBalances, formatRate } from './bankBudget.js'
 import { slicesBy } from './books.js'
 import { categoryShare, dailyAmounts, monthLabel, monthSummary, sourceAnalysis } from './fundsMonth.js'
 import { NavIcon } from './icons.jsx'
-import { monthsInPeriod, rowsInPeriod, weekOverlapsPeriod } from './reportingPeriod.js'
+import { MONTHS, monthsInPeriod, rowsInPeriod, weekOverlapsPeriod } from './reportingPeriod.js'
 import { useReportingPeriod } from './TimeframePopover.jsx'
 import { COPY, acquisitionSummary, weeklyBudget } from './veData.js'
-import { EMPTY, accountCaption, formatAmount, formatDisplayDate, isNeedsNote, moneyHidden, monthStripRows, sentenceCase, sourceLine, statusLabel } from './workspaceCharts.js'
+import { EMPTY, accountCaption, formatAmount, formatDayHeading, formatDisplayDate, isNeedsNote, moneyHidden, monthStripRows, sectionDetail, sentenceCase, statusLabel } from './workspaceCharts.js'
 
 export function Panel({ title, children, note }) {
   return (
@@ -62,7 +62,7 @@ function SectionHeading({ icon, children }) {
 }
 
 function Stat({ label, value, quiet = false, negative = false }) {
-  return <section className="card"><div className="card-body"><div className={`stat-num${negative ? ' money-neg' : ''}`} style={quiet ? { fontSize: 16, lineHeight: 1.35 } : { fontSize: 28 }}>{value}</div><div className="stat-desc">{label}</div></div></section>
+  return <section className="card"><div className="card-body"><div className={`stat-num kpi-figure${negative ? ' money-neg' : ''}${quiet ? ' is-quiet' : ''}`}>{value}</div><div className="stat-desc">{label}</div></div></section>
 }
 
 function moneyTile(value) {
@@ -102,20 +102,54 @@ function RankedSplit({ title, rows, center, empty }) {
   )
 }
 
-function FlowChart({ title, days, field, color }) {
-  const width = 640
-  const height = 180
-  const max = Math.max(...days.map((day) => day[field]), 1)
-  const points = days.map((day, index) => {
-    const x = days.length === 1 ? width / 2 : (index / (days.length - 1)) * width
-    const y = height - 16 - (day[field] / max) * (height - 32)
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  }).join(' ')
+function plotMetrics(days, seriesCount) {
+  const height = 220
+  const padL = 112
+  const padB = 42
+  const padT = 16
+  const slot = seriesCount > 1 ? 16 : 12
+  const width = padL + Math.max(days.length, 1) * slot + 12
+  const plotH = height - padB - padT
+  return { height, padL, padB, padT, slot, width, plotH }
+}
+
+function monthBlocks(days) {
+  const blocks = []
+  days.forEach((day, index) => {
+    const month = day.date.slice(0, 7)
+    const last = blocks.at(-1)
+    if (!last || last.month !== month) blocks.push({ month, start: index, count: 1 })
+    else last.count += 1
+  })
+  return blocks
+}
+
+function PlotFrame({ title, days, max, children, slot, legend = null }) {
+  const metrics = plotMetrics(days, slot > 12 ? 2 : 1)
+  const { height, padL, padT, plotH } = metrics
+  const usedSlot = slot || metrics.slot
+  const usedWidth = padL + Math.max(days.length, 1) * usedSlot + 12
+  const ticks = [max, max / 2, 0]
   return (
     <Panel title={title}>
-      <svg className="chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title}>
-        <polyline fill="none" stroke={color} strokeWidth="3" points={points} />
-      </svg>
+      <div className="plot-scroll">
+        <svg className="plot-svg" width={usedWidth} height="100%" viewBox={`0 0 ${usedWidth} ${height}`} preserveAspectRatio="none" role="img" aria-label={title}>
+          {ticks.map((tick) => {
+            const y = padT + plotH - (max ? (tick / max) * plotH : 0)
+            return (
+              <g key={tick}>
+                <line x1={padL} x2={usedWidth - 8} y1={y} y2={y} stroke="var(--border)" />
+                <text x={padL - 8} y={y + 4} textAnchor="end">{formatAmount(tick)}</text>
+              </g>
+            )
+          })}
+          {children({ padL, padT, plotH, usedSlot, height })}
+          {monthBlocks(days).map((block) => (
+            <text key={block.month} x={padL + (block.start + block.count / 2) * usedSlot} y={height - 6} textAnchor="middle">{MONTHS[Number(block.month.slice(5)) - 1]}</text>
+          ))}
+        </svg>
+      </div>
+      {legend}
     </Panel>
   )
 }
@@ -177,47 +211,48 @@ function MonthStrip({ rows, months }) {
 }
 
 function DailyBars({ days }) {
-  const height = 220
-  const padL = 108
-  const padB = 28
-  const padT = 12
-  const barW = 4
-  const slot = 14
-  const plotH = height - padB - padT
-  const width = padL + Math.max(days.length, 1) * slot + 8
   const max = Math.max(...days.flatMap((day) => [day.income, day.expense]), 1)
-  const ticks = [max, max / 2, 0]
   return (
-    <Panel title="Daily income & expense">
-      <div className="daily-scroll">
-        <svg className="chart-svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Daily income & expense">
-          {ticks.map((tick) => {
-            const y = padT + plotH - (tick / max) * plotH
-            return (
-              <g key={tick}>
-                <line x1={padL} x2={width - 8} y1={y} y2={y} stroke="var(--border)" />
-                <text x={padL - 8} y={y + 4} textAnchor="end" fontSize="11" fill="var(--text-muted)">{formatAmount(tick)}</text>
-              </g>
-            )
-          })}
-          {days.map((day, index) => {
-            const x = padL + index * slot
-            const incomeH = (day.income / max) * plotH
-            const expenseH = (day.expense / max) * plotH
-            const dayNum = Number(day.date.slice(-2))
-            const showLabel = [1, 8, 15, 22, 29].includes(dayNum)
-            return (
-              <g key={day.date}>
-                <rect x={x} y={padT + plotH - incomeH} width={barW} height={Math.max(incomeH, 0)} fill="var(--rag-green)">{day.income ? <title>{`${formatDisplayDate(day.date)} income ${formatAmount(day.income)}`}</title> : null}</rect>
-                <rect x={x + barW + 2} y={padT + plotH - expenseH} width={barW} height={Math.max(expenseH, 0)} fill="var(--rag-red)">{day.expense ? <title>{`${formatDisplayDate(day.date)} expense ${formatAmount(day.expense)}`}</title> : null}</rect>
-                {showLabel ? <text x={x + slot / 2} y={height - 8} textAnchor="middle" fontSize="10" fill="var(--text-muted)">{dayNum}</text> : null}
-              </g>
-            )
-          })}
-        </svg>
-      </div>
-      <div className="legend"><span><i className="dot" style={{ background: 'var(--rag-green)' }} />Income</span><span><i className="dot" style={{ background: 'var(--rag-red)' }} />Expense</span></div>
-    </Panel>
+    <PlotFrame title="Daily income & expense" days={days} max={max} slot={16} legend={<div className="legend"><span><i className="dot" style={{ background: 'var(--rag-green)' }} />Income</span><span><i className="dot" style={{ background: 'var(--rag-red)' }} />Expense</span></div>}>
+      {({ padL, padT, plotH, usedSlot }) => days.map((day, index) => {
+        const x = padL + index * usedSlot
+        const incomeH = (day.income / max) * plotH
+        const expenseH = (day.expense / max) * plotH
+        const dayNum = Number(day.date.slice(-2))
+        const showLabel = [1, 8, 15, 22, 29].includes(dayNum)
+        return (
+          <g key={day.date}>
+            <rect x={x} y={padT + plotH - incomeH} width={4} height={Math.max(incomeH, 0)} fill="var(--rag-green)">{day.income ? <title>{`${formatDisplayDate(day.date)} income ${formatAmount(day.income)}`}</title> : null}</rect>
+            <rect x={x + 6} y={padT + plotH - expenseH} width={4} height={Math.max(expenseH, 0)} fill="var(--rag-red)">{day.expense ? <title>{`${formatDisplayDate(day.date)} expense ${formatAmount(day.expense)}`}</title> : null}</rect>
+            {showLabel ? <text x={x + usedSlot / 2} y={178} textAnchor="middle">{dayNum}</text> : null}
+          </g>
+        )
+      })}
+    </PlotFrame>
+  )
+}
+
+function FlowChart({ title, days, field, color }) {
+  const max = Math.max(...days.map((day) => day[field]), 1)
+  return (
+    <PlotFrame title={title} days={days} max={max} slot={12}>
+      {({ padL, padT, plotH, usedSlot }) => {
+        const points = days.map((day, index) => {
+          const x = padL + index * usedSlot + 4
+          const y = padT + plotH - (day[field] / max) * plotH
+          return `${x.toFixed(1)},${y.toFixed(1)}`
+        }).join(' ')
+        return (
+          <g>
+            <polyline fill="none" stroke={color} strokeWidth="3" points={points} />
+            {days.map((day, index) => {
+              const dayNum = Number(day.date.slice(-2))
+              return [1, 8, 15, 22, 29].includes(dayNum) ? <text key={day.date} x={padL + index * usedSlot + 4} y={178} textAnchor="middle">{dayNum}</text> : null
+            })}
+          </g>
+        )
+      }}
+    </PlotFrame>
   )
 }
 
@@ -248,7 +283,7 @@ export function MonthCalendar({ days, month, bare = false }) {
         {Array.from({ length: offset }, (_, index) => <div key={`pad-${index}`} className="vh-day vh-blank" />)}
         {days.map((day) => {
           const active = day.income || day.expense
-          return <div key={day.date} className="vh-day"><span>{Number(day.date.slice(-2))}</span>{active ? <strong className={day.net < 0 ? 'money-neg' : undefined}>{formatAmount(day.net)}</strong> : null}</div>
+          return <div key={day.date} className="vh-day"><span>{Number(day.date.slice(-2))}</span>{active ? <strong className={day.net < 0 ? 'money-neg' : 'money-pos'}>{formatAmount(day.net)}</strong> : null}</div>
         })}
       </div>
     </div>
@@ -260,6 +295,20 @@ export function MonthCalendar({ days, month, bare = false }) {
       <div className="card-head"><h2>{label}</h2></div>
       <div className="card-body">{grid}</div>
     </section>
+  )
+}
+
+function DayList({ days }) {
+  const active = (days || []).filter((day) => day.income || day.expense)
+  return (
+    <ul className="day-list" aria-label="Days with movement">
+      {active.length ? active.map((day) => (
+        <li key={day.date}>
+          <span>{formatDayHeading(day.date)}</span>
+          <strong className={day.net < 0 ? 'money-neg' : 'money-pos'}>{formatAmount(day.net)}</strong>
+        </li>
+      )) : <li>No movement</li>}
+    </ul>
   )
 }
 
@@ -290,19 +339,19 @@ export function StandardOverview({ model }) {
   const categoryTitle = expenseRows.length ? 'Expenses by category' : 'Income by category'
   const months = monthsInPeriod(period)
   const next = model.upcoming?.[0]
-  const financeDetail = sourceLine(model.expenseNote) || sourceLine(model.incomeNote) || sourceLine(model.bankNote)
+  const financeDetail = sectionDetail(model.expenseNote || model.incomeNote, 'finances', model.businessId)
   return (
     <>
       <h2 className="sr-only">Overview</h2>
       <section aria-label="Finances">
         <SectionHeading icon="wallet">Finances</SectionHeading>
-        <div className="grid-4" style={{ margin: '16px 0' }}>
+        <div className="kpi-grid">
           <Stat label="Total spent" value={moneyTile(finance.expenses)} />
           <Stat label="Income" value={moneyTile(finance.income)} />
           <Stat label="Balance on hand" value={balanceText} quiet={!bankBlocked && !balances.length} />
           <Stat label="Profit generated" value={moneyTile(finance.profit)} negative={Number(finance.profit) < 0} />
         </div>
-        {bankBlocked ? <EmptyCard icon="landmark" title="Bank accounts are not visible" detail={sourceLine(model.bankNote)} /> : null}
+        {bankBlocked ? <EmptyCard icon="landmark" title="Bank accounts are not visible" detail={sectionDetail(model.bankNote, 'accounts', model.businessId)} /> : null}
         {moneyRows.length ? (
           <>
             <MonthStrip rows={moneyRows} months={months} />
@@ -321,7 +370,7 @@ export function StandardOverview({ model }) {
             <StatusShare rows={model.operations} center="Status" empty={EMPTY.operations} />
             {next ? <div className="next-renewal"><h3>Next renewal</h3><strong>{next.title}</strong><p>{formatDisplayDate(next.due)}</p></div> : null}
           </Panel>
-        ) : <EmptyCard icon={EMPTY.operations.icon} title={EMPTY.operations.title} detail={sourceLine(model.operationsNote)} />}
+        ) : <EmptyCard icon={EMPTY.operations.icon} title={EMPTY.operations.title} detail={sectionDetail(model.operationsNote, 'operations', model.businessId)} />}
       </section>
       <section aria-label="Clients">
         <SectionHeading icon="users">Clients</SectionHeading>
@@ -330,7 +379,7 @@ export function StandardOverview({ model }) {
             <StatusShare rows={model.clients} center="Status" empty={EMPTY.clients} pills />
             <ClientList clients={model.clients} />
           </Panel>
-        ) : <EmptyCard icon={EMPTY.clients.icon} title={EMPTY.clients.title} detail={sourceLine(model.clientsNote)} />}
+        ) : <EmptyCard icon={EMPTY.clients.icon} title={EMPTY.clients.title} detail={sectionDetail(model.clientsNote, 'clients', model.businessId)} />}
       </section>
     </>
   )
@@ -350,17 +399,17 @@ export function StandardFunds({ model }) {
   return (
     <>
       <h2 className="sr-only">Funds</h2>
-      {bothNeeds ? <EmptyCard icon={EMPTY.funds.icon} title={EMPTY.funds.title} detail={sourceLine(model.incomeNote) || sourceLine(model.expenseNote)} /> : (
+      {bothNeeds ? <EmptyCard icon={EMPTY.funds.icon} title={EMPTY.funds.title} detail={sectionDetail(model.incomeNote, 'funds', model.businessId)} /> : (
         <>
-          {moneyHidden(model.incomeNote) && !rows.some((row) => row.kind === 'income') ? <EmptyCard icon={EMPTY.income.icon} title={EMPTY.income.title} detail={sourceLine(model.incomeNote)} /> : null}
-          {moneyHidden(model.expenseNote) && !rows.some((row) => row.kind === 'expense') && sourceLine(model.expenseNote) !== sourceLine(model.incomeNote) ? <EmptyCard icon={EMPTY.expenses.icon} title={EMPTY.expenses.title} detail={sourceLine(model.expenseNote)} /> : null}
-          <div className="grid-3 funds-totals" style={{ marginBottom: 16 }}>
-            <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-red)' }}>{expenseValue == null ? '—' : formatAmount(expenseValue)}</div><div className="stat-desc">Expense</div></div></section>
-            <section className="card"><div className="card-body"><div className="stat-num" style={{ fontSize: 28 }}>{receivedValue == null ? '—' : formatAmount(receivedValue)}</div><div className="stat-desc">Total received</div></div></section>
+          {moneyHidden(model.incomeNote) && !rows.some((row) => row.kind === 'income') ? <EmptyCard icon={EMPTY.income.icon} title={EMPTY.income.title} detail={sectionDetail(model.incomeNote, 'income', model.businessId)} /> : null}
+          {moneyHidden(model.expenseNote) && !rows.some((row) => row.kind === 'expense') && sectionDetail(model.expenseNote, 'expenses', model.businessId) !== sectionDetail(model.incomeNote, 'income', model.businessId) ? <EmptyCard icon={EMPTY.expenses.icon} title={EMPTY.expenses.title} detail={sectionDetail(model.expenseNote, 'expenses', model.businessId)} /> : null}
+          <div className="kpi-grid">
+            <section className="card"><div className="card-body"><div className="stat-num kpi-figure">{expenseValue == null ? '—' : formatAmount(expenseValue)}</div><div className="stat-desc">Expense</div></div></section>
+            <section className="card"><div className="card-body"><div className="stat-num kpi-figure">{receivedValue == null ? '—' : formatAmount(receivedValue)}</div><div className="stat-desc">Total received</div></div></section>
           </div>
         </>
       )}
-      {!moneyHidden(model.expenseNote) && model.expenseNote && !rows.some((row) => row.kind === 'expense') ? <EmptyCard icon={EMPTY.expenses.icon} title={EMPTY.expenses.title} detail={sourceLine(model.expenseNote) || COPY.expensesEmpty} /> : null}
+      {!moneyHidden(model.expenseNote) && model.expenseNote && !rows.some((row) => row.kind === 'expense') ? <EmptyCard icon={EMPTY.expenses.icon} title={EMPTY.expenses.title} detail={sectionDetail(model.expenseNote, 'expenses', model.businessId)} /> : null}
       {rows.length ? (
         <>
           <div className="grid">
@@ -384,7 +433,7 @@ export function StandardFunds({ model }) {
             <div className="legend"><span><i className="dot" style={{ background: 'var(--rag-red)' }} />Expense</span><span><i className="dot" style={{ background: 'var(--rag-green)' }} />Income</span></div>
           </Panel>
         </>
-      ) : (!bothNeeds && !model.expenseNote && !model.incomeNote && <EmptyCard icon={EMPTY.funds.icon} title={EMPTY.funds.title} detail={COPY.fundsEmpty} />)}
+      ) : (!bothNeeds && !model.expenseNote && !model.incomeNote && <EmptyCard icon={EMPTY.funds.icon} title={EMPTY.funds.title} detail={sectionDetail('', 'funds', model.businessId)} />)}
       {!bothNeeds && <FundsMonth months={months} rows={rows} />}
     </>
   )
@@ -406,6 +455,7 @@ function FundsMonth({ months, rows }) {
       </div>
       <div className="card-body">
         <MonthCalendar month={selected} days={dailyAmounts(rows, selected)} bare />
+        <DayList days={dailyAmounts(rows, selected)} />
       </div>
     </section>
   )
@@ -526,8 +576,8 @@ export function StandardBudget({ model }) {
     <>
       <h2 className="sr-only">Budget</h2>
       {model.budget ? <BudgetProjection budget={model.budget} access={model.bankTxnAccess || 'empty'} period={period} /> : null}
-      {needsBudget ? <EmptyCard icon={EMPTY.budget.icon} title={EMPTY.budget.title} detail={sourceLine(model.expenseNote)} /> : (
-        !expenses.length ? <EmptyCard icon={EMPTY.expenses.icon} title={EMPTY.expenses.title} detail={sourceLine(model.expenseNote) || COPY.expensesEmpty} /> : (
+      {needsBudget ? <EmptyCard icon={EMPTY.budget.icon} title={EMPTY.budget.title} detail={sectionDetail(model.expenseNote, 'budget', model.businessId)} /> : (
+        !expenses.length ? <EmptyCard icon={EMPTY.expenses.icon} title={EMPTY.expenses.title} detail={sectionDetail(model.expenseNote, 'expenses', model.businessId)} /> : (
           <Panel title="Weekly expense budget">
             {weeks.length > 0 && (
               <div className="field" style={{ maxWidth: 240 }}>
@@ -545,8 +595,8 @@ export function StandardBudget({ model }) {
       )}
       {!needsBudget && expenses.length ? (
         <div className="grid">
-          <CategoryTable title="Income categories" rows={categoryTotals(income)} empty={{ title: EMPTY.income.title, detail: sourceLine(model.incomeNote) || 'No income was returned for this account.' }} />
-          <CategoryTable title="Expense categories" rows={categoryTotals(expenses)} empty={{ title: EMPTY.expenses.title, detail: sourceLine(model.expenseNote) || COPY.expensesEmpty }} />
+          <CategoryTable title="Income categories" rows={categoryTotals(income)} empty={{ title: EMPTY.income.title, detail: sectionDetail(model.incomeNote, 'income', model.businessId) }} />
+          <CategoryTable title="Expense categories" rows={categoryTotals(expenses)} empty={{ title: EMPTY.expenses.title, detail: sectionDetail(model.expenseNote, 'expenses', model.businessId) }} />
         </div>
       ) : null}
     </>
@@ -560,11 +610,11 @@ export function StandardMarketing({ model }) {
   const postsNote = model.postsNote != null ? model.postsNote : (isNeedsNote(model.marketingNote) ? model.marketingNote : '')
   const spendNote = model.spendNote != null ? model.spendNote : (isNeedsNote(model.marketingNote) ? model.marketingNote : '')
   if (!posts.length && !spend.length && (isNeedsNote(postsNote) || isNeedsNote(model.marketingNote)) && (isNeedsNote(spendNote) || isNeedsNote(model.marketingNote))) {
-    return <><h2 className="sr-only">Marketing</h2><EmptyCard icon={EMPTY.marketing.icon} title={EMPTY.marketing.title} detail={sourceLine(model.marketingNote || postsNote)} /></>
+    return <><h2 className="sr-only">Marketing</h2><EmptyCard icon={EMPTY.marketing.icon} title={EMPTY.marketing.title} detail={sectionDetail(model.marketingNote || postsNote, 'marketing', model.businessId)} /></>
   }
   const acquisition = acquisitionSummary(spend)
-  const postsDetail = isNeedsNote(postsNote) ? sourceLine(postsNote) : (postsNote || COPY.postsEmpty)
-  const spendDetail = isNeedsNote(spendNote) ? sourceLine(spendNote) : (spendNote || COPY.cacEmpty)
+  const postsDetail = sectionDetail(postsNote, 'posts', model.businessId)
+  const spendDetail = sectionDetail(spendNote, 'spend', model.businessId)
   const cac = acquisition.value == null ? 'Not recorded' : formatAmount(acquisition.value)
   return (
     <>

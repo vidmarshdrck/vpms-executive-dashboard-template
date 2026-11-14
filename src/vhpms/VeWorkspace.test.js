@@ -189,8 +189,8 @@ test('empty and blocked pages use finished copy', () => {
   assert.match(html, /class="stat-num">—</)
   assert.match(html, new RegExp(COPY.customersBlocked))
   assert.match(html, new RegExp(COPY.ordersBlocked))
-  assert.match(html, new RegExp(COPY.expensesEmpty))
-  assert.match(html, new RegExp(COPY.postsEmpty))
+  assert.match(html, /Record expenses to see VE spending for this period/)
+  assert.match(html, /Schedule a post to plan VE marketing/)
   assert.match(html, new RegExp(COPY.cacBlocked))
   assert.match(html, /No bank account connected/)
   assert.match(html, /No ZMW account was returned/)
@@ -255,7 +255,8 @@ test('the shared template paints stubbed rows and a finished empty state', () =>
   assert.match(html, /status-pill/)
   assert.match(html, />Active</)
   assert.match(html, new RegExp(EMPTY.budget.title))
-  assert.match(html, /From a VAI expense table/)
+  assert.match(html, /Set a budget to track VAI spending against it/)
+  assert.doesNotMatch(html, /From a VAI expense table/)
   assert.match(html, new RegExp(EMPTY.marketing.title))
   assert.doesNotMatch(html, /will appear here|No data connected yet|coming soon|placeholder|\bdemo\b|\bdraft\b/i)
   const empty = renderToStaticMarkup(createElement(BusinessWorkspace, {
@@ -266,7 +267,8 @@ test('the shared template paints stubbed rows and a finished empty state', () =>
   for (const item of [EMPTY.finances, EMPTY.operations, EMPTY.clients, EMPTY.funds, EMPTY.marketing, EMPTY.budget]) {
     assert.match(empty, new RegExp(item.title))
   }
-  assert.match(empty, /From public\.vt_income/)
+  assert.match(empty, /Record income and expenses to follow VT for this period/)
+  assert.match(empty, /Set a budget to track VT spending against it/)
   assert.doesNotMatch(empty, /will appear here|ZMW 0\.00|No data connected yet|1234/)
   assert.match(empty, /Powered by/)
 })
