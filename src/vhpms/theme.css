@@ -372,12 +372,15 @@
   font-variation-settings: "wght" 400; color: var(--text-primary); background: #fff;
   border: 1px solid #d6d3d1; border-radius: 6px;
 }
-.vh-app .hod-timeframe-panel > div { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.vh-app .hod-timeframe-panel > div { display: flex; align-items: baseline; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .vh-app .hod-timeframe-panel button:not(.btn) {
-  background: transparent; border: 0; color: #78716C; padding: 6px 12px; font-family: var(--font-sans);
-  font-size: 12px; font-weight: 600; font-variation-settings: "wght" 600; cursor: pointer;
+  background: transparent; border: 1px solid transparent; color: #78716C; padding: 4px 12px; font-family: var(--font-sans);
+  font-size: 12px; line-height: 16px; font-weight: 600; font-variation-settings: "wght" 600; cursor: pointer;
 }
-.vh-app .hod-timeframe-panel .btn { padding: 6px 12px; font-size: 12px; font-variation-settings: "wght" 600; }
+.vh-app .hod-timeframe-panel .btn {
+  box-sizing: border-box; height: 26px; min-height: 0; padding: 4px 12px; font-size: 12px; line-height: 16px;
+  font-variation-settings: "wght" 600;
+}
 .vh-app .hod-timeframe-panel .btn-primary { background: #1454c0; color: #fff; }
 .vh-app .hod-timeframe-panel .btn-primary:hover { background: #0e4197; }
 @media (max-width: 600px) {

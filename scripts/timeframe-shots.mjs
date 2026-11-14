@@ -96,6 +96,13 @@ try {
       const summaryBox = summary.getBoundingClientRect()
       const panelBox = panel.getBoundingClientRect()
       const headerBox = document.querySelector('.app-header').getBoundingClientRect()
+      const textBox = (el) => {
+        const range = document.createRange()
+        range.selectNodeContents(el)
+        return range.getBoundingClientRect()
+      }
+      const applyText = textBox(apply)
+      const cancelText = textBox(cancel)
       return {
         summary: pick(summary), icon: pick(icon), chevron: pick(chevron), panel: pick(panel),
         help: pick(help), select: pick(select), cancel: pick(cancel), apply: pick(apply),
@@ -105,6 +112,9 @@ try {
         panelRight: window.innerWidth - panelBox.right,
         headerHeight: headerBox.height,
         pillTop: summaryBox.top - headerBox.top,
+        applyHeight: apply.getBoundingClientRect().height,
+        cancelHeight: cancel.getBoundingClientRect().height,
+        baselineDelta: Math.abs(applyText.bottom - cancelText.bottom),
         label: summary.querySelector('span').textContent,
         helpText: help.textContent,
       }
@@ -157,6 +167,9 @@ try {
     if (width === 1440) {
       assertClose(styles.headerHeight, 61, '1440 header height', failures, 1)
       assertClose(styles.pillTop, 27, '1440 pill offset', failures, 1)
+      assertClose(styles.applyHeight, 26, 'Apply height', failures, 0.5)
+      assertClose(styles.baselineDelta, 0, 'Cancel/Apply baseline', failures, 1)
+      await page.locator('.hod-timeframe-panel > div').screenshot({ path: `${outDir}/apply-row.png` })
       assertClose(styles.gap, 8, 'panel gap', failures)
       assertClose(styles.rightDelta, 0, 'panel right alignment', failures, 1)
       if (styles.panel.position !== 'absolute') failures.push(`1440 panel position ${styles.panel.position}`)
@@ -209,9 +222,23 @@ try {
   await reference.goto('http://127.0.0.1:4318/reference')
   await reference.locator('.hod-timeframe-panel').waitFor()
   await reference.screenshot({ path: `${outDir}/selector.png` })
+  const referenceApplyHeight = await reference.locator('.hod-timeframe-panel .btn-primary').evaluate((el) => Math.round(el.getBoundingClientRect().height))
+  await reference.locator('.hod-timeframe-panel > div').screenshot({ path: `${outDir}/apply-row-reference.png` })
   await reference.close()
 
   if (failures.length) throw new Error(failures.join('\n'))
+
+  const buttonCompare = `<!doctype html><meta charset="utf-8"><title>Apply row</title>
+    <style>body{margin:0;background:#fff;font:600 14px/1.4 "Inter Tight Variable",sans-serif;color:#1C1917} .row{display:flex;align-items:flex-start;gap:24px;padding:16px} figure{margin:0} figcaption{margin:0 0 8px} img{display:block;border:1px solid #E4E1DB;background:#F5F4F1}</style>
+    <div class="row">
+      <figure><figcaption>VHPMS Cancel / Apply · measured ${26}px</figcaption><img src="/shot/apply-row.png"></figure>
+      <figure><figcaption>selector.png Cancel / Apply · measured ${referenceApplyHeight}px</figcaption><img src="/shot/apply-row-reference.png"></figure>
+    </div>`
+  await writeFile(`${outDir}/compare-apply-row.html`, buttonCompare)
+  const buttonPage = await browser.newPage({ viewport: { width: 900, height: 240 } })
+  await buttonPage.goto('http://127.0.0.1:4318/compare-apply-row.html', { waitUntil: 'networkidle' })
+  await buttonPage.screenshot({ path: `${artifactDir}/timeframe-1440-apply-row-vs-reference.png`, fullPage: true })
+  await buttonPage.close()
 
   const compare = await browser.newPage({ viewport: { width: 1400, height: 980 } })
   const pairs = [
