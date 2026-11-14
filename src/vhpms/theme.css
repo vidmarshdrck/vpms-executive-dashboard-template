@@ -409,7 +409,29 @@
 .vh-app .family-received .stat-num { font-size: 28px; }
 .vh-app .family-accounts table.data th,
 .vh-app .family-accounts table.data td { padding: 6px 10px; }
-.vh-app .slot-count { color: var(--brand); font-variant-numeric: tabular-nums; font-weight: 600; }
+.vh-app .slot-count { color: var(--brand); font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.vh-app table.data th.num,
+.vh-app table.data td.num,
+.vh-app .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vh-app .same-owner { color: var(--text-muted); }
+.vh-app .card-head h2.family-modal-title { font: 700 24px/1.2 var(--font-sans); letter-spacing: -.015em; display: block; margin: 0; }
+.vh-app .family-modal-sub { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-muted); }
+.vh-app .record-cards { list-style: none; margin: 0; padding: 0; }
+.vh-app .record-card { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.vh-app .record-card:last-child { border-bottom: none; }
+.vh-app .record-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.vh-app .record-line strong { min-width: 0; color: var(--text-primary); font-weight: 600; }
+.vh-app .record-line .num,
+.vh-app .record-line .slot-count { flex: none; }
+.vh-app .record-meta { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-muted); }
+.vh-app .family-cards,
+.vh-app .member-cards { display: none; }
+@media (max-width: 480px) {
+  .vh-app .family-accounts .family-table,
+  .vh-app .vh-modal .member-table { display: none; }
+  .vh-app .family-accounts .family-cards,
+  .vh-app .vh-modal .member-cards { display: block; }
+}
 .vh-app table.data tbody tr.is-clickable { cursor: pointer; }
 .vh-app .vh-modal { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 24px; }
 .vh-app .vh-modal-backdrop { position: absolute; inset: 0; margin: 0; padding: 0; border: 0; background: rgba(16, 24, 32, 0.55); cursor: pointer; }

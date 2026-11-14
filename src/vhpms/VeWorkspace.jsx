@@ -38,7 +38,7 @@ function DataTable({ columns, rows, empty, onRow }) {
   return (
     <div className="tbl-scroll">
       <table className="data">
-        <thead><tr>{columns.map((column) => <th key={column.key}>{column.label}</th>)}</tr></thead>
+        <thead><tr>{columns.map((column) => <th key={column.key} className={column.className}>{column.label}</th>)}</tr></thead>
         <tbody>
           {rows.length ? rows.map((row) => (
             <tr
@@ -47,12 +47,32 @@ function DataTable({ columns, rows, empty, onRow }) {
               tabIndex={onRow ? 0 : undefined}
               onClick={onRow ? () => onRow(row) : undefined}
               onKeyDown={onRow ? (event) => { if (event.key === 'Enter') onRow(row) } : undefined}
-            >{columns.map((column) => <td key={column.key}>{column.cell(row)}</td>)}</tr>
+            >{columns.map((column) => <td key={column.key} className={column.className}>{column.cell(row)}</td>)}</tr>
           )) : <tr><td colSpan={columns.length}>{empty}</td></tr>}
         </tbody>
       </table>
     </div>
   )
+}
+
+const PAYMENT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function paymentDate(value) {
+  const iso = String(value || '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return ''
+  const [year, month, day] = iso.split('-').map(Number)
+  return `${day} ${PAYMENT_MONTHS[month - 1]} ${year}`
+}
+
+function agentLabel(row) {
+  if (!row.agent) return '—'
+  if (row.agent === row.owner) return <span className="same-owner">Same as owner</span>
+  return row.agent
+}
+
+function slotButton(row, onOpen) {
+  const count = `${row.slotsTaken}/${row.slotsTotal}`
+  return <button type="button" className="btn btn-ghost btn-sm slot-count" aria-haspopup="dialog" aria-label={`Slots for ${row.owner}, ${count}`} onClick={() => onOpen(row)}>{count}</button>
 }
 
 function accessMessage(access, empty, blocked) {
@@ -99,29 +119,49 @@ export function FamilyModal({ account, onClose }) {
   }, [account, onClose])
   if (!account) return null
   const titleId = `family-members-${account.id || 'account'}`
+  const taken = Number.isFinite(account.slotsTaken) ? account.slotsTaken : account.members.length
+  const total = Number.isFinite(account.slotsTotal) ? account.slotsTotal : account.members.length
   const dialog = (
     <div className="vh-modal">
       <button type="button" className="vh-modal-backdrop" aria-label="Close family members" onClick={onClose} />
       <section ref={panelRef} className="card vh-modal-panel" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <div className="card-head"><h2 id={titleId}>{account.plan}</h2><button type="button" className="btn btn-ghost btn-sm" data-family-close onClick={onClose}>Close</button></div>
+        <div className="card-head">
+          <div>
+            <h2 id={titleId} className="family-modal-title">{account.plan}</h2>
+            <p className="family-modal-sub">Owner · {account.owner} · {taken} of {total} slots</p>
+          </div>
+          <button type="button" className="btn btn-ghost btn-sm" data-family-close onClick={onClose}>Close</button>
+        </div>
         <div className="card-body">
-          <p className="stat-desc" style={{ marginTop: 0 }}>{account.owner}</p>
           {account.members.length ? (
-            <div className="tbl-scroll">
-              <table className="data">
-                <thead><tr><th>Name</th><th>Slot</th><th>Last payment</th><th>Amount</th></tr></thead>
-                <tbody>
-                  {account.members.map((member) => (
-                    <tr key={`${member.cid}-${member.slot}`}>
-                      <td>{member.name}</td>
-                      <td>{member.slot}</td>
-                      <td>{member.lastPayment?.date || 'No payment recorded'}</td>
-                      <td>{member.lastPayment ? formatZmw(member.lastPayment.amount) : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="member-table tbl-scroll">
+                <table className="data">
+                  <thead><tr><th>Name</th><th>Slot</th><th>Last payment</th><th className="num">Amount</th></tr></thead>
+                  <tbody>
+                    {account.members.map((member) => (
+                      <tr key={`${member.cid}-${member.slot}`}>
+                        <td>{member.name}</td>
+                        <td>{member.slot}</td>
+                        <td>{member.lastPayment ? paymentDate(member.lastPayment.date) : 'No payment recorded'}</td>
+                        <td className="num">{member.lastPayment ? formatZmw(member.lastPayment.amount) : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <ul className="member-cards record-cards">
+                {account.members.map((member) => (
+                  <li key={`${member.cid}-${member.slot}`} className="record-card">
+                    <div className="record-line">
+                      <strong>{member.name}</strong>
+                      <span className="num">{member.lastPayment ? formatZmw(member.lastPayment.amount) : '—'}</span>
+                    </div>
+                    <p className="record-meta">Slot {member.slot} · {member.lastPayment ? paymentDate(member.lastPayment.date) : 'No payment recorded'}</p>
+                  </li>
+                ))}
+              </ul>
+            </>
           ) : <p className="empty">No one is connected.</p>}
         </div>
       </section>
@@ -131,25 +171,37 @@ export function FamilyModal({ account, onClose }) {
   return createPortal(dialog, document.querySelector('.vh-app') || document.body)
 }
 
+function accountMeta(row) {
+  const parts = [row.activity, row.plan, `Due ${row.dueDate}`, `Account paid: ${row.paidStatus}`]
+  if (row.email) parts.push(row.email)
+  parts.push(row.agent && row.agent !== row.owner ? row.agent : row.agent ? 'Same as owner' : 'No agent recorded')
+  return parts.join(' · ')
+}
+
 function AccountTable({ accounts, empty, onOpen }) {
+  if (!accounts.length) return <Message>{empty}</Message>
+  const columns = [
+    { key: 'owner', label: <ColumnLabel icon="users">Account owner</ColumnLabel>, cell: (row) => row.owner },
+    { key: 'status', label: <ColumnLabel icon="activity">Status</ColumnLabel>, cell: (row) => <StatusChip value={row.activity} /> },
+    { key: 'plan', label: <ColumnLabel icon="package">Plan</ColumnLabel>, cell: (row) => row.plan },
+    { key: 'due', label: <ColumnLabel icon="calendar">Due date</ColumnLabel>, cell: (row) => row.dueDate },
+    { key: 'email', label: <ColumnLabel icon="mail">Email</ColumnLabel>, cell: (row) => row.email || <span aria-label="Email not recorded" /> },
+    { key: 'slots', label: <ColumnLabel icon="layers">Slots</ColumnLabel>, cell: (row) => slotButton(row, onOpen) },
+    { key: 'paid', label: <ColumnLabel icon="receipt">Account paid</ColumnLabel>, cell: (row) => <StatusChip value={row.paidStatus} /> },
+    { key: 'agent', label: <ColumnLabel icon="user">Agent</ColumnLabel>, cell: (row) => agentLabel(row) },
+  ]
   return (
-    <DataTable
-      rows={accounts}
-      empty={empty}
-      columns={[
-        { key: 'owner', label: <ColumnLabel icon="users">Account owner</ColumnLabel>, cell: (row) => row.owner },
-        { key: 'status', label: <ColumnLabel icon="activity">Status</ColumnLabel>, cell: (row) => <StatusChip value={row.activity} /> },
-        { key: 'plan', label: <ColumnLabel icon="package">Plan</ColumnLabel>, cell: (row) => row.plan },
-        { key: 'due', label: <ColumnLabel icon="calendar">Due date</ColumnLabel>, cell: (row) => row.dueDate },
-        { key: 'email', label: <ColumnLabel icon="mail">Email</ColumnLabel>, cell: (row) => row.email || <span aria-label="Email not recorded" /> },
-        { key: 'slots', label: <ColumnLabel icon="layers">Slots</ColumnLabel>, cell: (row) => {
-          const count = `${row.slotsTaken}/${row.slotsTotal}`
-          return <button type="button" className="btn btn-ghost btn-sm slot-count" aria-haspopup="dialog" aria-label={`Slots for ${row.owner}, ${count}`} onClick={() => onOpen(row)}>{count}</button>
-        } },
-        { key: 'paid', label: <ColumnLabel icon="receipt">Paid status</ColumnLabel>, cell: (row) => <StatusChip value={row.paidStatus} /> },
-        { key: 'agent', label: <ColumnLabel icon="user">Agent</ColumnLabel>, cell: (row) => row.agent || '—' },
-      ]}
-    />
+    <>
+      <div className="family-table"><DataTable rows={accounts} empty={empty} columns={columns} /></div>
+      <ul className="family-cards record-cards">
+        {accounts.map((row) => (
+          <li key={row.id} className="record-card">
+            <div className="record-line"><strong>{row.owner}</strong>{slotButton(row, onOpen)}</div>
+            <p className="record-meta">{accountMeta(row)}</p>
+          </li>
+        ))}
+      </ul>
+    </>
   )
 }
 
@@ -191,17 +243,32 @@ function FamilyAccounts({ model }) {
       )}
       <Panel title="Plans">
         {plansMessage || !model.products.length ? <Message>{plansMessage || COPY.plansEmpty}</Message> : (
-          <DataTable
-            rows={model.products}
-            empty={COPY.plansEmpty}
-            columns={[
-              { key: 'name', label: 'Plan', cell: (row) => row.name },
-              { key: 'category', label: 'Category', cell: (row) => row.category },
-              { key: 'slots', label: 'Slots', cell: (row) => (row.shared ? `${row.slots ?? '—'} shared` : 'Not shared') },
-              { key: 'price', label: 'Price', cell: (row) => (row.price == null ? 'Not recorded' : formatZmw(row.price)) },
-              { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.active ? 'Active' : 'Inactive'} /> },
-            ]}
-          />
+          <>
+            <div className="family-table">
+              <DataTable
+                rows={model.products}
+                empty={COPY.plansEmpty}
+                columns={[
+                  { key: 'name', label: 'Plan', cell: (row) => row.name },
+                  { key: 'category', label: 'Category', cell: (row) => row.category },
+                  { key: 'slots', label: 'Slots', cell: (row) => (row.shared ? `${row.slots ?? '—'} shared` : 'Not shared') },
+                  { key: 'price', className: 'num', label: 'Price', cell: (row) => (row.price == null ? 'Not recorded' : formatZmw(row.price)) },
+                  { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.active ? 'Active' : 'Inactive'} /> },
+                ]}
+              />
+            </div>
+            <ul className="family-cards record-cards">
+              {model.products.map((row) => (
+                <li key={row.id} className="record-card">
+                  <div className="record-line">
+                    <strong>{row.name}</strong>
+                    <span className="num">{row.price == null ? 'Not recorded' : formatZmw(row.price)}</span>
+                  </div>
+                  <p className="record-meta">{row.category} · {row.shared ? `${row.slots ?? '—'} shared` : 'Not shared'} · {row.active ? 'Active' : 'Inactive'}</p>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </Panel>
     </div>

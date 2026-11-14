@@ -100,13 +100,22 @@ try {
     }, 'Family Accounts')
     const tableName = width === 1440 ? 'family-accounts-table-1440.png' : 'family-accounts-table-390.png'
     await page.screenshot({ path: `${outDir}/${tableName}`, fullPage: true })
-    await page.getByRole('button', { name: /Slots for / }).first().click()
+    const opener = page.getByRole('button', { name: /Slots for / }).first()
+    await opener.click()
     await page.getByRole('dialog').waitFor()
     const popupName = width === 1440 ? 'family-accounts-members-1440.png' : 'family-accounts-members-390.png'
     await page.screenshot({ path: `${outDir}/${popupName}`, fullPage: false })
     if (width === 1440) await page.screenshot({ path: `${outDir}/family-accounts-popup-desktop.png`, fullPage: false })
     await page.keyboard.press('Escape')
     await page.getByRole('dialog').waitFor({ state: 'hidden' })
+    const afterEscape = await page.evaluate(() => document.activeElement?.getAttribute('aria-label') || '')
+    if (!afterEscape.startsWith('Slots for')) throw new Error(`Escape did not return focus at ${width}: ${afterEscape}`)
+    await opener.click()
+    await page.getByRole('dialog').waitFor()
+    await page.locator('.vh-modal-backdrop').click({ position: { x: 8, y: 8 } })
+    await page.getByRole('dialog').waitFor({ state: 'hidden' })
+    const afterBackdrop = await page.evaluate(() => document.activeElement?.getAttribute('aria-label') || '')
+    if (!afterBackdrop.startsWith('Slots for')) throw new Error(`Backdrop did not return focus at ${width}: ${afterBackdrop}`)
   }
   const secret = await page.locator('body').innerText()
   if (secret.includes('must-not-render')) throw new Error('secret rendered')
