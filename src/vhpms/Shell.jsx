@@ -32,14 +32,14 @@ export function LoginScreen({ error, busy, onSubmit }) {
       <div className="login-shell">
         <div className="login-slides" aria-hidden="true">
           {LOGIN_SLIDES.map(([file], index) => (
-            <img key={file} src={`${base}login/${file}`} alt="" className={index === slide ? 'is-active' : ''} loading={index === 0 ? 'eager' : 'lazy'} />
+            <img key={file} src={`${base}login/${file}`} alt="" className={[index === slide ? 'is-active' : '', file === 'transport.webp' ? 'is-transport' : ''].filter(Boolean).join(' ')} loading={index === 0 ? 'eager' : 'lazy'} />
           ))}
+          <div className={LOGIN_SLIDES[slide][0] === 'markets.webp' ? 'login-markets-shade is-active' : 'login-markets-shade'} />
         </div>
         <div className="login-layout">
           <div className="login-stage" />
           <div className="login-card">
             <div className="login-brand">
-              <img className="login-mark" src={`${base}vh-submark-on-light.svg`} alt="" width={32} height={32} />
               <span className="brand-name">VHPMS</span>
             </div>
             <h1>Performance Management System</h1>
