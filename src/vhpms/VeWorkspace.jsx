@@ -297,9 +297,10 @@ export function ProviderReconciliation({ model }) {
     return true
   }).sort((a, b) => String(a.expected_date).localeCompare(String(b.expected_date)) || String(a.fid).localeCompare(String(b.fid), undefined, { numeric: true }))
   const summary = data.summary || {}
-  const confirmedActive = data.confirmed_activity ? Object.values(data.confirmed_activity).filter((value) => value === 'Active').length : null
-  const confirmedInactive = data.confirmed_activity ? Object.values(data.confirmed_activity).filter((value) => value === 'Inactive').length : null
-  const notConfirmed = data.preserved_activity ? Object.keys(data.preserved_activity).length : null
+  const labelled = (model.accounts || []).filter((account) => account.activitySource === 'Confirmed' || account.activitySource === 'Not confirmed')
+  const confirmedActive = labelled.length ? labelled.filter((account) => account.activitySource === 'Confirmed' && account.activity === 'Active').length : (data.confirmed_activity ? Object.values(data.confirmed_activity).filter((value) => value === 'Active').length : null)
+  const confirmedInactive = labelled.length ? labelled.filter((account) => account.activitySource === 'Confirmed' && account.activity === 'Inactive').length : (data.confirmed_activity ? Object.values(data.confirmed_activity).filter((value) => value === 'Inactive').length : null)
+  const notConfirmed = labelled.length ? labelled.filter((account) => account.activitySource === 'Not confirmed').length : (data.preserved_activity ? Object.keys(data.preserved_activity).length : null)
   const estimatesRecorded = (data.cycles || []).some((row) => row.estimated_amount_zmw != null && row.estimated_amount_zmw !== '' && Number.isFinite(Number(row.estimated_amount_zmw)))
   const asOf = formatDisplayDate(data.as_of)
   const labelFor = (fid) => {
