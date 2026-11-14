@@ -7,6 +7,7 @@ import { emptyState, parseState, STORAGE_KEY } from './model.js'
 import { freshScorecard, loadScorecard, buildOrganisation, recordPeriod } from './score.js'
 import { emptyBooks, parseBooks } from './books.js'
 import { todayIso } from './veData.js'
+import { resetPeriodOnSignIn } from './reportingPeriod.js'
 import Shell, { LoginScreen } from './Shell.jsx'
 import GmDashboard from './GmDashboard.jsx'
 import { Departments, DepartmentHeatMap } from './DepartmentViews.jsx'
@@ -102,6 +103,7 @@ export default function Vhpms() {
     setBusy(false)
     if (!result.ok) { setError(result.error); return }
     const next = result.token ? { ...result.user, token: result.token } : result.user
+    resetPeriodOnSignIn(typeof localStorage === 'undefined' ? null : localStorage, next.username || next.id, todayIso())
     saveSession(next, result.token)
     setUser(next)
     setMode('management')

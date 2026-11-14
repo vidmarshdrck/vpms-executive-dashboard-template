@@ -1,5 +1,4 @@
 import { useContext, useEffect, useRef, useState, createContext } from 'react'
-import { Calendar, ChevronDown } from 'lucide-react'
 import { MONTHS, clampPeriod, defaultPeriod, periodBounds, periodLabel, readStoredPeriod, writeStoredPeriod, yearOptions } from './reportingPeriod.js'
 
 const ReportingPeriodContext = createContext(null)
@@ -35,68 +34,80 @@ export function useReportingPeriod(today) {
 export function TimeframePopover({ pageTitle = 'Dashboard', today, initiallyOpen = false }) {
   const period = useReportingPeriod(today)
   const [open, setOpen] = useState(initiallyOpen)
-  const [draft, setDraft] = useState({ year: period.year, from: period.from, to: period.to })
   const root = useRef(null)
-  const help = `Reporting period · ${pageTitle}`
+  const help = `Reporting period \u00b7 ${pageTitle}`
   useEffect(() => {
-    if (!open) return undefined
-    function onPointer(event) {
-      if (!root.current?.contains(event.target)) setOpen(false)
+    function onClick(event) {
+      const popover = root.current
+      if (!popover?.open || popover.contains(event.target)) return
+      setOpen(false)
     }
     function onKey(event) {
-      if (event.key !== 'Escape') return
+      const popover = root.current
+      if (event.key !== 'Escape' || !popover?.open) return
       setOpen(false)
-      root.current?.querySelector('button')?.focus()
+      popover.querySelector('summary')?.focus()
     }
-    document.addEventListener('mousedown', onPointer)
+    document.addEventListener('click', onClick)
     document.addEventListener('keydown', onKey)
     return () => {
-      document.removeEventListener('mousedown', onPointer)
+      document.removeEventListener('click', onClick)
       document.removeEventListener('keydown', onKey)
     }
-  }, [open])
-  function setField(field, value) {
-    setDraft((current) => ({ ...current, [field]: Number(value) }))
+  }, [])
+  function onToggle(event) {
+    setOpen(event.currentTarget.open)
+  }
+  function onSummaryClick(event) {
+    event.preventDefault()
+    setOpen((current) => {
+      const next = !current
+      if (next) root.current?.querySelector('form')?.reset()
+      return next
+    })
   }
   function apply(event) {
     event.preventDefault()
-    const from = Number(draft.from)
-    const to = Number(draft.to)
-    period.apply({ year: Number(draft.year), from, to: to < from ? from : to })
+    const form = event.currentTarget
+    const from = Number(form.elements.period_from.value)
+    let to = Number(form.elements.period_to.value)
+    if (to < from) {
+      to = from
+      form.elements.period_to.value = String(from)
+    }
+    period.apply({ year: Number(form.elements.period_year.value), from, to })
     setOpen(false)
   }
-  const years = yearOptions(period.todayYear || defaultPeriod(today).year, Number(draft.year))
+  const years = yearOptions(period.todayYear || defaultPeriod(today).year, period.year)
   return (
-    <div className="vh-timeframe" ref={root}>
-      <button type="button" className="vh-timeframe-trigger" aria-label="Select reporting period" aria-haspopup="dialog" aria-expanded={open} onClick={() => { if (open) { setOpen(false); return } setDraft({ year: period.year, from: period.from, to: period.to }); setOpen(true) }}>
-        <Calendar aria-hidden="true" size={12} strokeWidth={1.8} />
+    <details ref={root} className="hod-header-popover hod-timeframe-popover" open={open} onToggle={onToggle}>
+      <summary role="button" aria-label="Select reporting period" aria-haspopup="dialog" onClick={onSummaryClick}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18" /></svg>
         <span>{period.label}</span>
-        <ChevronDown className="vh-timeframe-chevron" aria-hidden="true" size={11} strokeWidth={1.8} />
-      </button>
-      {open && (
-        <form className="vh-timeframe-panel" aria-label={help} onSubmit={apply}>
-          <p>{help}</p>
-          <label>From
-            <select name="period_from" value={draft.from} onChange={(event) => setField('from', event.target.value)}>
-              {MONTHS.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
-            </select>
-          </label>
-          <label>To
-            <select name="period_to" value={draft.to} onChange={(event) => setField('to', event.target.value)}>
-              {MONTHS.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
-            </select>
-          </label>
-          <label>Year
-            <select name="period_year" value={draft.year} onChange={(event) => setField('year', event.target.value)}>
-              {years.map((year) => <option key={year} value={year}>{year}</option>)}
-            </select>
-          </label>
-          <div>
-            <button type="button" onClick={() => setOpen(false)}>Cancel</button>
-            <button type="submit" className="btn btn-primary">Apply</button>
-          </div>
-        </form>
-      )}
-    </div>
+        <svg className="hod-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+      </summary>
+      <form key={`${period.year}-${period.from}-${period.to}`} className="hod-timeframe-panel" aria-label={help} onSubmit={apply}>
+        <p>{help}</p>
+        <label>From
+          <select name="period_from" defaultValue={period.from}>
+            {MONTHS.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
+          </select>
+        </label>
+        <label>To
+          <select name="period_to" defaultValue={period.to}>
+            {MONTHS.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
+          </select>
+        </label>
+        <label>Year
+          <select name="period_year" defaultValue={period.year}>
+            {years.map((year) => <option key={year} value={year}>{year}</option>)}
+          </select>
+        </label>
+        <div>
+          <button type="button" data-cancel-period onClick={() => setOpen(false)}>Cancel</button>
+          <button type="submit" className="btn btn-primary">Apply</button>
+        </div>
+      </form>
+    </details>
   )
 }
