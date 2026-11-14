@@ -12,6 +12,36 @@ import BusinessWorkspace from '../src/vhpms/BusinessWorkspace.jsx'
 import { CORE_BUSINESS_IDS, buildAdapterModel } from '../src/vhpms/businessSources.js'
 
 const TODAY = '2026-11-08'
+
+function reconciliationCycles() {
+  const plans = [
+    { fid: 12, product: 'Netflix', due: '2026-12-05' },
+    { fid: 18, product: 'Apple Music', due: '2027-01-15' },
+    { fid: 4, product: 'Spotify', due: '2026-08-06' },
+    { fid: 9, product: 'Prime Video', due: '2026-12-24' },
+    { fid: 21, product: 'Starlink', due: '2026-12-20' },
+  ]
+  const cycles = []
+  for (let index = 0; index < 56; index += 1) {
+    const account = plans[index % plans.length]
+    const month = Math.floor(index / plans.length)
+    const day = account.due.slice(8, 10)
+    const expected = new Date(Date.UTC(2025, month, Number(day))).toISOString().slice(0, 10)
+    cycles.push({
+      cycle_key: `cycle-${account.fid}-${expected}`,
+      fid: account.fid,
+      expected_date: expected,
+      ledger_candidate_expense_ids: index % 4 === 0 ? [1000 + index] : [],
+      unallocated_bank_candidate_handles: [],
+      verified_bank_match: null,
+      verified_amount_zmw: null,
+      estimated_amount_zmw: null,
+    })
+  }
+  return { plans, cycles }
+}
+
+const { plans: reconciliationPlans, cycles: reconciliationCycleRows } = reconciliationCycles()
 const model = buildWorkspace({
   familyAccounts: {
     access: 'ok',
@@ -19,8 +49,8 @@ const model = buildWorkspace({
       { fid: 12, aaid: 'AG1', product: 'Netflix', due_date: '2026-12-05', paid_status: 'Unpaid', slots_total: 5, slots_taken: 3, slot_1: 'C1', slot_2: 'C2', slot_3: 'C3', password: 'must-not-render' },
       { fid: 18, aaid: 'AG2', product: 'Apple Music', due_date: '2027-01-15', paid_status: 'Unpaid', slots_total: 5, slots_taken: 1, slot_1: 'C4' },
       { fid: 4, aaid: 'AG3', product: 'Spotify', due_date: '2026-08-06', paid_status: 'Unpaid', slots_total: 5, slots_taken: 2, slot_1: 'C5', slot_2: 'C6' },
-      { fid: 9, aaid: 'AG4', product: 'Prime Video', due_date: '2026-05-24', paid_status: 'Unpaid', slots_total: 5, slots_taken: 0 },
-      { fid: 21, aaid: 'AG5', product: 'Starlink', due_date: '2026-12-20', paid_status: 'Unpaid', slots_total: 1, slots_taken: 1, slot_1: 'C2' },
+      { fid: 9, aaid: 'AG4', product: 'Prime Video', due_date: '2026-12-24', paid_status: 'Unpaid', slots_total: 5, slots_taken: 0 },
+      { fid: 21, aaid: 'AG5', product: 'Starlink', due_date: '2026-12-20', paid_status: 'Paid', slots_total: 1, slots_taken: 1, slot_1: 'C2' },
     ],
   },
   accountAgents: { access: 'ok', rows: [
@@ -102,6 +132,30 @@ const model = buildWorkspace({
       { id: 5, account_id: 'acct-zmw', txn_date: '2026-11-04', description: 'STARLINK', reference: 'SL-1', amount: -800, balance: 100.75, category: 've_provider_subscription', orig_amount_usd: null, fx_rate: null },
       { id: 6, account_id: 'acct-zmw', txn_date: '2026-11-05', description: 'Transfer from savings', reference: 'IN-1', amount: 500, balance: 600.75, category: 'transfer_in', orig_amount_usd: null, fx_rate: null },
     ],
+  },
+  reconciliation: {
+    access: 'ok',
+    rows: [{
+      id: 'stub-reconciliation',
+      business_id: 'VE',
+      event: 've_family_reconciliation_v1',
+      created_at: '2026-11-14T09:00:00Z',
+      after_value: {
+        version: 1,
+        as_of: '2026-11-14',
+        confirmed_activity: { '12': 'Inactive', '4': 'Active', '21': 'Active' },
+        preserved_activity: { '18': 'Inactive' },
+        summary: {
+          expected_cycles: reconciliationCycleRows.length,
+          cycles_with_candidate_evidence: reconciliationCycleRows.filter((row) => row.ledger_candidate_expense_ids.length).length,
+          unreconciled_cycles: reconciliationCycleRows.length,
+          payment_count_actually_made: null,
+          actual_paid_total: null,
+        },
+        accounts: reconciliationPlans.map((plan) => ({ fid: plan.fid, product: plan.product, due_date_unchanged: plan.due, expected_cycle_count: reconciliationCycleRows.filter((row) => row.fid === plan.fid).length })),
+        cycles: reconciliationCycleRows,
+      },
+    }],
   },
 }, TODAY)
 

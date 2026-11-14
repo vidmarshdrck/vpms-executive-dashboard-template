@@ -12,7 +12,7 @@ import { CORE_BUSINESS_IDS, buildAdapterModel } from './businessSources.js'
 import { EMPTY } from './workspaceCharts.js'
 
 const bundle = await build({
-  stdin: { contents: "export { BusinessHome } from './src/vhpms/BusinessHome.jsx'\nexport { default as BusinessWorkspace } from './src/vhpms/BusinessWorkspace.jsx'\nexport { default as VeWorkspace, FamilyModal } from './src/vhpms/VeWorkspace.jsx'\nexport { default as ActivitiesBoard } from './src/vhpms/ActivitiesBoard.jsx'\nexport { default as Shell } from './src/vhpms/Shell.jsx'\nexport { TimeframePopover } from './src/vhpms/TimeframePopover.jsx'", resolveDir: process.cwd() },
+  stdin: { contents: "export { BusinessHome } from './src/vhpms/BusinessHome.jsx'\nexport { default as BusinessWorkspace } from './src/vhpms/BusinessWorkspace.jsx'\nexport { default as VeWorkspace, FamilyModal, ProviderReconciliation } from './src/vhpms/VeWorkspace.jsx'\nexport { default as ActivitiesBoard } from './src/vhpms/ActivitiesBoard.jsx'\nexport { default as Shell } from './src/vhpms/Shell.jsx'\nexport { TimeframePopover } from './src/vhpms/TimeframePopover.jsx'", resolveDir: process.cwd() },
   bundle: true,
   write: false,
   platform: 'node',
@@ -27,7 +27,7 @@ const code = bundle.outputFiles[0].text.replace(/from "([^"]+)"/g, (_, name) => 
   if (name.startsWith('react') || name.startsWith('@supabase/') || name === 'lucide-react') return `from "file://${require.resolve(name)}"`
   return `from "${name}"`
 })
-const { BusinessHome, BusinessWorkspace, VeWorkspace, FamilyModal, ActivitiesBoard, Shell, TimeframePopover } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
+const { BusinessHome, BusinessWorkspace, VeWorkspace, FamilyModal, ProviderReconciliation, ActivitiesBoard, Shell, TimeframePopover } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
 
 const TODAY = '2026-11-08'
 const SECRET = 'super-secret-value'
@@ -65,6 +65,52 @@ function renderWorkspace(model) {
 function renderHome(id = 've', books = emptyBooks()) {
   return renderToStaticMarkup(createElement(BusinessHome, { books, businessId: id, onChange: () => { throw new Error('read only') } }))
 }
+
+test('monthly reconciliation visibly separates expected candidates unknown paid and unavailable costs', () => {
+  const model = workspaceModel()
+  model.reconciliation = {
+    as_of: '2026-11-14', confirmed_activity: { '7': 'Active' }, preserved_activity: {},
+    summary: { expected_cycles: 1, cycles_with_candidate_evidence: 1, unreconciled_cycles: 1, payment_count_actually_made: null },
+    accounts: [{ fid: 7, product: 'Netflix', due_date_unchanged: '2026-04-05', expected_cycle_count: 1 }],
+    cycles: [{ cycle_key: 'fid:7:2026-04-05', fid: 7, expected_date: '2026-04-05', ledger_candidate_expense_ids: [123], unallocated_bank_candidate_handles: [], verified_bank_match: null, verified_amount_zmw: null, estimated_amount_zmw: null }],
+  }
+  const html = renderToStaticMarkup(createElement(ProviderReconciliation, { model }))
+  for (const text of ['Monthly provider reconciliation', 'Expected anniversary', 'Candidate only', 'Actual paid count: Unknown', 'Unreconciled', 'No settled match verified', 'Historical estimate unavailable', '2026-04-05', 'Historical provider costs are not recorded yet.']) assert.ok(html.includes(text), text)
+  assert.doesNotMatch(html, /0 paid|K0|ZMW 0\.00/)
+  assert.doesNotMatch(html, /owner instruction|Boaz|Nathan|Activity evidence|\bFID\b|will appear here|\b(draft|demo|sample|placeholder|preview)\b/i)
+})
+
+test('known reconciliation amounts use a signed kwacha figure and unknown amounts stay unknown', () => {
+  const model = workspaceModel()
+  model.reconciliation = {
+    as_of: '2026-11-14', confirmed_activity: {}, preserved_activity: {},
+    summary: { expected_cycles: 2, cycles_with_candidate_evidence: 0, unreconciled_cycles: 1, payment_count_actually_made: null, actual_paid_total: null },
+    accounts: [{ fid: 7, product: 'Netflix', due_date_unchanged: '2026-04-05' }],
+    cycles: [
+      { cycle_key: 'a', fid: 7, expected_date: '2026-04-05', ledger_candidate_expense_ids: [], unallocated_bank_candidate_handles: [], verified_bank_match: null, verified_amount_zmw: -15.5, estimated_amount_zmw: null },
+      { cycle_key: 'b', fid: 7, expected_date: '2026-05-05', ledger_candidate_expense_ids: [], unallocated_bank_candidate_handles: [], verified_bank_match: null, verified_amount_zmw: 10, estimated_amount_zmw: 20 },
+    ],
+  }
+  const html = renderToStaticMarkup(createElement(ProviderReconciliation, { model }))
+  assert.match(html, /money-neg">ZMW \u221215\.50/)
+  assert.match(html, />ZMW 10\.00</)
+  assert.doesNotMatch(html, /money-neg">ZMW 10\.00/)
+  assert.match(html, /Actual paid count: Unknown/)
+  assert.match(html, /Actual paid total: Unknown/)
+  assert.doesNotMatch(html, /ZMW 0\.00|0 paid|K0/)
+})
+
+test('family accounts show confirmation apart from payment', () => {
+  const model = workspaceModel()
+  model.reconciliation = { as_of: '2026-11-14', confirmed_activity: { '7': 'Active' }, preserved_activity: {}, summary: {}, accounts: [], cycles: [] }
+  model.activeAccounts[0].activitySource = 'Confirmed'
+  const html = renderWorkspace(model)
+  assert.match(html, />Confirmed</)
+  assert.match(html, />Unpaid</)
+  assert.match(html, /Confirmation/)
+  assert.match(html, /status-pill/)
+  assert.doesNotMatch(html, /Activity evidence|\bFID\b|Preserved|owner-confirmed|Owner-confirmed/)
+})
 
 test('the VE pages render mapped records', () => {
   const html = renderWorkspace(workspaceModel())

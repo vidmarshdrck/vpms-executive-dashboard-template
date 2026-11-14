@@ -195,7 +195,7 @@ test('the authenticated read lists safe columns and drops a secret if one is ret
   assert.equal(options.url, 'https://example.supabase.co')
   assert.equal(await options.next.accessToken(), 'owner-token')
   assert.equal(options.next.global.headers.Authorization, 'Bearer owner-token')
-  assert.deepEqual(seen.map((item) => item.columns), [FAMILY_COLUMNS, CUSTOMER_COLUMNS, ORDER_COLUMNS, EXPENSE_COLUMNS, MARKETING_COLUMNS, SPEND_COLUMNS, PRODUCT_COLUMNS, BANK_ACCOUNT_COLUMNS, BANK_TXN_COLUMNS, AGENT_COLUMNS])
+  assert.deepEqual(seen.map((item) => item.columns), [FAMILY_COLUMNS, CUSTOMER_COLUMNS, ORDER_COLUMNS, EXPENSE_COLUMNS, MARKETING_COLUMNS, SPEND_COLUMNS, PRODUCT_COLUMNS, BANK_ACCOUNT_COLUMNS, BANK_TXN_COLUMNS, AGENT_COLUMNS, 'id,business_id,task_id,event,after_value,created_at'])
   for (const columns of seen.map((item) => item.columns)) {
     assert.equal(/\b(password|receipt|notes|fnb_transaction_ref)\b/i.test(columns), false)
   }

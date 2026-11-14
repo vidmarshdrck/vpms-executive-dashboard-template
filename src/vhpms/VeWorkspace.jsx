@@ -5,8 +5,9 @@ import { Donut, PageFooter } from './Donut.jsx'
 import { formatZmw, slicesBy } from './books.js'
 import { ColumnLabel } from './icons.jsx'
 import { accountPeriod, accountsByCurrency, categoryLabel, filterBankTransactions, formatMoney, fxText } from './bankBudget.js'
-import { categoryShare } from './fundsMonth.js'
-import { StandardBudget, StandardFunds, StandardMarketing, StandardOverview } from './businessPanels.jsx'
+import { categoryShare, monthLabel } from './fundsMonth.js'
+import { EmptyState, StandardBudget, StandardFunds, StandardMarketing, StandardOverview } from './businessPanels.jsx'
+import { formatAmount, formatDisplayDate } from './workspaceCharts.js'
 import { glanceFromVe } from './businessSources.js'
 import { useReportingPeriod } from './TimeframePopover.jsx'
 import { COPY, buildWorkspace, emptySources, fetchVeWorkspace, filterCustomers, receivedInPeriod, todayIso, whatsappHref } from './veData.js'
@@ -31,6 +32,25 @@ function StatusChip({ value }) {
   const key = String(value || '').toLowerCase()
   const tone = key === 'overdue' ? 'red' : /unpaid|inactive|disconnected/.test(key) ? 'amber' : /active|connected|paid|published|scheduled/.test(key) ? 'green' : 'na'
   return <span className={`chip ${tone}`}>{value}</span>
+}
+
+function StatusPill({ value }) {
+  const key = String(value || '').toLowerCase()
+  const tone = key === 'not confirmed' || key === 'unreconciled' ? 'amber' : key === 'confirmed' || key === 'settled' ? 'green' : 'na'
+  return <span className={`chip status-pill ${tone}`}>{value}</span>
+}
+
+function knownCount(value) {
+  if (value == null || value === '') return 'Unknown'
+  const amount = Number(value)
+  return Number.isFinite(amount) ? String(amount) : 'Unknown'
+}
+
+function AmountOr({ value, unknown }) {
+  if (value == null || value === '') return unknown
+  const amount = typeof value === 'number' ? value : Number(String(value).replace(/,/g, ''))
+  if (!Number.isFinite(amount)) return unknown
+  return <span className={amount < 0 ? 'num money-neg' : 'num'}>{formatAmount(amount)}</span>
 }
 
 function DataTable({ columns, rows, empty, onRow }) {
@@ -190,11 +210,12 @@ function accountCardLine(row) {
   return [row.plan, displayDate(row.dueDate), agentPlain(row)].join(' · ')
 }
 
-function AccountTable({ accounts, empty, onOpen }) {
+function AccountTable({ accounts, empty, onOpen, showConfirmation = false }) {
   if (!accounts.length) return <Message>{empty}</Message>
   const columns = [
     { key: 'owner', label: <ColumnLabel icon="users">Account owner</ColumnLabel>, cell: (row) => row.owner },
     { key: 'status', label: <ColumnLabel icon="activity">Status</ColumnLabel>, cell: (row) => <StatusChip value={row.activity} /> },
+    ...(showConfirmation ? [{ key: 'confirmation', label: <ColumnLabel icon="clipboard">Confirmation</ColumnLabel>, cell: (row) => row.activitySource ? <StatusPill value={row.activitySource} /> : '—' }] : []),
     { key: 'plan', label: <ColumnLabel icon="package">Plan</ColumnLabel>, cell: (row) => row.plan },
     { key: 'due', label: <ColumnLabel icon="calendar">Due date</ColumnLabel>, cell: (row) => displayDate(row.dueDate) },
     { key: 'email', label: <ColumnLabel icon="mail">Email</ColumnLabel>, cell: (row) => row.email || <span aria-label="Email not recorded" /> },
@@ -217,6 +238,7 @@ function AccountTable({ accounts, empty, onOpen }) {
               {slotButton(row, onOpen)}
             </div>
             <p className="record-meta">{accountCardLine(row)}</p>
+            {showConfirmation && row.activitySource ? <p className="record-meta"><StatusPill value={row.activitySource} /></p> : null}
           </li>
         ))}
       </ul>
@@ -226,6 +248,121 @@ function AccountTable({ accounts, empty, onOpen }) {
 
 function Overview({ model }) {
   return <StandardOverview model={glanceFromVe(model)} />
+}
+
+function reconciliationAccountLabel(row, family, withAnniversary = false) {
+  const plan = String(row.product || family?.plan || 'Account').trim() || 'Account'
+  const owner = family?.owner && family.owner !== 'Not recorded' ? family.owner : ''
+  const anniversary = withAnniversary && row.due_date_unchanged ? `anniversary ${formatDisplayDate(row.due_date_unchanged)}` : ''
+  return [plan, owner, anniversary].filter(Boolean).join(' · ')
+}
+
+function candidateParts(row) {
+  return [
+    ...(row.ledger_candidate_expense_ids || []).map((id) => `Expense ${id}`),
+    ...(row.unallocated_bank_candidate_handles || []).map((handle) => String(handle || '').trim()).filter(Boolean),
+  ]
+}
+
+function cycleSettled(row) {
+  return row.verified_bank_match != null || (row.verified_amount_zmw != null && row.verified_amount_zmw !== '' && Number.isFinite(Number(row.verified_amount_zmw)))
+}
+
+function ReconciliationStatus({ row }) {
+  if (cycleSettled(row)) return <StatusPill value="Settled" />
+  return (
+    <span className="recon-status">
+      {candidateParts(row).length ? <StatusPill value="Candidate only" /> : null}
+      <StatusPill value="Unreconciled" />
+    </span>
+  )
+}
+
+export function ProviderReconciliation({ model }) {
+  const [accountId, setAccountId] = useState('')
+  const [month, setMonth] = useState('')
+  const data = model.reconciliation
+  if (!data) {
+    const detail = accessMessage(model.reconciliationAccess, COPY.reconciliationEmpty, COPY.reconciliationBlocked) || COPY.reconciliationEmpty
+    return <Panel title="Monthly provider reconciliation"><EmptyState icon="receipt" title={detail} /></Panel>
+  }
+  const families = new Map((model.accounts || []).map((account) => [account.id, account]))
+  const accountRows = data.accounts?.length
+    ? data.accounts
+    : [...new Map((data.cycles || []).map((row) => [String(row.fid), { fid: row.fid }])).values()]
+  const months = [...new Set((data.cycles || []).map((row) => String(row.expected_date || '').slice(0, 7)).filter((value) => /^\d{4}-\d{2}$/.test(value)))].sort()
+  const cycles = (data.cycles || []).filter((row) => {
+    if (accountId && String(row.fid) !== accountId) return false
+    if (month && String(row.expected_date || '').slice(0, 7) !== month) return false
+    return true
+  }).sort((a, b) => String(a.expected_date).localeCompare(String(b.expected_date)) || String(a.fid).localeCompare(String(b.fid), undefined, { numeric: true }))
+  const summary = data.summary || {}
+  const confirmedActive = data.confirmed_activity ? Object.values(data.confirmed_activity).filter((value) => value === 'Active').length : null
+  const confirmedInactive = data.confirmed_activity ? Object.values(data.confirmed_activity).filter((value) => value === 'Inactive').length : null
+  const notConfirmed = data.preserved_activity ? Object.keys(data.preserved_activity).length : null
+  const estimatesRecorded = (data.cycles || []).some((row) => row.estimated_amount_zmw != null && row.estimated_amount_zmw !== '' && Number.isFinite(Number(row.estimated_amount_zmw)))
+  const asOf = formatDisplayDate(data.as_of)
+  const labelFor = (fid) => {
+    const listed = accountRows.find((account) => String(account.fid) === String(fid)) || { fid, product: families.get(String(fid))?.plan || '' }
+    return reconciliationAccountLabel(listed, families.get(String(fid)))
+  }
+  const columns = [
+    { key: 'account', label: 'Account', cell: (row) => labelFor(row.fid) },
+    { key: 'expected', label: 'Expected anniversary', cell: (row) => <time dateTime={row.expected_date}>{formatDisplayDate(row.expected_date)}</time> },
+    { key: 'status', label: 'Status', cell: (row) => <ReconciliationStatus row={row} /> },
+    { key: 'candidate', label: 'Candidate', cell: (row) => candidateParts(row).join(', ') || 'No candidate' },
+    { key: 'settled', label: 'Settled match', cell: (row) => <AmountOr value={row.verified_amount_zmw} unknown="No settled match verified" /> },
+    { key: 'estimate', label: 'Estimate', cell: (row) => <AmountOr value={row.estimated_amount_zmw} unknown="Historical estimate unavailable" /> },
+  ]
+  return (
+    <Panel title="Monthly provider reconciliation" note={asOf && asOf !== String(data.as_of || '') ? `Activity as of ${asOf}.` : undefined}>
+      <div className="month-strip" aria-label="Reconciliation summary">
+        <article><span>Expected cycles</span><strong>{knownCount(summary.expected_cycles)}</strong></article>
+        <article><span>With a candidate</span><strong>{knownCount(summary.cycles_with_candidate_evidence)}</strong></article>
+        <article><span>Unreconciled</span><strong>{knownCount(summary.unreconciled_cycles)}</strong></article>
+      </div>
+      <p>{knownCount(confirmedActive)} confirmed active · {knownCount(confirmedInactive)} confirmed inactive · {knownCount(notConfirmed)} not confirmed.</p>
+      <p><strong>Actual paid count: {knownCount(summary.payment_count_actually_made)}</strong> · Actual paid total: <AmountOr value={summary.actual_paid_total} unknown="Unknown" />.</p>
+      <p className="stat-desc">A candidate is a possible match. It stays unreconciled until a settled payment is recorded.</p>
+      <div className="field-row recon-filters">
+        <div className="field">
+          <label htmlFor="recon-account">Account</label>
+          <select id="recon-account" aria-label="Reconciliation account" value={accountId} onChange={(event) => setAccountId(event.target.value)}>
+            <option value="">All accounts</option>
+            {accountRows.map((row) => <option key={row.fid} value={String(row.fid)}>{reconciliationAccountLabel(row, families.get(String(row.fid)), true)}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="recon-month">Month</label>
+          <select id="recon-month" aria-label="Reconciliation month" value={month} onChange={(event) => setMonth(event.target.value)}>
+            <option value="">All months</option>
+            {months.map((value) => <option key={value} value={value}>{monthLabel(value)}</option>)}
+          </select>
+        </div>
+      </div>
+      {(accountId || month) && cycles.length > 0 ? <p className="stat-desc">Showing {cycles.length} {cycles.length === 1 ? 'cycle' : 'cycles'} for this filter.</p> : null}
+      {cycles.length ? (
+        <>
+          <div className="family-table recon-table"><DataTable rows={cycles.map((row) => ({ ...row, id: row.cycle_key }))} empty="" columns={columns} /></div>
+          <ul className="family-cards record-cards">
+            {cycles.map((row) => (
+              <li key={row.cycle_key} className="record-card recon-card">
+                <div className="record-line">
+                  <strong>{labelFor(row.fid)}</strong>
+                  <ReconciliationStatus row={row} />
+                </div>
+                <p className="record-meta">Expected anniversary <time dateTime={row.expected_date}>{formatDisplayDate(row.expected_date)}</time></p>
+                <p className="record-meta">{candidateParts(row).join(', ') || 'No candidate'}</p>
+                <p className="record-meta"><AmountOr value={row.verified_amount_zmw} unknown="No settled match verified" /></p>
+                <p className="record-meta"><AmountOr value={row.estimated_amount_zmw} unknown="Historical estimate unavailable" /></p>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : <Message>{accountId || month ? 'No cycles for this account and month.' : 'No cycles were returned.'}</Message>}
+      {!estimatesRecorded && <p className="stat-desc">Historical provider costs are not recorded yet.</p>}
+    </Panel>
+  )
 }
 
 function FamilyAccounts({ model }) {
@@ -256,10 +393,11 @@ function FamilyAccounts({ model }) {
             <button type="button" role="tab" aria-selected={group === 'inactive'} className={group === 'inactive' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'} onClick={() => setGroup('inactive')}>Inactive ({model.inactiveAccounts.length})</button>
           </div>
           <Panel title={group === 'active' ? 'Active accounts' : 'Inactive accounts'}>
-            <AccountTable accounts={rows} empty={group === 'active' ? COPY.activeEmpty : COPY.inactiveEmpty} onOpen={setAccount} />
+            <AccountTable accounts={rows} empty={group === 'active' ? COPY.activeEmpty : COPY.inactiveEmpty} onOpen={setAccount} showConfirmation={Boolean(model.reconciliation)} />
           </Panel>
         </>
       )}
+      <ProviderReconciliation model={model} />
       <Panel title="Plans">
         {plansMessage || !model.products.length ? <Message>{plansMessage || COPY.plansEmpty}</Message> : (
           <>
