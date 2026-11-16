@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
+import { ownerDisplayFor } from './veOwnerDisplay.js'
+import { validReconciliation } from './veEvidence.js'
 import { projectBudget } from './bankBudget.js'
 import { slicesBy } from './books.js'
 import { periodBounds } from './reportingPeriod.js'
@@ -108,6 +110,7 @@ export function emptySources(access) {
     bankAccounts: sourceState(access),
     bankTransactions: sourceState(access),
     accountAgents: sourceState(access),
+    reconciliation: sourceState(access),
   }
 }
 
@@ -414,7 +417,35 @@ export function buildWorkspace(sources, today = todayIso()) {
       if (id && name) agents.set(id, name)
     }
   }
-  const accounts = sources.familyAccounts.access === 'ok' ? sources.familyAccounts.rows.map((row) => mapAccount(row, customers, today, agents)) : []
+  const reconciliationSource = sources.reconciliation || { access: 'empty', rows: [] }
+  const reconciliationEvent = reconciliationSource.access === 'ok'
+    ? reconciliationSource.rows.filter(row => row.business_id === 'VE' && row.event === 've_family_reconciliation_v1' && row.after_value?.version === 1).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0]
+    : null
+  const reconciliation = reconciliationEvent?.after_value || null
+  const displaySnapshot = ownerDisplayFor(sources, reconciliation)
+  // Finance inputs stay purely source/date-derived, regardless of display evidence.
+  const sourceAccounts = sources.familyAccounts.access === 'ok'
+    ? sources.familyAccounts.rows.map(row => mapAccount(row, customers, today, agents)) : []
+  const sourceIds = new Set(sourceAccounts.map(account => Number(account.id)))
+  const completeSource = sourceAccounts.length === 18 && sourceIds.size === 18
+    && Array.from({ length: 18 }, (_, i) => i + 1).every(id => sourceIds.has(id))
+  const operationalActivity = completeSource && validReconciliation(reconciliation) ? reconciliation : null
+  const accounts = sourceAccounts.map(account => {
+    if (displaySnapshot) return {
+      ...account,
+      sourceActivity: account.activity,
+      activity: displaySnapshot.active.includes(Number(account.id)) ? 'Active' : 'Inactive',
+      activitySource: `Owner-confirmed · 14/11/2026 · Display only (v${displaySnapshot.version}) · Date-derived: ${account.activity}`,
+    }
+    const confirmed = operationalActivity?.confirmed_activity?.[account.id]
+    const preserved = operationalActivity?.preserved_activity?.[account.id]
+    return {
+      ...account,
+      sourceActivity: account.activity,
+      activity: ['Active', 'Inactive'].includes(confirmed) ? confirmed : ['Active', 'Inactive'].includes(preserved) ? preserved : account.activity,
+      activitySource: ['Active', 'Inactive'].includes(confirmed) ? `Owner-confirmed · ${operationalActivity.as_of}` : 'Preserved · not owner-confirmed',
+    }
+  })
   const activeAccounts = accounts.filter((account) => account.activity === 'Active').sort((a, b) => a.dueDate.localeCompare(b.dueDate))
   const inactiveAccounts = accounts.filter((account) => account.activity === 'Inactive').sort((a, b) => a.dueDate.localeCompare(b.dueDate))
   const income = sources.orders.access === 'ok' ? sources.orders.rows.map((row) => mapIncome(row, customers)) : []
@@ -429,6 +460,10 @@ export function buildWorkspace(sources, today = todayIso()) {
   const connected = new Set(accounts.flatMap((account) => account.members.map((member) => member.cid)))
   return {
     today,
+    displaySnapshot,
+    reconciliation,
+    reconciliationAccess: reconciliationSource.access,
+    reconciliationEventId: reconciliationEvent?.id || null,
     access: {
       familyAccounts: sources.familyAccounts.access,
       customers: sources.customers.access,
@@ -451,7 +486,8 @@ export function buildWorkspace(sources, today = todayIso()) {
     products,
     bankAccounts,
     bankTransactions,
-    budget: projectBudget({ activeAccounts, transactions: bankTransactions }),
+    // Display activity must not silently rewrite the existing finance projection.
+    budget: projectBudget({ activeAccounts: sourceAccounts.filter(account => account.activity === 'Active'), transactions: bankTransactions }),
     weeks: weeklyBudget(expenses),
     incomeCategories: categoryTotals(income),
     expenseCategories: categoryTotals(expenses),
@@ -520,7 +556,7 @@ export async function fetchVeWorkspace({ env = {}, token = '', today = todayIso(
   if (!token) return buildWorkspace(emptySources('signed-out'), today)
   const client = createVeClient(env, token, factory)
   if (!client) return buildWorkspace(emptySources('unconfigured'), today)
-  const [familyAccounts, customers, orders, expenses, marketing, marketingSpend, products, bankAccounts, bankTransactions, accountAgents] = await Promise.all([
+  const [familyAccounts, customers, orders, expenses, marketing, marketingSpend, products, bankAccounts, bankTransactions, accountAgents, reconciliation] = await Promise.all([
     readTable(client, 'public', 'family_accounts', FAMILY_COLUMNS, 'fid'),
     readTable(client, 'public', 'customers', CUSTOMER_COLUMNS, 'name'),
     readTable(client, 'public', 'orders', ORDER_COLUMNS, 'date'),
@@ -531,6 +567,7 @@ export async function fetchVeWorkspace({ env = {}, token = '', today = todayIso(
     readTable(client, 'public', 've_bank_accounts', BANK_ACCOUNT_COLUMNS, 'label'),
     readTable(client, 'public', 've_bank_transactions', BANK_TXN_COLUMNS, 'txn_date'),
     readTable(client, 'public', 'account_agents', AGENT_COLUMNS, 'name'),
+    readScopedTable(client, 'public', 'vhpms_activities', 'id,business_id,task_id,event,after_value,created_at', 'created_at', [{ op: 'eq', column: 'business_id', value: 'VE' }, { op: 'eq', column: 'event', value: 've_family_reconciliation_v1' }]),
   ])
-  return buildWorkspace({ familyAccounts, customers, orders, expenses, marketing, marketingSpend, products, bankAccounts, bankTransactions, accountAgents }, today)
+  return buildWorkspace({ familyAccounts, customers, orders, expenses, marketing, marketingSpend, products, bankAccounts, bankTransactions, accountAgents, reconciliation }, today)
 }

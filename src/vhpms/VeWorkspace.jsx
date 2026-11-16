@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { validReconciliation, validSupplement } from './veEvidence.js'
+import { VE_RECONCILIATION_DISPLAY } from './veReconciliationDisplay.js'
 import SlideTabs from './SlideTabs.jsx'
 import { Donut, PageFooter } from './Donut.jsx'
 import { formatZmw, slicesBy } from './books.js'
@@ -193,6 +195,8 @@ function accountCardLine(row) {
 function AccountTable({ accounts, empty, onOpen }) {
   if (!accounts.length) return <Message>{empty}</Message>
   const columns = [
+    { key: 'fid', label: 'FID', cell: row => row.id },
+    { key: 'activitySource', label: 'Activity evidence', cell: row => row.activitySource },
     { key: 'owner', label: <ColumnLabel icon="users">Account owner</ColumnLabel>, cell: (row) => row.owner },
     { key: 'status', label: <ColumnLabel icon="activity">Status</ColumnLabel>, cell: (row) => <StatusChip value={row.activity} /> },
     { key: 'plan', label: <ColumnLabel icon="package">Plan</ColumnLabel>, cell: (row) => row.plan },
@@ -217,6 +221,7 @@ function AccountTable({ accounts, empty, onOpen }) {
               {slotButton(row, onOpen)}
             </div>
             <p className="record-meta">{accountCardLine(row)}</p>
+            <p className="record-meta">FID {row.id} · {row.activitySource}</p>
           </li>
         ))}
       </ul>
@@ -226,6 +231,115 @@ function AccountTable({ accounts, empty, onOpen }) {
 
 function Overview({ model }) {
   return <StandardOverview model={glanceFromVe(model)} />
+}
+
+function OwnerDisplayReconciliation({ model }) {
+  const [fid, setFid] = useState('')
+  const [month, setMonth] = useState('')
+  if (!model.displaySnapshot || model.access.familyAccounts !== 'ok') return null
+  const data = VE_RECONCILIATION_DISPLAY
+  const cycles = data.accounts.flatMap(account => account.expected_cycle_dates.map(date => ({
+    id: `${account.fid}:${date}`, fid: account.fid, product: account.product,
+    anchor: account.due_date_unchanged, date,
+  })))
+  const mismatches = data.accounts.filter(account => {
+    const source = model.accounts.find(row => Number(row.id) === account.fid)
+    return source?.dueDate !== (account.due_date_unchanged || 'Not dated')
+  })
+  return <Panel title="Monthly provider reconciliation" note="Owner-confirmed snapshot · 14/11/2026">
+    <p><strong>Display only · version {model.displaySnapshot.version}</strong> — 14 owner-confirmed active · 4 owner-confirmed inactive. Not database synchronization. Source payment status, dates and slots are unchanged; activity is separate from Account paid.</p>
+    <p>{data.summary.expected_cycles} expected cycles · {data.summary.cycles_with_candidate_evidence} with candidate evidence · {data.summary.unreconciled_cycles} unreconciled.</p>
+    <p><strong>Actual paid count: Unknown</strong> · Actual paid total: Unknown · Truly missing payments: Unknown · Historical costs, FNB FX and fees: Unknown.</p>
+    <p className="stat-desc">Original eleven continuous from stored anchors: owner assertion, not independently verified service or finance history. Monthly anniversaries through 14/11/2026 inclusive, not monthly debts. Candidate pools may recur across accounts and must not be summed. No verified match is not evidence of no payment.</p>
+    <p>Boaz report summary · 14/11/2026 · HOLD: {data.cashSummary.groups_matching_exact_order_tid} exact-TID candidates, NOT verified payments; {data.cashSummary.groups_with_order_amount_match} amount-concordant, {data.cashSummary.exact_tid_groups_with_amount_mismatch} amount mismatches; {data.cashSummary.groups_with_current_product_slot} current product-slot links, {data.cashSummary.groups_with_current_active_product_slot} active. Zero payment verifications and zero historically proven allocations. Incoming customer cash is not provider expense proof.</p>
+    <p>Private detail unavailable in this display snapshot. Both MTN and Airtel CSV exports were reviewed and deduplicated by Boaz; coverage remains incomplete. No raw customer or bank evidence is bundled. Historical costs remain unavailable; no estimates posted as expenses.</p>
+    <p>FID 6 annual · future anchor 2027-01-15; FID 9 future anchor 2026-12-05; FID 18 missing anchor. No monthly cycles invented for these accounts.</p>
+    {mismatches.length > 0 && <p role="status">Source anchor mismatch for FID {mismatches.map(row => row.fid).join(', ')}. Anniversary rows below are the dated report snapshot, not recalculated live payment findings. Current source dates remain in the account table.</p>}
+    <details><summary>56 expected anniversary rows · unchanged report anchors</summary>
+      <div className="vh-actions" style={{flexWrap:'wrap'}}>
+        <label>Account<select aria-label="Snapshot reconciliation account" value={fid} onChange={event => setFid(event.target.value)}><option value="">Original eleven accounts</option>{data.accounts.filter(row => row.expected_cycle_dates.length).map(row => <option key={row.fid} value={row.fid}>FID {row.fid} · {row.product}</option>)}</select></label>
+        <label>Expected month<select aria-label="Snapshot reconciliation month" value={month} onChange={event => setMonth(event.target.value)}><option value="">All anniversary months</option>{[...new Set(cycles.map(row => row.date.slice(0,7)))].sort().map(value => <option key={value}>{value}</option>)}</select></label>
+      </div>
+      <DataTable rows={cycles.filter(row => (!fid || String(row.fid) === fid) && (!month || row.date.startsWith(month)))} empty="No expected anniversaries in this selection; not a payment finding." columns={[
+        {key:'fid',label:'FID / plan',cell:row => `FID ${row.fid} · ${row.product}`},
+        {key:'anchor',label:'Original report anchor',cell:row => row.anchor},
+        {key:'date',label:'Expected anniversary',cell:row => row.date},
+        {key:'status',label:'Evidence / payment',cell:() => 'Unreconciled · per-cycle private detail unavailable · actual paid unknown'},
+      ]}/>
+    </details>
+  </Panel>
+}
+
+export function ProviderReconciliation({ model }) {
+  const [fid, setFid] = useState('')
+  const [month, setMonth] = useState('')
+  const data = model.reconciliation
+  const title = model.displaySnapshot ? 'Stored operational evidence' : 'Monthly provider reconciliation'
+  if (!data && model.displaySnapshot) return null
+  if (!data) return <Panel title={title}><Message>{model.reconciliationAccess === 'blocked' ? 'Reconciliation is not visible to this account.' : 'Owner-confirmed activity and Boaz reconciliation are unavailable. Existing account labels are preserved, not owner-confirmed.'}</Message></Panel>
+  if (!validReconciliation(data)) return <Panel title={title}><Message>Reconciliation unavailable — malformed or incomplete evidence. Supplement absent or stale. Continuity confirmation absent or stale. Counts and detail are not validated; not evidence of no payment.</Message></Panel>
+  const accounts = data.accounts || []
+  const cycles = (data.cycles || []).filter(row => (!fid || String(row.fid) === fid) && (!month || row.expected_date.slice(0, 7) === month))
+  const summary = data.summary || {}
+  const supplement = data.finance_supplement
+  const evidence = supplement?.summary || {}
+  const active = [1,2,3,4,5,6,8,9,10,11,13,14,16,18]
+  const original = [1,2,3,4,5,8,10,11,13,14,16]
+  const currentPayload = data.version === 1 && data.as_of === '2026-11-14'
+    && Object.keys(data.confirmed_activity || {}).length === 18
+    && Array.from({length:18},(_,i)=>i+1).every(id => data.confirmed_activity[id] === (active.includes(id) ? 'Active' : 'Inactive'))
+    && data.cycles?.length === 56 && summary.expected_cycles === 56
+    && new Set(data.cycles.map(row => `${row.fid}:${row.expected_date}`)).size === 56
+    && data.cycles.every(row => original.includes(Number(row.fid)))
+  const ownerContinuity = currentPayload
+    && data.historical_continuity === 'Original eleven continuous since anchors owner-confirmed; not new 6/9/18'
+    && original.every(id => accounts.find(row => Number(row.fid) === id)?.continuous_from_anchor_owner_confirmed === true)
+    && [6,9,18].every(id => accounts.find(row => Number(row.fid) === id)?.continuous_from_anchor_owner_confirmed === false)
+  const currentSupplement = currentPayload && validSupplement(supplement)
+    && supplement?.source === 'actual Boaz boaz-supplement-report.json'
+    && supplement.sha256 === 'b704c3f39eb3f6bb605275a5b571b90e544144960087a5669a4032e7ec395660'
+    && evidence.incoming_tid_groups_including_invalid === 397
+    && evidence.groups_matching_exact_order_tid === 201 && evidence.groups_with_order_amount_match === 181
+    && evidence.exact_tid_groups_with_amount_mismatch === 20 && evidence.groups_with_current_product_slot === 67
+    && evidence.groups_with_current_active_product_slot === 64
+    && evidence.payment_verifications_performed === 0 && evidence.historically_proven_family_allocations === 0
+    && supplement.customer_cash_links?.length === 397
+    && supplement.customer_cash_links.every(row => row.verified === false && row.historical_connection_proven === false)
+  const continuity = ownerContinuity && currentSupplement
+  return <Panel title={title} note={`Owner activity as of ${data.as_of}. ${currentSupplement ? 'Finance evidence reviewed by actual Boaz; not payment verification by Nathan.' : 'Supplement absent or stale — current Boaz evidence not validated.'}`}>
+    <p>{Object.values(data.confirmed_activity || {}).filter(value => value === 'Active').length} owner-confirmed active · {Object.values(data.confirmed_activity || {}).filter(value => value === 'Inactive').length} owner-confirmed inactive · {Object.keys(data.preserved_activity || {}).length} preserved without confirmation.</p>
+    <p>{summary.expected_cycles ?? 'Unknown'} expected cycles · {summary.cycles_with_candidate_evidence ?? 'Unknown'} with candidate evidence · {summary.unreconciled_cycles ?? 'Unknown'} unreconciled.</p>
+    <p><strong>Actual paid count: Unknown</strong> · Actual paid total: Unknown · Truly missing payments: Unknown.</p>
+    <p className="stat-desc">Provisional due-date anniversaries through {data.as_of}, inclusive. Anchors remain unchanged. {continuity ? 'Original eleven continuously active from stored anchors: owner-confirmed. This is the owner assertion, not independently verified historical service or finance proof; display requires valid current supplemental evidence. New fids 6/9/18 have no confirmed historical continuity.' : 'Continuity confirmation absent or stale — historical service continuity is not established by this event.'} Activity does not prove monthly payment or debt. Candidates are unallocated retrieval aids, may recur across accounts, and must not be summed. No settled match verified is not evidence of no payment.</p>
+    {currentSupplement ? <p>Review status: HOLD — Boaz supplement consumed; no new payment verifications. {evidence.groups_matching_exact_order_tid} exact-TID candidates, NOT verified payments; {evidence.groups_with_order_amount_match} amount-concordant, {evidence.exact_tid_groups_with_amount_mismatch} amount mismatches. {evidence.groups_with_current_product_slot} current links, {evidence.groups_with_current_active_product_slot} active; not historical allocations. Zero historically proven allocations. Incoming cash is not provider expense proof.</p> : <p>Review status: HOLD — Supplement absent or stale. Current candidate figures and CSV coverage are not validated.</p>}
+    {currentSupplement && <p>Both MTN and Airtel CSV exports found and deduped; no duplicate PDF requirement blocks this nonfinancial UI. Coverage incomplete. Historical estimates unavailable; actual paid and missing totals unknown.</p>}
+    {continuity && <p>fid6 annual, future anchor 2027-01-15; fid9 future anchor 2026-12-05; fid18 null anchor. No invented cycles.</p>}
+    <div className="vh-actions" style={{ flexWrap: 'wrap', marginBottom: 16 }}>
+      <label style={{ maxWidth: '100%' }}>Account<select style={{ maxWidth: '100%' }} aria-label="Reconciliation account" value={fid} onChange={event => setFid(event.target.value)}><option value="">All account anchors</option>{accounts.map(row => <option key={row.fid} value={String(row.fid)}>FID {row.fid} · {row.product} · anchor {row.due_date_unchanged || 'Unknown'}</option>)}</select></label>
+      <label>Expected month<select aria-label="Reconciliation month" value={month} onChange={event => setMonth(event.target.value)}><option value="">All anniversary months</option>{[...new Set((data.cycles || []).map(row => row.expected_date.slice(0, 7)))].sort().map(value => <option key={value}>{value}</option>)}</select></label>
+    </div>
+    <DataTable rows={cycles.map(row => ({ ...row, id: row.cycle_key }))} empty="No expected cycles in this selection; not a payment finding." columns={[
+      { key: 'fid', label: 'FID / plan', cell: row => <>{row.fid} · {accounts.find(account => account.fid === row.fid)?.product || 'Unknown'}</> },
+      { key: 'anchor', label: 'Unchanged anchor', cell: row => accounts.find(account => account.fid === row.fid)?.due_date_unchanged || 'Unknown' },
+      { key: 'expected', label: 'Expected anniversary', cell: row => row.expected_date },
+      { key: 'candidate', label: 'Candidate evidence', cell: row => [...(row.ledger_candidate_expense_ids || []).map(id => `Ledger #${id}`), ...(row.unallocated_bank_candidate_handles || [])].join(', ') || 'None found in reviewed sources' },
+      { key: 'classification', label: 'Classification', cell: row => (row.ledger_candidate_expense_ids?.length || row.unallocated_bank_candidate_handles?.length) ? 'Candidate only · Unreconciled' : 'Unreconciled' },
+      { key: 'verified', label: 'Boaz-verified settled match', cell: () => 'No settled match verified' },
+      { key: 'estimated', label: 'Historical estimate', cell: () => 'Historical estimate unavailable' },
+      { key: 'fx', label: 'Billing currency / FNB rate / fees', cell: () => 'USD confirmed / historical FNB FX and fees unknown' },
+    ]} />
+    <details><summary>Customer cash / order / current-slot candidates</summary>
+      <p>{currentSupplement ? 'Actual Boaz supplemental evidence. All HOLD, not verified payments.' : 'Unvalidated supplemental detail — source attribution and current totals are not established.'} Current membership is not historical allocation. Incoming cash does not prove provider settlement. No candidate totals summed.</p>
+      <DataTable rows={(currentSupplement ? supplement.customer_cash_links : []).map(row => ({...row, id:row.key}))} empty="Supplemental detail unavailable — malformed, stale or unattested evidence; not evidence of no customer cash." columns={[
+        {key:'tid',label:'Literal evidence key / provider',cell:row => row.key + ' · ' + row.provider},
+        {key:'order',label:'Candidate order / customer / product',cell:row => (row.orders || []).map(order => [order.oid,order.cid || 'Unresolved cid',order.product].join(' / ')).join('; ') || 'No exact order TID'},
+        {key:'slots',label:'Current same-product family / slot',cell:row => (row.current_slots || []).map(slot => [slot.cid,'FID '+slot.fid,'slot '+slot.slot].join(' / ')).join('; ') || 'No current same-product slot'},
+        {key:'amount',label:'Amount concordance',cell:row => row.amount_match ? 'Candidate amount concordant' : 'Not concordant or no order'},
+        {key:'verified',label:'Boaz verification / history',cell:() => 'HOLD · not verified · Historical allocation: unproven'},
+      ]}/>
+    </details>
+    <p className="stat-desc">Historical costs remain unavailable: {currentPayload && data.source_currency === 'USD owner-confirmed' ? 'USD confirmed' : 'Currency confirmation unavailable'}; per-account invoices, service periods, transaction-specific historical FNB conversion and fees are not established. Current public list prices and published fee tariffs are not historical account costs. No estimates posted as expenses. {currentSupplement ? 'Source: owner instruction 2026-11-14; actual Boaz original finance report plus boaz-supplement-report.json and validation 2026-11-14.' : 'Current Boaz supplement source not validated.'}</p>
+  </Panel>
 }
 
 function FamilyAccounts({ model }) {
@@ -249,6 +363,8 @@ function FamilyAccounts({ model }) {
         </div>
       </section>
       <FamilyModal account={account} onClose={closeAccount} />
+      <OwnerDisplayReconciliation model={model} />
+      <ProviderReconciliation model={model} />
       {message ? <Message>{message}</Message> : (
         <>
           <div className="segmented" role="tablist" aria-label="Account activity">
