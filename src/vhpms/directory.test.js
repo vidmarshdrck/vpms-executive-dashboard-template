@@ -49,11 +49,13 @@ test('merged roles show every section each role grants, and the switcher narrows
     }
   }
   assert.ok(merged.has('gm'))
-  assert.ok(merged.has('upload'))
-  assert.ok(merged.has('hr'))
-  assert.ok(merged.has('kpi-entry'))
+  assert.ok(merged.has('departments'))
+  assert.ok(merged.has('kpi'))
+  assert.ok(merged.has('scorecards'))
   assert.ok(merged.has('admin-users'))
   assert.ok(merged.has('admin-businesses'))
+  assert.equal(merged.has('hr'), false)
+  assert.equal(merged.has('upload'), false)
 
   const asAdmin = grantedSections({ ...owner, currentRole: 'admin' })
   assert.ok(asAdmin.includes('gm'))
@@ -63,12 +65,14 @@ test('merged roles show every section each role grants, and the switcher narrows
 
   const asGm = grantedSections({ ...owner, currentRole: 'gm' })
   assert.ok(asGm.includes('gm'))
-  assert.ok(asGm.includes('upload'))
+  assert.ok(asGm.includes('kpi'))
+  assert.ok(asGm.includes('scorecards'))
+  assert.equal(asGm.includes('upload'), false)
   assert.equal(asGm.includes('admin-users'), false)
   assert.equal(asGm.includes('hr'), false)
 
   const asHrd = grantedSections({ ...owner, currentRole: 'hrd' })
-  assert.deepEqual(asHrd, ['hr', 'kpi-entry', 'admin-users'])
+  assert.deepEqual(asHrd, ['departments', 'kpi', 'admin-users'])
   assert.equal(canSee({ ...owner, currentRole: 'hrd' }, 'hr'), true)
   assert.equal(canSee({ ...owner, currentRole: 'hrd' }, 'gm'), false)
   assert.equal(canSee({ ...owner, currentRole: 'hrd' }, 'admin-businesses'), false)
@@ -78,17 +82,19 @@ test('merged roles show every section each role grants, and the switcher narrows
 
   const unknownRole = grantedSections({ ...owner, currentRole: 'staff' })
   assert.ok(unknownRole.includes('gm'))
-  assert.ok(unknownRole.includes('hr'))
+  assert.ok(unknownRole.includes('departments'))
+  assert.equal(unknownRole.includes('hr'), false)
 })
 
 test('HRD alone opens Human Resources and the user directory', () => {
   const hrd = { username: 'hr.director', name: 'Human Resources Director', roles: ['hrd'] }
-  assert.deepEqual(grantedSections(hrd), ['hr', 'kpi-entry', 'admin-users'])
+  assert.deepEqual(grantedSections(hrd), ['departments', 'kpi', 'admin-users'])
   assert.equal(homeView(hrd), 'hr')
   assert.equal(entryDepartment(hrd), 'hr')
   assert.equal(canSee(hrd, 'admin-kpis'), false)
   assert.equal(canSee(hrd, 'upload'), false)
-  assert.equal(canSee(hrd, 'departments'), false)
+  assert.equal(canSee(hrd, 'departments'), true)
+  assert.equal(canSee(hrd, 'hr'), true)
   assert.equal(isViewOnly(hrd), false)
   assert.equal(isViewOnly({ username: 'board', roles: ['board'], currentRole: 'board' }), true)
   assert.equal(isViewOnly(findAccount('shadrickvidmar')), false)

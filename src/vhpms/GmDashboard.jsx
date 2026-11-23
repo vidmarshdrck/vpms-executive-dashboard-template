@@ -93,9 +93,7 @@ export default function GmDashboard({ model, scorecard, viewOnly }) {
     <div className="wrap gm">
       <div className="topbar">
         <div>
-          <p className="brand-eyebrow">Vidmar Holdings · General Manager</p>
-          <h1>GM Dashboard{viewOnly && <span className="view-only">View only</span>}</h1>
-          <p className="sub">Balanced Scorecard · {model.year}</p>
+          {viewOnly && <span className="view-only">View only</span>}
         </div>
         <div className="legend" aria-label="Performance status legend">
           <span><i className="dot" style={{ background: 'var(--rag-green)' }} />On target (≥100%)</span>
@@ -106,7 +104,7 @@ export default function GmDashboard({ model, scorecard, viewOnly }) {
       </div>
       <div className="kpi-strip">
         <div className="tile" style={{ '--t': 'var(--brand)' }}><div className="lab">Overall score</div><div className="val">{model.overall == null ? '—' : `${Math.round(model.overall)}%`}</div><div className="foot">avg. of perspectives with data</div></div>
-        <div className="tile" style={{ '--t': 'var(--teal)' }}><div className="lab">GM KPIs tracked</div><div className="val">{model.stats.tracked}</div><div className="foot">of {model.stats.totalKpis} in the strategy</div></div>
+        <div className="tile" style={{ '--t': 'var(--teal)' }}><div className="lab">KPIs tracked</div><div className="val">{model.stats.tracked}</div><div className="foot">of {model.stats.totalKpis} in the strategy</div></div>
         <div className="tile" style={{ '--t': 'var(--green)' }}><div className="lab">Reporting actuals</div><div className="val">{model.stats.reporting}</div><div className="foot">{model.stats.onTarget} currently on target</div></div>
         <div className="tile" style={{ '--t': 'var(--violet)' }}><div className="lab">Departments tracked</div><div className="val">{coverage.length}</div><div className="foot">with KPI targets set</div></div>
         <div className="tile" style={{ '--t': 'var(--orange)' }}><div className="lab">Active objectives</div><div className="val">{model.stats.objectives}</div><div className="foot">across 4 perspectives</div></div>
@@ -149,7 +147,7 @@ export default function GmDashboard({ model, scorecard, viewOnly }) {
         <section className="card accent-green">
           <div className="card-head"><h2>Status mix & strategy coverage</h2></div>
           <div className="card-body">
-            {model.stats.tracked ? <Donut items={statusItems} center="GM KPIs" format={(value) => String(value)} /> : <p className="empty">No KPI actuals have been recorded yet.</p>}
+            {model.stats.tracked ? <Donut items={statusItems} center="KPIs" format={(value) => String(value)} /> : <p className="empty">No KPI actuals have been recorded yet.</p>}
             <hr style={{ border: 0, borderTop: '1px solid var(--border)', margin: '18px 0' }} />
             <Donut items={perspectiveItems} center="strategy KPIs" format={(value) => String(value)} />
           </div>

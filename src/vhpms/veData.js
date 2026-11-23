@@ -20,8 +20,8 @@ export const BANK_TXN_COLUMNS = 'id,account_id,txn_date,description,reference,am
 export const AGENT_COLUMNS = 'aaid,name'
 
 export const COPY = {
-  signedOut: 'Sign in with Supabase to load VE records.',
-  unconfigured: 'Supabase is not configured for this sign-in.',
+  signedOut: 'Sign in to see these records.',
+  unconfigured: 'These records are not connected for this sign-in.',
   loading: 'Loading VE records.',
   loadError: 'Could not load these records.',
   familyEmpty: 'No family account rows were returned for this account.',
@@ -159,6 +159,13 @@ export function whatsappHref(customer) {
   if (!number) return ''
   const text = `Hello ${customer.name}, this is a reminder to renew ${customer.products}. Payment is due ${customer.dueDate}.`
   return `https://wa.me/${number}?text=${encodeURIComponent(text)}`
+}
+
+export function customerResultMessage(query, matchCount) {
+  const trimmed = String(query || '').trim()
+  if (trimmed && matchCount === 0) return `No customers match "${trimmed}"`
+  if (matchCount === 0) return COPY.customersEmpty
+  return ''
 }
 
 export function filterCustomers(rows, { status = 'All', query = '' } = {}) {

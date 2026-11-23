@@ -10,7 +10,6 @@ export function InboxView({ rows, books, onLabel, onOpenSms }) {
   const items = inboxFromSms(rows)
   return (
     <div className="wrap">
-      <div className="topbar"><div><p className="brand-eyebrow">Vidmar Holdings</p><h1>Inbox</h1><p className="sub">Items that need attention now.</p></div></div>
       {note && <p className="vh-status" role="status">{note}</p>}
       {items.length ? items.map((item) => {
         const row = rows.find((entry) => entry.id === item.smsId)
@@ -23,7 +22,7 @@ export function InboxView({ rows, books, onLabel, onOpenSms }) {
               <div className="field"><label>Business<select name="businessId" required><option value="">Select</option>{businesses.map((business) => <option key={business.id} value={business.id}>{business.name}</option>)}</select></label></div>
               <div className="field"><label>What it is for<input name="purpose" type="text" required /></label></div>
               <button className="btn btn-primary" type="submit">Label</button>
-              <button className="btn btn-ghost" type="button" onClick={() => onOpenSms(row.id)}>Open in SMS</button>
+              <button className="btn btn-ghost" type="button" onClick={() => onOpenSms(row.id)}>Open in Mobile Money</button>
             </form>
           </div></section>
         )
@@ -56,7 +55,6 @@ export function SmsDashboard({ user, books, rows, loadError, labels, onLabelled,
   }
   return (
     <div className="wrap">
-      <div className="topbar"><div><p className="brand-eyebrow">Vidmar Holdings · SMSGate</p><h1>SMS Transactions</h1><p className="sub">Incoming mobile-money messages. Unlabelled rows stay in the Inbox.</p></div></div>
       {message && <p className="vh-status" role="status">{message}</p>}
       <div className="vh-form">
         <div className="field"><label>Business<select aria-label="Filter by business" value={filters.business} onChange={(event) => setFilters({ ...filters, business: event.target.value })}><option value="">All businesses</option>{businesses.map((business) => <option key={business.id} value={business.id}>{business.name}</option>)}</select></label></div>
@@ -67,7 +65,7 @@ export function SmsDashboard({ user, books, rows, loadError, labels, onLabelled,
       <section className="card"><div className="card-body pad-0"><div className="tbl-scroll"><table className="data">
         <thead><tr><th>Received</th><th>Sender</th><th>Transaction ID</th><th>Amount (ZMW)</th><th>Direction</th><th>Counterparty</th><th>Message</th><th>Business</th><th>Purpose</th></tr></thead>
         <tbody>
-          {loadError && !visible.length ? <tr><td colSpan="9">SMS transactions could not be loaded.</td></tr> : visible.length ? visible.map((row) => (
+          {loadError && !visible.length ? <tr><td colSpan="9">Mobile money messages could not be loaded.</td></tr> : visible.length ? visible.map((row) => (
             <tr key={row.id} id={`sms-${row.id}`} className={isUnlabelled(row) ? 'needs-label' : ''}>
               <td>{row.receivedAt ? new Date(row.receivedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</td>
               <td>{row.sender}</td>
@@ -86,7 +84,7 @@ export function SmsDashboard({ user, books, rows, loadError, labels, onLabelled,
                 ) : <span>{businesses.find((business) => business.id === row.businessId)?.name || row.businessId} · {row.purpose}</span>}
               </td>
             </tr>
-          )) : <tr><td colSpan="9">No SMS transactions received yet</td></tr>}
+          )) : <tr><td colSpan="9">No mobile money messages yet</td></tr>}
         </tbody>
       </table></div></div></section>
       {(byBusiness.length > 0 || byPurpose.length > 0) && <div className="two even" style={{ marginTop: 18 }}>

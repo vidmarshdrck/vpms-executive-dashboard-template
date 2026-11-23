@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { kpisForDepartment, deptAccent, formatNum, formatPct } from './score.js'
+import { kpisForDepartment, deptAccent, formatNum, formatPct, publicDepartmentName } from './score.js'
 import { PageFooter } from './Donut.jsx'
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -23,7 +23,7 @@ export function KpiEntry({ scorecard, user, onSave }) {
   }
   return (
     <div className="wrap">
-      <div className="topbar"><div><p className="brand-eyebrow">{department.name}</p><h1>Enter KPI Data</h1><p className="sub">Add or update a target and actual for one period. An existing entry for the same period is overwritten.</p></div></div>
+      <p className="sub">{publicDepartmentName(department)}. Add or update a target and actual for one period. An existing entry for the same period is overwritten.</p>
       {message && <div className="form-msg success">{message}</div>}
       {error && <div className="form-msg error">{error}</div>}
       <section className={`card accent-${deptAccent(department.code)}`} style={{ maxWidth: 640 }}>
@@ -45,8 +45,9 @@ export function KpiEntry({ scorecard, user, onSave }) {
           ) : <p className="stat-desc">No KPIs are defined yet for your department. Ask an administrator to add them under Admin · KPIs.</p>}
         </div>
       </section>
-      <h2 className="section-title">Your department&apos;s KPIs — latest recorded period</h2>
+      <h2 className="section-title">Latest recorded period</h2>
       <section className="card"><div className="card-body pad-0"><div className="tbl-scroll"><table className="data"><thead><tr><th>Perspective</th><th>Measure</th><th>Latest period</th><th>Target</th><th>Actual</th><th>Achievement</th></tr></thead><tbody>{kpis.map((kpi) => <tr key={kpi.id}><td>{kpi.perspective}</td><td>{kpi.measure || kpi.milestone || '—'}</td><td>{kpi.latest ? `${kpi.latest.label} ${kpi.latest.year}` : '—'}</td><td>{formatNum(kpi.latest?.target)}</td><td>{formatNum(kpi.latest?.actual)}</td><td>{formatPct(kpi.latestPct)}</td></tr>)}</tbody></table></div></div></section>
+      <PageFooter />
     </div>
   )
 }
@@ -62,7 +63,7 @@ export function UploadScorecard() {
   }
   return (
     <div className="wrap">
-      <div className="topbar"><div><p className="brand-eyebrow">Vidmar Holdings</p><h1>Upload Scorecard / Strategic Plan</h1><p className="sub">Load a Balanced Scorecard workbook. Every KPI and target it contains is added as new — nothing already recorded is changed, matched, or removed.</p></div></div>
+      <p className="sub">Load a Balanced Scorecard workbook. Every KPI and target it contains is added as new — nothing already recorded is changed, matched, or removed.</p>
       {error && <div className="form-msg error">{error}</div>}
       <section className="card" style={{ maxWidth: 640 }}>
         <div className="card-head"><h2>Upload a workbook</h2></div>

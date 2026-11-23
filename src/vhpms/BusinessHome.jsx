@@ -7,7 +7,6 @@ export function BusinessList({ books, onOpen }) {
   const businesses = activeBusinesses(books)
   return (
     <div className="wrap">
-      <div className="topbar"><div><p className="brand-eyebrow">Vidmar Holdings</p><h1>Businesses</h1></div></div>
       {businesses.length ? <div className="grid-3">{businesses.map((business) => {
         const expenses = entriesFor(books, business.id, 'expense').length
         const income = entriesFor(books, business.id, 'income').length

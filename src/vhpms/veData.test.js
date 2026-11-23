@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   AGENT_COLUMNS, BANK_ACCOUNT_COLUMNS, BANK_TXN_COLUMNS, CUSTOMER_COLUMNS, EXPENSE_COLUMNS, FAMILY_COLUMNS, MARKETING_COLUMNS, ORDER_COLUMNS, PRODUCT_COLUMNS, SPEND_COLUMNS,
-  activeCustomerCount, buildWorkspace, classifyResult, createVeClient, customersDue, fetchVeWorkspace, filterCustomers, filterFunds, financeSummary, formatK, fundMovements, fundsByMonth, fundsGrouped, fundsInPeriod, lastFourDigits, moneySoFar, paymentAccounts, receivedInPeriod, seatedCustomerIds, subscriptionsThisWeek, sumReceived, weekStart, weeklyBudget, whatsappHref, whatsappNumber,
+  COPY, activeCustomerCount, buildWorkspace, classifyResult, createVeClient, customerResultMessage, customersDue, fetchVeWorkspace, filterCustomers, filterFunds, financeSummary, formatK, fundMovements, fundsByMonth, fundsGrouped, fundsInPeriod, lastFourDigits, moneySoFar, paymentAccounts, receivedInPeriod, seatedCustomerIds, subscriptionsThisWeek, sumReceived, weekStart, weeklyBudget, whatsappHref, whatsappNumber,
 } from './veData.js'
 
 const TODAY = '2026-11-08'
@@ -146,6 +146,14 @@ test('empty marketing and blocked reads stay distinct', () => {
   assert.equal(blocked.income.length, 0)
   assert.equal(classifyResult({ data: null, error: { code: '42501', message: 'permission denied for table customers' } }).access, 'blocked')
   assert.equal(classifyResult({ data: [], error: null }).access, 'empty')
+})
+
+test('a customer search with no matches names the query and sign-in copy stays owner-facing', () => {
+  assert.equal(customerResultMessage('Zed', 0), 'No customers match "Zed"')
+  assert.equal(customerResultMessage('  ', 0), COPY.customersEmpty)
+  assert.equal(customerResultMessage('Amara', 1), '')
+  assert.equal(COPY.signedOut.includes('Supabase'), false)
+  assert.equal(COPY.unconfigured.includes('Supabase'), false)
 })
 
 test('customer search and WhatsApp links use the stored phone', () => {

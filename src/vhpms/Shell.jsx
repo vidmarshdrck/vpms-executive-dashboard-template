@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BUSINESS_ICONS, NavIcon, MenuIcon } from './icons.jsx'
 import { VidmarCredit } from './Donut.jsx'
-import { accountRoles, roleLabel, managementLinks, adminLinks, WORKSPACE_LINKS } from './directory.js'
+import { accountRoles, roleLabel, managementLinks, adminLinks, WORKSPACE_LINKS, invoiceMakerUrl } from './directory.js'
 import { activeBusinesses } from './books.js'
 import { readSidebarRetracted, writeSidebarRetracted } from './sidebar.js'
 import { ReportingPeriodProvider, TimeframePopover } from './TimeframePopover.jsx'
@@ -40,7 +40,7 @@ export function LoginScreen({ error, busy, onSubmit }) {
           <div className="login-stage" />
           <div className="login-card">
             <div className="login-brand">
-              <span className="brand-name">VHPMS</span>
+              <span className="brand-name">VPMS</span>
             </div>
             <h1>Performance Management System</h1>
             <p className="sub">Sign in with your PMS account.</p>
@@ -64,25 +64,30 @@ export function LoginScreen({ error, busy, onSubmit }) {
   )
 }
 
+function navCurrent(item, view) {
+  if (view === item.id) return true
+  return item.id === 'departments' && (view === 'department' || view === 'hr')
+}
+
 function NavButton({ item, current, onOpen }) {
-  return <button type="button" aria-current={current === item.id ? 'page' : undefined} onClick={() => onOpen(item.id)}><NavIcon name={item.icon} /><span className="nav-label">{item.label}</span></button>
+  return <button type="button" aria-current={navCurrent(item, current) ? 'page' : undefined} onClick={() => onOpen(item.id)}><NavIcon name={item.icon} /><span className="nav-label">{item.label}</span></button>
 }
 
 const LIVE_LINKS = [
-  { id: 'activities', label: 'Activities', icon: 'clipboard' },
   { id: 'inbox', label: 'Inbox', icon: 'inbox' },
-  { id: 'sms', label: 'SMS Transactions', icon: 'activity' },
+  { id: 'activities', label: 'Activities', icon: 'clipboard' },
+  { id: 'sms', label: 'Mobile Money', icon: 'smartphone' },
 ]
 
-export default function Shell({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onRole, title, headerAction = null, today, children }) {
+export default function Shell({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onRole, title, headerAction = null, today, invoiceUrl = invoiceMakerUrl(import.meta.env), children }) {
   return (
     <ReportingPeriodProvider userId={user?.username || user?.id || ''} today={today}>
-      <ShellFrame user={user} view={view} menu={menu} setMenu={setMenu} mode={mode} books={books} businessId={businessId} inboxCount={inboxCount} onOpen={onOpen} onLive={onLive} onBack={onBack} onBusiness={onBusiness} onRole={onRole} title={title} headerAction={headerAction} today={today}>{children}</ShellFrame>
+      <ShellFrame user={user} view={view} menu={menu} setMenu={setMenu} mode={mode} books={books} businessId={businessId} inboxCount={inboxCount} onOpen={onOpen} onLive={onLive} onBack={onBack} onBusiness={onBusiness} onRole={onRole} title={title} headerAction={headerAction} today={today} invoiceUrl={invoiceUrl}>{children}</ShellFrame>
     </ReportingPeriodProvider>
   )
 }
 
-function ShellFrame({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onRole, title, headerAction = null, today, children }) {
+function ShellFrame({ user, view, menu, setMenu, mode, books, businessId, inboxCount = 0, onOpen, onLive, onBack, onBusiness, onRole, title, headerAction = null, today, invoiceUrl = '', children }) {
   const businesses = activeBusinesses(books)
   const [retracted, setRetracted] = useState(() => (typeof localStorage === 'undefined' ? false : readSidebarRetracted(localStorage)))
   useEffect(() => {
@@ -100,7 +105,7 @@ function ShellFrame({ user, view, menu, setMenu, mode, books, businessId, inboxC
         <div className="sidebar-sticky">
         <button type="button" className="sidebar-brand" aria-controls="sidebar" aria-expanded={menu || !retracted} aria-label={retracted && !menu ? 'Expand sidebar' : 'Collapse sidebar'} onClick={toggleSidebar}>
           <span className="brand-logo" aria-hidden="true"><NavIcon name="hexagon" /></span>
-          <span className="brand-text"><span className="brand-name">Vidmar Holdings</span><span className="brand-sub">VHPMS</span></span>
+          <span className="brand-text"><span className="brand-name">VPMS</span></span>
         </button>
         <nav className="side-nav" aria-label="Primary navigation">
           {mode === 'businesses' ? (
@@ -113,10 +118,11 @@ function ShellFrame({ user, view, menu, setMenu, mode, books, businessId, inboxC
             </>
           ) : (
             <>
-              <div className="side-label">Management views</div>
+              <div className="side-label">Management</div>
               {managementLinks(user).map((item) => <NavButton key={item.id} item={item} current={view} onOpen={onOpen} />)}
               <div className="side-label spaced">Workspace</div>
               {WORKSPACE_LINKS.map((item) => <NavButton key={item.id} item={item} current={view} onOpen={onOpen} />)}
+              {invoiceUrl ? <a href={invoiceUrl} target="_blank" rel="noopener noreferrer"><NavIcon name="receipt" /><span className="nav-label">Invoice maker</span></a> : null}
               {adminLinks(user).length > 0 && <div className="side-label spaced">Administration</div>}
               {adminLinks(user).map((item) => <NavButton key={item.id} item={item} current={view} onOpen={onOpen} />)}
             </>
@@ -141,7 +147,6 @@ function ShellFrame({ user, view, menu, setMenu, mode, books, businessId, inboxC
         <header className="app-header">
           <button className="menu-btn" type="button" aria-label="Toggle navigation" aria-expanded={menu} onClick={() => setMenu(!menu)}><MenuIcon /></button>
           <div style={{ minWidth: 0 }}>
-            <div className="eyebrow">VHPMS performance management</div>
             <div className="page-title">{title}</div>
           </div>
           <div className="header-tools">

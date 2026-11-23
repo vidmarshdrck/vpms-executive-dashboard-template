@@ -1,7 +1,7 @@
 import {
-  Activity, BarChart3, Building2, Calculator, Calendar, ClipboardList, Clapperboard, Cpu, Eye, EyeOff, Hexagon,
+  Activity, BarChart3, Briefcase, Building2, Calculator, Calendar, ClipboardList, Clapperboard, Cpu, Eye, EyeOff, Hexagon,
   House, Inbox, Landmark, Layers, LayoutDashboard, Mail, Megaphone, MessageCircle, Package, PieChart,
-  Receipt, Shield, Shirt, Smartphone, Target, Truck, Upload, UserRound, Users, Wallet,
+  Receipt, Search, Shield, Shirt, Smartphone, Target, Truck, Upload, UserRound, Users, Wallet, X,
 } from 'lucide-react'
 
 const ICONS = {
@@ -19,6 +19,7 @@ const ICONS = {
   receipt: Receipt,
   message: MessageCircle,
   building: Building2,
+  briefcase: Briefcase,
   upload: Upload,
   clipboard: ClipboardList,
   shield: Shield,
@@ -34,6 +35,8 @@ const ICONS = {
   hexagon: Hexagon,
   eye: Eye,
   'eye-off': EyeOff,
+  search: Search,
+  x: X,
   bars: BarChart3,
   pie: PieChart,
 }
