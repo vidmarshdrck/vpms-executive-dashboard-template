@@ -1,20 +1,25 @@
-import { operatingDepartments, kpisForDepartment, departmentAverage, deptAccent, ragFor, ragLabel, formatWeight, formatNum, formatPct, publicDepartmentName } from './score.js'
+import { operatingDepartments, kpisForDepartment, departmentAverage, deptAccent, ragFor, ragLabel, formatWeight, formatTarget, formatActual, formatPct, publicDepartmentName, presentScorecard } from './score.js'
 import { ScoreGauge, PageFooter } from './Donut.jsx'
+import { useReportingPeriod } from './TimeframePopover.jsx'
+import { veKpiFigures } from './kpiLive.js'
 
-export function Departments({ scorecard, onOpen }) {
-  const departments = operatingDepartments(scorecard.departments)
+export function Departments({ scorecard, workspace, onOpen }) {
+  const period = useReportingPeriod()
+  const presented = presentScorecard(scorecard, veKpiFigures(workspace, period))
+  const departments = operatingDepartments(presented.departments)
   return (
     <div className="wrap">
       <div className="grid-3">
         {departments.map((department) => {
-          const stat = departmentAverage(scorecard.kpis, department.code)
+          const stat = departmentAverage(presented.kpis, department.code)
+          const hasTarget = presented.kpis.some((kpi) => kpi.dept === department.code && (kpi.periods || []).some((period) => period.target != null))
           const rag = stat.pct == null ? 'na' : ragFor(stat.pct)
           return (
             <button key={department.code} type="button" className="card-link" onClick={() => onOpen(department.code)}>
               <section className={`card accent-${deptAccent(department.code)}`}>
                 <div className="card-head"><h2>{publicDepartmentName(department)}</h2></div>
                 <div className="card-body">
-                  {stat.pct == null ? <p className="stat-desc">No data entered yet.</p> : <><div className="stat-tile"><span className="stat-num" style={{ fontSize: 30 }}>{Math.round(stat.pct)}%</span></div><p className="stat-desc"><span className={`chip ${rag}`}>{ragLabel(rag)}</span> · based on {stat.count} KPI(s) with data</p></>}
+                  {stat.pct == null ? <p className="stat-desc">{hasTarget ? 'No actual yet' : 'No target set'}</p> : <><div className="stat-tile"><span className="stat-num" style={{ fontSize: 30 }}>{Math.round(stat.pct)}%</span></div><p className="stat-desc"><span className={`chip ${rag}`}>{ragLabel(rag)}</span> · based on {stat.count} KPI(s) with data</p></>}
                 </div>
               </section>
             </button>
@@ -26,13 +31,15 @@ export function Departments({ scorecard, onOpen }) {
   )
 }
 
-export function DepartmentHeatMap({ scorecard, code }) {
-  const department = scorecard.departments.find((item) => item.code === code)
+export function DepartmentHeatMap({ scorecard, workspace, code }) {
+  const period = useReportingPeriod()
+  const presented = presentScorecard(scorecard, veKpiFigures(workspace, period))
+  const department = presented.departments.find((item) => item.code === code)
   if (!department) {
-    return <div className="wrap"><div className="card"><div className="card-body"><p className="stat-desc">No department selected. Choose a department from the list.</p></div></div></div>
+    return <div className="wrap"><div className="card"><div className="card-body"><p className="stat-desc">No KPIs for this department.</p></div></div><PageFooter /></div>
   }
-  const grouped = kpisForDepartment(scorecard.kpis, department.code)
-  const stat = departmentAverage(scorecard.kpis, department.code)
+  const grouped = kpisForDepartment(presented.kpis, department.code)
+  const stat = departmentAverage(presented.kpis, department.code)
   const accent = deptAccent(department.code)
   const rag = stat.pct == null ? 'na' : ragFor(stat.pct)
   return (
@@ -66,7 +73,7 @@ export function DepartmentHeatMap({ scorecard, code }) {
                 <table className="data">
                   <thead>
                     <tr>
-                      <th>Milestone / Initiative</th><th>Measure</th><th>Weighting</th><th>Latest period</th><th>Target</th><th>Actual</th><th>Achievement</th><th>Status</th>
+                      <th>Measure</th><th>Unit</th><th>Weighting</th><th>Latest period</th><th>Target</th><th>Actual</th><th>Achievement</th><th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -74,12 +81,12 @@ export function DepartmentHeatMap({ scorecard, code }) {
                       const status = ragFor(kpi.latestPct)
                       return (
                         <tr key={kpi.id}>
-                          <td>{kpi.milestone && <strong>{kpi.milestone}</strong>}{kpi.milestone && kpi.initiative && <br />}{kpi.initiative && <span className="comment">{kpi.initiative}</span>}</td>
                           <td>{kpi.measure || '—'}</td>
+                          <td>{kpi.unit || '—'}</td>
                           <td>{kpi.weighting == null ? '—' : <span className="weighting-tag">{formatWeight(kpi.weighting)}</span>}</td>
-                          <td>{kpi.latest ? `${kpi.latest.label} ${kpi.latest.year}` : '—'}</td>
-                          <td>{formatNum(kpi.latest?.target)}</td>
-                          <td>{formatNum(kpi.latest?.actual)}</td>
+                          <td>{kpi.latest?.label ? `${kpi.latest.label} ${kpi.latest.year}` : (kpi.latest ? 'This period' : '—')}</td>
+                          <td>{formatTarget(kpi.latest?.target, kpi.unit)}</td>
+                          <td>{formatActual(kpi.latest?.actual, kpi.unit)}</td>
                           <td>{formatPct(kpi.latestPct)}</td>
                           <td><span className={`chip ${status}`}>{ragLabel(status)}</span></td>
                         </tr>

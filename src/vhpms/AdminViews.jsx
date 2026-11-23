@@ -16,7 +16,7 @@ export function AdminDepartments({ scorecard, onChange }) {
   }
   return (
     <div className="wrap">
-      <p className="sub">Departments mirror the scorecard heat-map sheets. Deleting one removes its KPIs.</p>
+      <p className="sub">Each business has its own KPIs, and Shadrick Vidmar has his own card. Deleting one removes its KPIs.</p>
       <Note message={message} error={error} />
       <section className="card" style={{ maxWidth: 640, marginBottom: 24 }}>
         <div className="card-head"><h2>Add department</h2></div>
@@ -47,7 +47,7 @@ export function AdminDepartments({ scorecard, onChange }) {
                     <input className="inline-input" name="sheet" type="text" defaultValue={department.sheet || ''} aria-label={`${department.name} sheet`} style={{ width: 180 }} />
                     <input className="inline-input" name="sort" type="number" defaultValue={department.sort || 0} aria-label={`${department.name} sort`} style={{ width: 80 }} />
                     <button className="btn btn-ghost btn-sm" type="submit">Save</button>
-                    {department.code !== 'gm' && <button className="btn btn-danger btn-sm" type="button" onClick={() => { if (window.confirm('Delete this department and all its KPI data?')) run((current) => deleteDepartment(current, department.code)) }}>Delete</button>}
+                    <button className="btn btn-danger btn-sm" type="button" onClick={() => { if (window.confirm('Delete this business and all its KPI data?')) run((current) => deleteDepartment(current, department.code)) }}>Delete</button>
                   </form>
                 </td>
               </tr>
@@ -72,14 +72,14 @@ export function AdminKpis({ scorecard, onChange }) {
   }
   return (
     <div className="wrap">
-      <p className="sub">Every KPI belongs to a department and a Balanced Scorecard perspective.</p>
+      <p className="sub">Every KPI belongs to a business and a Balanced Scorecard perspective.</p>
       <Note message={message} error={error} />
       <section className="card" style={{ maxWidth: 680, marginBottom: 24 }}>
         <div className="card-head"><h2>Add KPI</h2></div>
         <div className="card-body">
           <form onSubmit={(event) => { event.preventDefault(); const fields = Object.fromEntries(new FormData(event.currentTarget)); run((current) => addKpi(current, fields)); event.currentTarget.reset() }}>
             <div className="field-row">
-              <div className="field"><label htmlFor="department_id">Department</label><select id="department_id" name="dept" required>{departments.map((department) => <option key={department.code} value={department.code}>{department.name}</option>)}</select></div>
+              <div className="field"><label htmlFor="department_id">Business</label><select id="department_id" name="dept" required>{departments.map((department) => <option key={department.code} value={department.code}>{department.name}</option>)}</select></div>
               <div className="field"><label htmlFor="perspective_id">Perspective</label><select id="perspective_id" name="perspective" required>{perspectives.map((name) => <option key={name}>{name}</option>)}</select></div>
             </div>
             <div className="field"><label htmlFor="measure">Measure</label><input id="measure" name="measure" type="text" required /></div>
@@ -91,12 +91,12 @@ export function AdminKpis({ scorecard, onChange }) {
         </div>
       </section>
       <div style={{ marginBottom: 14, maxWidth: 320 }}>
-        <div className="field" style={{ margin: 0 }}><label htmlFor="dept">Filter by department</label>
-          <select id="dept" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="">All departments</option>{departments.map((department) => <option key={department.code} value={department.code}>{department.name}</option>)}</select>
+        <div className="field" style={{ margin: 0 }}><label htmlFor="dept">Filter by business</label>
+          <select id="dept" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="">All businesses</option>{departments.map((department) => <option key={department.code} value={department.code}>{department.name}</option>)}</select>
         </div>
       </div>
       <section className="card"><div className="card-body pad-0"><div className="tbl-scroll"><table className="data">
-        <thead><tr><th>Department</th><th>Perspective</th><th>Measure</th><th>Weighting</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Business</th><th>Perspective</th><th>Measure</th><th>Weighting</th><th>Status</th><th></th></tr></thead>
         <tbody>
           {rows.map((kpi) => (
             <tr key={kpi.id}>

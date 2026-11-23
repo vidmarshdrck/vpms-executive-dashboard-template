@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import './theme.css'
 import './vhpms.css'
 import { signIn, readSession, saveSession, clearSession } from './auth.js'
-import { parseDirectory, homeView, findAccount, withCurrentRole, canSee, scopedDepartment, entryDepartment, isViewOnly, accountList } from './directory.js'
+import { parseDirectory, homeView, findAccount, withCurrentRole, canSee, scopedDepartment, isViewOnly, accountList } from './directory.js'
 import { emptyState, parseState, STORAGE_KEY } from './model.js'
-import { freshScorecard, loadScorecard, buildOrganisation, recordPeriod, operatingDepartments, publicDepartmentName } from './score.js'
-import { emptyBooks, parseBooks } from './books.js'
-import { todayIso } from './veData.js'
+import { freshScorecard, loadScorecard, recordPeriod, operatingDepartments, publicDepartmentName } from './score.js'
+import { emptyBooks, parseBooks, activeBusinesses } from './books.js'
+import { fetchVeWorkspace, todayIso } from './veData.js'
 import { resetPeriodOnSignIn } from './reportingPeriod.js'
 import Shell, { LoginScreen } from './Shell.jsx'
 import GmDashboard from './GmDashboard.jsx'
@@ -20,16 +20,26 @@ import ProfilePage from './ProfilePage.jsx'
 import { InboxView, SmsDashboard } from './InboxSms.jsx'
 import ScorecardsPage from './ScorecardsPage.jsx'
 import { emptyOwnerScorecards, parseOwnerScorecards } from './ownerScorecards.js'
+import { SCORE_KEY, OWNER_SCORECARDS_KEY, loadKpiScorecard, saveKpiScorecard, loadOwnerScorecards, saveOwnerScorecards } from './sharedStore.js'
 import { emptyActivities, parseActivities, ACTIVITY_KEY } from './activities.js'
 import { emptyLabels, parseLabels, mergeLabels, inboxFromSms, labelTransaction, clearPrivateSms, SMS_LABELS_KEY } from './sms.js'
 import { fetchSms, pushSmsLabel, endSmsSession, smsWatchKey } from './smsClient.js'
 
 const DIR_KEY = 'vhpms-directory-v1'
-const SCORE_KEY = 'vhpms-scorecard-v1'
 const BOOKS_KEY = 'vhpms-books-v1'
-const OWNER_SCORECARDS_KEY = 'vhpms-owner-scorecards-v1'
 const WORKSPACE = new Set(['operations', 'calendar'])
 const LIVE_VIEWS = new Set(['activities', 'inbox', 'sms', 'business', 'business-list', 'profile'])
+
+function visibleDepartment(user, scorecard, selected, view) {
+  if (view === 'hr') return 'hr'
+  const codes = new Set(scorecard.departments.map((item) => item.code))
+  const scoped = scopedDepartment(user)
+  if (scoped && codes.has(scoped)) return scoped
+  if (!scoped && codes.has(selected)) return selected
+  const unit = String(user?.unit || '').trim().toLowerCase()
+  if (codes.has(unit)) return unit
+  return scoped || selected
+}
 
 function readStored(key, parse, fallback) {
   try { return parse(localStorage.getItem(key)) } catch { return fallback }
@@ -51,7 +61,7 @@ export default function Vhpms() {
   const [menu, setMenu] = useState(false)
   const [mode, setMode] = useState('management')
   const [returnView, setReturnView] = useState('gm')
-  const [selectedDept, setSelectedDept] = useState('engineering')
+  const [selectedDept, setSelectedDept] = useState('ve')
   const [businessId, setBusinessId] = useState('ve')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -60,15 +70,49 @@ export default function Vhpms() {
   const [books, setBooks] = useState(() => readStored(BOOKS_KEY, parseBooks, emptyBooks()))
   const [activities, setActivities] = useState(() => readStored(ACTIVITY_KEY, parseActivities, emptyActivities()))
   const [ownerScorecards, setOwnerScorecards] = useState(() => readStored(OWNER_SCORECARDS_KEY, parseOwnerScorecards, emptyOwnerScorecards()))
+  const [veWorkspace, setVeWorkspace] = useState(null)
+  const scoreEdited = useRef(false)
+  const cardsEdited = useRef(false)
   const [labels, setLabels] = useState(() => readStored(SMS_LABELS_KEY, parseLabels, emptyLabels()))
   const [smsRemote, setSmsRemote] = useState({ ok: true, rows: [] })
   const [smsFocus, setSmsFocus] = useState('')
   const smsGeneration = useRef(0)
   const smsKey = smsWatchKey(user)
+  const sessionToken = user?.token || ''
   useEffect(() => { document.title = 'VPMS' }, [])
+  useEffect(() => {
+    let cancelled = false
+    fetchVeWorkspace({ env: import.meta.env, token: sessionToken, today: todayIso() }).then((model) => {
+      if (!cancelled) setVeWorkspace(model)
+    })
+    return () => { cancelled = true }
+  }, [sessionToken])
+  useEffect(() => {
+    let cancelled = false
+    const storage = typeof localStorage === 'undefined' ? null : localStorage
+    loadKpiScorecard({ env: import.meta.env, token: sessionToken, storage }).then((next) => {
+      if (!cancelled && !scoreEdited.current) setScorecard(next)
+    })
+    loadOwnerScorecards({ env: import.meta.env, token: sessionToken, storage }).then((next) => {
+      if (!cancelled && !cardsEdited.current) setOwnerScorecards(next)
+    })
+    return () => { cancelled = true }
+  }, [sessionToken])
 
   function persist(key, value, setter) {
     try { localStorage.setItem(key, JSON.stringify(value)); setter(value) } catch { setError('Could not save in this browser.') }
+  }
+  function persistScore(next) {
+    scoreEdited.current = true
+    setScorecard(next)
+    const storage = typeof localStorage === 'undefined' ? null : localStorage
+    void saveKpiScorecard({ env: import.meta.env, token: sessionToken, storage, scorecard: next })
+  }
+  function persistCards(next) {
+    cardsEdited.current = true
+    setOwnerScorecards(next)
+    const storage = typeof localStorage === 'undefined' ? null : localStorage
+    void saveOwnerScorecards({ env: import.meta.env, token: sessionToken, storage, state: next })
   }
   useEffect(() => {
     if (!smsKey) return undefined
@@ -141,13 +185,12 @@ export default function Vhpms() {
   const activeUser = withCurrentRole(findAccount(user.username, directory) || user, user.currentRole)
   const sessionUser = user.token ? { ...activeUser, token: user.token } : activeUser
   const displayView = canSee(sessionUser, view) ? view : homeView(sessionUser)
-  const deptCode = displayView === 'hr' ? 'hr' : (scopedDepartment(sessionUser) || selectedDept)
+  const deptCode = visibleDepartment(sessionUser, scorecard, selectedDept, displayView)
   const department = scorecard.departments.find((item) => item.code === deptCode)
   const business = books.businesses.find((item) => item.id === businessId)
   const title = displayView === 'department' || displayView === 'hr'
     ? (publicDepartmentName(department) || 'Department')
     : displayView === 'business' ? (business?.name || 'Business') : (TITLES[displayView] || 'Dashboard')
-  const model = buildOrganisation(scorecard.kpis, scorecard.year)
   const smsRows = mergeLabels(smsRemote.rows, labels)
 
   return (
@@ -168,14 +211,14 @@ export default function Vhpms() {
       onBusiness={(id) => { setBusinessId(id); setView('business'); setMenu(false) }}
       onRole={switchRole}
     >
-      {displayView === 'gm' && <GmDashboard model={model} scorecard={scorecard} viewOnly={isViewOnly(sessionUser)} />}
-      {displayView === 'departments' && <Departments scorecard={scorecard} onOpen={(code) => { setSelectedDept(code); open('department') }} />}
-      {(displayView === 'department' || displayView === 'hr') && <DepartmentHeatMap scorecard={scorecard} code={deptCode} />}
-      {(displayView === 'kpi' || displayView === 'kpi-entry') && <KpiEntry scorecard={scorecard} user={{ ...sessionUser, dept: entryDepartment(sessionUser) }} onSave={(id, period) => persist(SCORE_KEY, recordPeriod(scorecard, id, period), setScorecard)} />}
-      {displayView === 'scorecards' && <ScorecardsPage departments={operatingDepartments(scorecard.departments)} users={accountList(directory)} cards={ownerScorecards} onChange={(next) => persist(OWNER_SCORECARDS_KEY, next, setOwnerScorecards)} />}
+      {displayView === 'gm' && <GmDashboard scorecard={scorecard} workspace={veWorkspace} viewOnly={isViewOnly(sessionUser)} />}
+      {displayView === 'departments' && <Departments scorecard={scorecard} workspace={veWorkspace} onOpen={(code) => { setSelectedDept(code); open('department') }} />}
+      {(displayView === 'department' || displayView === 'hr') && <DepartmentHeatMap scorecard={scorecard} workspace={veWorkspace} code={deptCode} />}
+      {(displayView === 'kpi' || displayView === 'kpi-entry') && <KpiEntry scorecard={scorecard} workspace={veWorkspace} user={sessionUser} viewOnly={isViewOnly(sessionUser)} onSave={(id, period) => persistScore(recordPeriod(scorecard, id, period))} />}
+      {displayView === 'scorecards' && <ScorecardsPage departments={operatingDepartments(scorecard.departments)} users={accountList(directory)} businesses={activeBusinesses(books)} cards={ownerScorecards} onChange={persistCards} />}
       {displayView === 'upload' && <UploadScorecard />}
-      {displayView === 'admin-departments' && <AdminDepartments scorecard={scorecard} onChange={(next) => persist(SCORE_KEY, next, setScorecard)} />}
-      {displayView === 'admin-kpis' && <AdminKpis scorecard={scorecard} onChange={(next) => persist(SCORE_KEY, next, setScorecard)} />}
+      {displayView === 'admin-departments' && <AdminDepartments scorecard={scorecard} onChange={persistScore} />}
+      {displayView === 'admin-kpis' && <AdminKpis scorecard={scorecard} onChange={persistScore} />}
       {displayView === 'admin-users' && <AdminUsers directory={directory} onChange={(next) => persist(DIR_KEY, next, setDirectory)} />}
       {displayView === 'admin-businesses' && <AdminBusinesses books={books} onChange={(next) => persist(BOOKS_KEY, next, setBooks)} />}
       {displayView === 'business-list' && <BusinessList books={books} onOpen={(id) => { setBusinessId(id); setView('business') }} />}

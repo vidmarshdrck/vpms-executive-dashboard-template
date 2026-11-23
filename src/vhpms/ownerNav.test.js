@@ -147,8 +147,16 @@ test('scorecards persist a department or user with metric targets', () => {
   assert.equal(edited.cards[0].subjectType, 'user')
   assert.equal(parseOwnerScorecards(JSON.stringify(edited)).cards[0].subjectId, 'nehemiah')
   assert.throws(() => saveOwnerScorecard(emptyOwnerScorecards(), { name: '', subjectType: 'department', subjectId: 'hr', metrics: [{ name: 'Retention', target: '95%' }] }))
+  const businessCard = saveOwnerScorecard(emptyOwnerScorecards(), {
+    name: 'VE Scorecard',
+    subjectType: 'business',
+    subjectId: 'VE',
+    metrics: [{ name: 'Active family accounts', target: '20' }],
+  })
+  assert.equal(businessCard.cards[0].subjectType, 'business')
+  assert.equal(businessCard.cards[0].subjectId, 'VE')
   const empty = renderToStaticMarkup(createElement(ScorecardsPage, {
-    departments: freshScorecard().departments.filter((department) => department.code !== 'gm'),
+    departments: freshScorecard().departments,
     users: [findAccount('nehemiah')],
     cards: emptyOwnerScorecards(),
     onChange: () => {},
