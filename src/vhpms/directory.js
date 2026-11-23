@@ -117,7 +117,7 @@ export function adminLinks(user) {
       { id: 'admin-departments', label: 'Departments', icon: 'building' },
       { id: 'admin-kpis', label: 'KPIs', icon: 'target' },
       { id: 'admin-users', label: 'Users', icon: 'users' },
-      { id: 'admin-businesses', label: 'Businesses', icon: 'building' },
+      { id: 'admin-businesses', label: 'Businesses', icon: 'briefcase' },
     ]
   }
   if (roles.includes('hrd')) return [{ id: 'admin-users', label: 'Users', icon: 'users' }]

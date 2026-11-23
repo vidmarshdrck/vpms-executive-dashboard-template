@@ -54,9 +54,10 @@ test('management reads Dashboard, Departments, KPIs, Scorecards and HR is not a 
   const departments = [...managementLinks(owner), ...adminLinks(owner)].filter((link) => link.label === 'Departments')
   const kpis = [...managementLinks(owner), ...adminLinks(owner)].filter((link) => link.label === 'KPIs')
   assert.equal(departments.length, 2)
-  assert.equal(new Set(departments.map((link) => link.icon)).size, 1)
+  assert.deepEqual(departments.map((link) => link.icon), ['building', 'building'])
   assert.equal(kpis.length, 2)
   assert.equal(new Set(kpis.map((link) => link.icon)).size, 1)
+  assert.equal(adminLinks(owner).find((link) => link.id === 'admin-businesses').icon, 'briefcase')
 })
 
 test('invoice maker is an external address and stays hidden when unset', () => {
