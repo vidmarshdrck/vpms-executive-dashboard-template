@@ -228,22 +228,23 @@ function AccountTable({ accounts, empty, onOpen }) {
   )
 }
 
-function Tile({ label, value }) {
-  return <section className="card"><div className="card-body"><div className="stat-num">{value}</div><div className="stat-desc">{label}</div></div></section>
+function Tile({ label, value, quiet = false }) {
+  return <section className="card"><div className="card-body"><div className={`stat-num${quiet ? ' is-quiet' : ''}`}>{value}</div><div className="stat-desc">{label}</div></div></section>
 }
 
 function Overview({ model }) {
   const period = useReportingPeriod(model.today)
   const familyReadable = model.access.familyAccounts === 'ok' || model.access.familyAccounts === 'empty'
   const customersReadable = model.access.customers === 'ok' || model.access.customers === 'empty'
-  const money = moneySoFar(model.income, model.expenses, model.access, period)
+  const held = moneySoFar(model.bankAccounts, model.bankTransactions, model.access, period.end)
+  const money = held == null ? '—' : (held || 'No bank account connected')
   return (
     <>
       <section className="ve-summary" aria-label="Summary">
         <Tile label="Active accounts" value={familyReadable ? model.activeAccounts.length : '—'} />
         <Tile label="Accounts ready to activate" value={familyReadable ? model.inactiveAccounts.length : '—'} />
         <Tile label="Active customers" value={customersReadable ? activeCustomerCount(model.customers) : '—'} />
-        <Tile label="Money so far" value={formatK(money)} />
+        <Tile label="Money so far" value={money} quiet={!held} />
         <Tile label="Customers due" value={customersReadable ? customersDue(model.customers, period).length : '—'} />
       </section>
       <StandardOverview model={glanceFromVe(model)} />

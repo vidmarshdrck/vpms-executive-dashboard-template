@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { ownerDisplayFor } from './veOwnerDisplay.js'
 import { validReconciliation } from './veEvidence.js'
-import { projectBudget } from './bankBudget.js'
+import { closingBalances, projectBudget } from './bankBudget.js'
+import { formatAmount } from './workspaceCharts.js'
 import { slicesBy } from './books.js'
 import { monthLabel } from './fundsMonth.js'
 import { dateInPeriod, periodBounds } from './reportingPeriod.js'
@@ -450,13 +451,14 @@ export function fundsGrouped(rows) {
   return months
 }
 
-export function moneySoFar(income, expenses, access = {}, period) {
-  const ordersOk = access.orders === 'ok' || access.orders === 'empty'
-  const expensesOk = access.expenses === 'ok' || access.expenses === 'empty'
-  if (!ordersOk || !expensesOk || !period) return null
-  const earned = fundsInPeriod(income, period).reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
-  const spent = fundsInPeriod(expenses, period).reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
-  return earned - spent
+const BLOCKED_READ = new Set(['blocked', 'error', 'signed-out', 'unconfigured'])
+
+// Cash already held: the same closing balance as Balance on hand, summed per currency.
+export function moneySoFar(accounts, transactions, access = {}, end) {
+  if (BLOCKED_READ.has(access.bankAccounts) || BLOCKED_READ.has(access.bankTransactions)) return null
+  const totals = closingBalances(accounts, transactions, end)
+  if (!totals.length) return ''
+  return totals.map((line) => formatAmount(line.amount, line.currency)).join(' · ')
 }
 
 export function customersDue(customers, period) {
