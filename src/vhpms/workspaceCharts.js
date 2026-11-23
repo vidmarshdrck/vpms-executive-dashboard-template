@@ -94,6 +94,31 @@ export function axisMax(peak) {
   return Number(result.toPrecision(12))
 }
 
+export function chartAxis(rows, fields) {
+  const peak = Math.max(0, ...(rows || []).flatMap((row) => fields.map((field) => Number(row?.[field]) || 0)))
+  return axisMax(peak)
+}
+
+function weekStart(iso) {
+  const date = new Date(`${iso}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7))
+  return date.toISOString().slice(0, 10)
+}
+
+export function plottedRows(days, weekly) {
+  if (!weekly) return (days || []).map((day) => ({ ...day, month: String(day.date || '').slice(8, 10) === '01' ? String(day.date).slice(0, 7) : '' }))
+  const groups = new Map()
+  for (const day of days || []) {
+    const key = weekStart(day.date)
+    if (!groups.has(key)) groups.set(key, { date: key, income: 0, expense: 0, month: '' })
+    const bucket = groups.get(key)
+    bucket.income += Number(day.income) || 0
+    bucket.expense += Number(day.expense) || 0
+    if (String(day.date || '').slice(8, 10) === '01') bucket.month = String(day.date).slice(0, 7)
+  }
+  return [...groups.values()]
+}
+
 export function weekBars(width, count, seriesCount) {
   const bars = Math.max(seriesCount, 1)
   const weeks = Math.max(count, 1)

@@ -12,7 +12,7 @@ import { CORE_BUSINESS_IDS, buildAdapterModel } from './businessSources.js'
 import { EMPTY } from './workspaceCharts.js'
 
 const bundle = await build({
-  stdin: { contents: "export { BusinessHome } from './src/vhpms/BusinessHome.jsx'\nexport { default as BusinessWorkspace } from './src/vhpms/BusinessWorkspace.jsx'\nexport { default as VeWorkspace, FamilyModal } from './src/vhpms/VeWorkspace.jsx'\nexport { default as ActivitiesBoard } from './src/vhpms/ActivitiesBoard.jsx'\nexport { default as Shell } from './src/vhpms/Shell.jsx'\nexport { TimeframePopover } from './src/vhpms/TimeframePopover.jsx'", resolveDir: process.cwd() },
+  stdin: { contents: "export { BusinessHome } from './src/vhpms/BusinessHome.jsx'\nexport { default as BusinessWorkspace } from './src/vhpms/BusinessWorkspace.jsx'\nexport { default as VeWorkspace, FamilyModal, SearchField } from './src/vhpms/VeWorkspace.jsx'\nexport { default as ActivitiesBoard } from './src/vhpms/ActivitiesBoard.jsx'\nexport { default as Shell } from './src/vhpms/Shell.jsx'\nexport { ReportingPeriodProvider, TimeframePopover } from './src/vhpms/TimeframePopover.jsx'", resolveDir: process.cwd() },
   bundle: true,
   write: false,
   platform: 'node',
@@ -27,7 +27,7 @@ const code = bundle.outputFiles[0].text.replace(/from "([^"]+)"/g, (_, name) => 
   if (name.startsWith('react') || name.startsWith('@supabase/') || name === 'lucide-react') return `from "file://${require.resolve(name)}"`
   return `from "${name}"`
 })
-const { BusinessHome, BusinessWorkspace, VeWorkspace, FamilyModal, ActivitiesBoard, Shell, TimeframePopover } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
+const { BusinessHome, BusinessWorkspace, VeWorkspace, FamilyModal, SearchField, ActivitiesBoard, Shell, ReportingPeriodProvider, TimeframePopover } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
 
 const TODAY = '2026-11-08'
 const SECRET = 'super-secret-value'
@@ -68,15 +68,17 @@ function renderHome(id = 've', books = emptyBooks()) {
 
 test('the VE pages render mapped records', () => {
   const html = renderWorkspace(workspaceModel())
-  for (const title of ['Overview', 'Family Accounts', 'Customers', 'Funds', 'Accounts', 'Budget', 'Marketing']) {
+  for (const title of ['Overview', 'Family Accounts', 'Customers', 'Funds', 'Accounts', 'Budgets', 'Marketing']) {
     assert.match(html, new RegExp(`<span>${title}</span></button>`))
   }
   assert.match(html, /Account owner/)
   assert.doesNotMatch(html, /Account \/ Names/)
+  assert.doesNotMatch(html, /Activity evidence/)
+  assert.doesNotMatch(html, />FID</)
   assert.match(html, /Amara Banda/)
   assert.doesNotMatch(html, />Amara Banda<\/button>/)
   assert.match(html, /Twaambo Banda/)
-  assert.match(html, /Same as owner/)
+  assert.doesNotMatch(html, /Same as owner/)
   assert.match(html, /5 Dec 2026/)
   assert.match(html, /record-title/)
   assert.match(html, />Streaming</)
@@ -84,12 +86,25 @@ test('the VE pages render mapped records', () => {
   assert.match(html, /Account paid/)
   assert.doesNotMatch(html, /Paid status/)
   assert.match(html, /aria-label="Slots for Twaambo Banda, 1\/5"/)
-  assert.match(html, /Active \(1\)/)
-  assert.match(html, /Inactive \(1\)/)
   assert.match(html, />1\/5</)
   assert.doesNotMatch(html, /1 of 5/)
   assert.match(html, /Received · Oct – Dec 2026/)
-  assert.match(html, /Total received/)
+  assert.match(html, /Active accounts/)
+  assert.match(html, /Accounts ready to activate/)
+  assert.match(html, /Active customers/)
+  assert.match(html, /Money so far/)
+  assert.match(html, /Customers due/)
+  assert.match(html, /K 288\.95<\/div><div class="stat-desc">Money so far/)
+  assert.match(html, /class="ve-status green"/)
+  assert.match(html, /class="ve-status amber"/)
+  assert.match(readFileSync(new URL('./veWorkspace.css', import.meta.url), 'utf8'), /month-strip \{ grid-template-columns: 1fr/)
+  assert.match(readFileSync(new URL('./veWorkspace.css', import.meta.url), 'utf8'), /nth-child\(5\) \{ grid-column: 1 \/ -1/)
+  assert.match(html, /ve-search/)
+  assert.match(html, /aria-label="Clear search"/)
+  assert.match(readFileSync(new URL('./veWorkspace.css', import.meta.url), 'utf8'), /border-color:\s*#1454c0/)
+  assert.match(readFileSync(new URL('./veWorkspace.css', import.meta.url), 'utf8'), /aria-hidden="true"/)
+  assert.doesNotMatch(html, /Vidmar Holdings · VE/)
+  assert.doesNotMatch(html, /Activity evidence|Source: owner instruction|actual Boaz|Display only/)
   assert.doesNotMatch(html, /role="dialog"/)
   const dialog = renderToStaticMarkup(createElement(FamilyModal, {
     account: {
@@ -108,9 +123,9 @@ test('the VE pages render mapped records', () => {
   assert.match(dialog, /Slot 2 · No payment recorded/)
   assert.match(dialog, /8 Nov 2026/)
   assert.match(dialog, /class="num"/)
-  assert.match(dialog, /ZMW 120\.00/)
-  assert.match(html, />Email</)
-  assert.match(html, /aria-label="Email not recorded"/)
+  assert.match(dialog, /K 120\.00/)
+  assert.doesNotMatch(html, />Email</)
+  assert.doesNotMatch(html, /aria-label="Email not recorded"/)
   assert.match(html, /Finances/)
   assert.match(html, /aria-label="Month strip"/)
   assert.match(html, /Expenses by category/)
@@ -124,53 +139,42 @@ test('the VE pages render mapped records', () => {
   assert.match(html, /aria-label="Operations"/)
   assert.match(html, /aria-label="Clients"/)
   assert.match(html, /Total spent/)
-  assert.match(html, /Balance on hand/)
-  assert.match(html, /ZMW 288\.95<\/div><div class="stat-desc">Balance on hand/)
-  assert.match(html, /ZMW 90\.00<\/div><div class="stat-desc">Profit generated/)
+  assert.doesNotMatch(html, /Balance on hand/)
+  assert.match(html, /K 90\.00<\/div><div class="stat-desc">Profit generated/)
   assert.match(html, /Profit generated/)
-  assert.match(html, /ZMW 120\.00/)
-  assert.match(html, /ZMW 30\.00/)
-  assert.match(html, /ZMW 1,500\.00/)
+  assert.match(html, /K 120\.00/)
+  assert.match(html, /K 30\.00/)
+  assert.match(html, /K 1,500\.00/)
+  assert.match(html, /ve-customer-cards/)
+  assert.match(html, /Last payment 8 Nov 2026 · K 120\.00/)
+  assert.match(readFileSync(new URL('./veWorkspace.css', import.meta.url), 'utf8'), /max-width: 600px[\s\S]*ve-customer-table \{ display: none/)
+  assert.doesNotMatch(html, /ZMW \d/)
   assert.match(html, /aria-label="Search customers"/)
   assert.match(html, /aria-label="Customer status"/)
   assert.match(html, /https:\/\/wa\.me\/260977000111\?text=/)
   assert.match(html, /target="_blank"/)
   assert.match(html, /disabled="">WhatsApp/)
   assert.doesNotMatch(html, />Password</)
-  assert.match(html, /Expense overview/)
-  assert.match(html, /Income overview/)
-  assert.match(html, /Expense flow/)
-  assert.match(html, /Income flow/)
-  assert.match(html, /aria-label="Funds calendar"/)
   assert.match(html, /November 2026/)
-  assert.match(html, /aria-label="Previous month"/)
-  assert.match(html, /aria-label="Next month"/)
-  assert.match(html, /Account analysis/)
+  assert.match(html, /Amara Banda · Netflix/)
+  assert.match(html, /\+K 120\.00/)
+  assert.match(html, new RegExp(`${'\u2212'}K 30\\.00`))
+  assert.doesNotMatch(html, /class="ve-dir"/)
+  assert.doesNotMatch(html, /Expense overview|Income flow|Funds calendar|Account analysis|Weekly expense budget/)
   assert.match(html, /Last payment/)
   assert.match(html, /FNB Lifestart Student \(ZMW\)/)
-  assert.match(html, /1583/)
-  assert.match(html, /ZMW 288\.95/)
-  assert.match(html, /No USD account was returned/)
-  assert.match(html, /aria-label="Search transactions"/)
-  assert.match(html, /aria-label="USD plan prices"/)
-  assert.match(html, /USD 15\.99/)
-  assert.doesNotMatch(html, /ZMW 15\.99/)
-  assert.match(html, /FX 25\.00/)
-  assert.match(html, /aria-label="Current FX rate"/)
-  assert.match(html, /25\.00/)
-  assert.match(html, /Projected monthly cost/)
-  assert.match(html, /Gap against the latest month/)
+  assert.match(html, /···· 1583/)
+  assert.match(html, /K 288\.95/)
+  assert.doesNotMatch(html, /No USD account was returned|No ZMW account was returned/)
+  assert.doesNotMatch(html, /aria-label="Search transactions"/)
   assert.doesNotMatch(html, /The tiles are the totals|Where this comes from|Active means the due date/)
-  assert.equal((html.match(/November 2026/g) || []).length >= 2, true)
-  assert.match(html, /Weekly expense budget/)
-  assert.match(html, /Week of 2 Nov 2026/)
-  assert.match(html, /ZMW 30\.00/)
+  assert.match(html, /No subscriptions due this week/)
   assert.match(html, /December renewals/)
   assert.match(html, /No scheduled posts yet|December renewals/)
   assert.match(html, /CAC/)
-  assert.match(html, /ZMW 50\.00/)
+  assert.match(html, /K 50\.00/)
   assert.match(html, /Powered by/)
-  assert.match(html, /Vidmar Holdings · VE/)
+  assert.doesNotMatch(html, /Vidmar Holdings · VE/)
   assert.equal(html.includes(SECRET), false)
   assert.equal(html.slice(html.lastIndexOf('page-footer')).includes('Vidmar Holdings'), false)
   assert.doesNotMatch(html, /type="submit"|>Save<|>Delete</)
@@ -193,11 +197,11 @@ test('empty and blocked pages use finished copy', () => {
   assert.match(html, /class="stat-num">—</)
   assert.match(html, new RegExp(COPY.customersBlocked))
   assert.match(html, new RegExp(COPY.ordersBlocked))
-  assert.match(html, /Record expenses to see VE spending for this period/)
+  assert.match(html, /Record income and expenses to follow VE for this period/)
   assert.match(html, /Schedule a post to plan VE marketing/)
   assert.match(html, new RegExp(COPY.cacBlocked))
   assert.match(html, /No bank account connected/)
-  assert.match(html, /No ZMW account was returned/)
+  assert.match(html, /No payment accounts were returned/)
   const blockedBank = renderWorkspace(buildWorkspace({
     familyAccounts: { access: 'empty', rows: [] },
     customers: { access: 'empty', rows: [] },
@@ -212,8 +216,39 @@ test('empty and blocked pages use finished copy', () => {
   assert.match(blockedBank, /Bank accounts are not visible to this account/)
   assert.match(blockedBank, /Bank transactions are not visible to this account/)
   assert.doesNotMatch(blockedBank, /No bank account connected/)
-  assert.match(html, /No USD account was returned/)
-  assert.equal(/\b(draft|demo|sample|placeholder|coming soon)\b/i.test(html), false)
+  assert.doesNotMatch(html, /No USD account was returned|No ZMW account was returned/)
+  assert.match(html, /No subscriptions due this week/)
+  assert.equal(/\b(draft|demo|sample|placeholder|coming soon|will appear here)\b/i.test(html), false)
+})
+
+test('funds follow the header reporting period and a filled search can be cleared', () => {
+  const november = renderToStaticMarkup(createElement(ReportingPeriodProvider, { userId: 'period-nov', today: TODAY }, createElement(VeWorkspace, {
+    business: { id: 've', name: 'Vidmar Entertainment (VE)' }, model: workspaceModel(), today: TODAY,
+  })))
+  const store = new Map([['vhpms-reporting-period:period-sep', JSON.stringify({ year: 2026, from: 9, to: 9 })]])
+  const previous = globalThis.localStorage
+  globalThis.localStorage = {
+    getItem: (key) => store.get(key) ?? null,
+    setItem: (key, value) => store.set(key, value),
+    removeItem: (key) => store.delete(key),
+  }
+  let september = ''
+  try {
+    september = renderToStaticMarkup(createElement(ReportingPeriodProvider, { userId: 'period-sep', today: TODAY }, createElement(VeWorkspace, {
+      business: { id: 've', name: 'Vidmar Entertainment (VE)' }, model: workspaceModel(), today: TODAY,
+    })))
+  } finally {
+    if (previous === undefined) delete globalThis.localStorage
+    else globalThis.localStorage = previous
+  }
+  assert.match(november, /November 2026/)
+  assert.match(november, /\+K 120\.00/)
+  assert.match(september, /No transactions in this period/)
+  assert.doesNotMatch(september, /November 2026/)
+  assert.doesNotMatch(september, /\+K 120\.00/)
+  const filled = renderToStaticMarkup(createElement(SearchField, { id: 've-customer-search', label: 'Search customers', value: 'Amara', onChange: () => {} }))
+  assert.match(filled, /class="ve-search-clear"(?! hidden)/)
+  assert.match(filled, /value="Amara"/)
 })
 
 test('VE ignores planner entries and every live business uses the same four pages', () => {

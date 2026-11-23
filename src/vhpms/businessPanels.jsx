@@ -7,7 +7,8 @@ import { NavIcon } from './icons.jsx'
 import { MONTHS, monthsInPeriod, rowsInPeriod, weekOverlapsPeriod } from './reportingPeriod.js'
 import { useReportingPeriod } from './TimeframePopover.jsx'
 import { COPY, acquisitionSummary, weeklyBudget } from './veData.js'
-import { EMPTY, accountCaption, axisMax, formatAmount, formatDayHeading, formatDisplayDate, isNeedsNote, moneyHidden, monthStripRows, sectionDetail, sentenceCase, statusLabel, weekBars } from './workspaceCharts.js'
+import { useVeFormat } from './veFormat.js'
+import { EMPTY, accountCaption, chartAxis, formatAmount, formatDayHeading, formatDisplayDate, isNeedsNote, moneyHidden, monthStripRows, plottedRows, sectionDetail, sentenceCase, statusLabel, weekBars } from './workspaceCharts.js'
 
 export function Panel({ title, children, note }) {
   return (
@@ -93,11 +94,12 @@ function casedRows(rows) {
 }
 
 function RankedSplit({ title, rows, center, empty }) {
+  const format = useVeFormat()
   const share = categoryShare(casedRows(rows))
   const slices = slicesBy(share.map((item) => ({ group: item.name, amount: item.amount })), 'group')
   return (
     <Panel title={title}>
-      {share.length ? <Donut items={slices} center={center} format={formatAmount} /> : <EmptyState icon="pie" title={empty.title} detail={empty.detail} />}
+      {share.length ? <Donut items={slices} center={center} format={format} /> : <EmptyState icon="pie" title={empty.title} detail={empty.detail} />}
     </Panel>
   )
 }
@@ -152,30 +154,10 @@ function monthBlocks(days) {
   return blocks
 }
 
-function weekStart(iso) {
-  const date = new Date(`${iso}T00:00:00Z`)
-  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7))
-  return date.toISOString().slice(0, 10)
-}
-
-function plotRows(days, weekly) {
-  if (!weekly) return days.map((day) => ({ ...day, month: day.date.slice(8, 10) === '01' ? day.date.slice(0, 7) : '' }))
-  const groups = new Map()
-  for (const day of days) {
-    const key = weekStart(day.date)
-    if (!groups.has(key)) groups.set(key, { date: key, income: 0, expense: 0, month: '' })
-    const bucket = groups.get(key)
-    bucket.income += Number(day.income) || 0
-    bucket.expense += Number(day.expense) || 0
-    if (day.date.slice(8, 10) === '01') bucket.month = day.date.slice(0, 7)
-  }
-  return [...groups.values()]
-}
-
 function PixelPlot({ title, days, series, legend = null }) {
   const [scrollRef, box] = usePlotBox()
   const weekly = useNarrowViewport()
-  const rows = plotRows(days, weekly)
+  const rows = plottedRows(days, weekly)
   const axisH = 34
   const topPad = 8
   const plotH = Math.max(48, box.height - axisH)
@@ -183,14 +165,16 @@ function PixelPlot({ title, days, series, legend = null }) {
   const slot = svgWidth / Math.max(rows.length, 1)
   const weeks = weekly ? weekBars(svgWidth, rows.length, series.length) : null
   const barW = weekly ? weeks.barWidth : Math.min(4, Math.max(1, slot - 1))
-  const max = axisMax(Math.max(...rows.flatMap((row) => series.map((item) => Number(row[item.field]) || 0)), 0))
+  const format = useVeFormat()
+  const fields = series.map((item) => item.field)
+  const max = chartAxis(rows, fields)
   const ticks = [max, max / 2, 0]
   const yFor = (value) => topPad + (1 - value / max) * (plotH - topPad - 1)
   return (
     <Panel title={title}>
       <div className="plot-block" data-plot={title} data-slots={rows.length} data-scale={weekly ? 'week' : 'day'} data-series={series.length} data-axis={max}>
         <div className="plot-y" aria-hidden="true">
-          {ticks.map((tick) => <span key={tick} className="plot-label">{formatAmount(tick)}</span>)}
+          {ticks.map((tick) => <span key={tick} className="plot-label">{format(tick)}</span>)}
         </div>
         <div className="plot-scroll" ref={scrollRef}>
           <svg className="plot-svg" width={svgWidth} height={plotH} viewBox={`0 0 ${svgWidth} ${plotH}`} role="img" aria-label={title}>
@@ -202,7 +186,7 @@ function PixelPlot({ title, days, series, legend = null }) {
               return series.map((item, seriesIndex) => {
                 const value = Number(row[item.field]) || 0
                 const y = yFor(value)
-                return <rect key={`${row.date}-${item.field}`} className="plot-bar" x={origin + seriesIndex * step} y={y} width={barW} height={Math.max(plotH - 1 - y, 0)} fill={item.color}><title>{`${formatDisplayDate(row.date)} ${formatAmount(value)}`}</title></rect>
+                return <rect key={`${row.date}-${item.field}`} className="plot-bar" x={origin + seriesIndex * step} y={y} width={barW} height={Math.max(plotH - 1 - y, 0)} fill={item.color}><title>{`${formatDisplayDate(row.date)} ${format(value)}`}</title></rect>
               })
             })}
           </svg>
@@ -272,6 +256,7 @@ function periodFinance(finance, incomeRows, expenseRows) {
 }
 
 function MonthStrip({ rows, months }) {
+  const format = useVeFormat()
   const items = monthStripRows(rows, months)
   return (
     <Panel title="Month strip">
@@ -281,8 +266,8 @@ function MonthStrip({ rows, months }) {
           return (
             <article key={item.month}>
               <span>{item.label}</span>
-              <strong className={!quiet && item.income - item.expense < 0 ? 'money-neg' : undefined}>{quiet ? '—' : formatAmount(item.income - item.expense)}</strong>
-              {quiet ? <small>No movement</small> : <><small>In {formatAmount(item.income)}</small><small>Out {formatAmount(item.expense)}</small></>}
+              <strong className={!quiet && item.income - item.expense < 0 ? 'money-neg' : undefined}>{quiet ? '—' : format(item.income - item.expense)}</strong>
+              {quiet ? <small>No movement</small> : <><small>In {format(item.income)}</small><small>Out {format(item.expense)}</small></>}
             </article>
           )
         })}
@@ -307,6 +292,7 @@ function FlowChart({ title, days, field, color }) {
 }
 
 function ByAccountBars({ rows }) {
+  const format = useVeFormat()
   const max = Math.max(...rows.map((row) => Math.abs(Number(row.amount))), 1)
   return (
     <Panel title="By account">
@@ -315,7 +301,7 @@ function ByAccountBars({ rows }) {
           <div className="bar-row" key={row.id}>
             <strong className="bar-name" title={accountCaption(row)}>{accountCaption(row)}</strong>
             <span className="bar-track"><span className="bar-fill" style={{ width: `${(Math.abs(Number(row.amount)) / max) * 100}%` }} /></span>
-            <b className={`bar-value${Number(row.amount) < 0 ? ' money-neg' : ''}`}>{formatAmount(row.amount, row.currency)}</b>
+            <b className={`bar-value${Number(row.amount) < 0 ? ' money-neg' : ''}`}>{format(row.amount, row.currency)}</b>
           </div>
         ))}
       </div>
@@ -390,16 +376,19 @@ export function StandardOverview({ model }) {
   const months = monthsInPeriod(period)
   const next = model.upcoming?.[0]
   const financeDetail = sectionDetail(model.expenseNote || model.incomeNote, 'finances', model.businessId)
+  const format = useVeFormat()
+  const tile = (value) => (value == null ? '—' : format(value))
+  const ve = model.businessId === 've'
   return (
     <>
       <h2 className="sr-only">Overview</h2>
       <section aria-label="Finances">
         <SectionHeading icon="wallet">Finances</SectionHeading>
-        <div className="kpi-grid">
-          <Stat label="Total spent" value={moneyTile(finance.expenses)} />
-          <Stat label="Income" value={moneyTile(finance.income)} />
-          <Stat label="Balance on hand" value={balanceText} quiet={!bankBlocked && !balances.length} />
-          <Stat label="Profit generated" value={moneyTile(finance.profit)} negative={Number(finance.profit) < 0} />
+        <div className={ve ? 'kpi-grid ve-finance' : 'kpi-grid'}>
+          <Stat label="Total spent" value={tile(finance.expenses)} />
+          <Stat label="Income" value={tile(finance.income)} />
+          {ve ? null : <Stat label="Balance on hand" value={balanceText} quiet={!bankBlocked && !balances.length} />}
+          <Stat label="Profit generated" value={tile(finance.profit)} negative={Number(finance.profit) < 0} />
         </div>
         {bankBlocked ? <EmptyCard icon="landmark" title="Bank accounts are not visible" detail={sectionDetail(model.bankNote, 'accounts', model.businessId)} /> : null}
         {moneyRows.length ? (
@@ -654,6 +643,7 @@ export function StandardBudget({ model }) {
 }
 
 export function StandardMarketing({ model }) {
+  const format = useVeFormat()
   const period = useReportingPeriod(model.today)
   const posts = rowsInPeriod(model.posts || [], period)
   const spend = rowsInPeriod(model.spend || [], period)
@@ -665,7 +655,7 @@ export function StandardMarketing({ model }) {
   const acquisition = acquisitionSummary(spend)
   const postsDetail = sectionDetail(postsNote, 'posts', model.businessId)
   const spendDetail = sectionDetail(spendNote, 'spend', model.businessId)
-  const cac = acquisition.value == null ? 'Not recorded' : formatAmount(acquisition.value)
+  const cac = acquisition.value == null ? 'Not recorded' : format(acquisition.value)
   return (
     <>
       <h2 className="sr-only">Marketing</h2>
@@ -695,9 +685,9 @@ export function StandardMarketing({ model }) {
                   { key: 'date', label: 'Date', cell: (row) => formatDisplayDate(row.date) },
                   { key: 'channel', label: 'Channel', cell: (row) => row.channel },
                   { key: 'campaign', label: 'Campaign', cell: (row) => row.campaign },
-                  { key: 'amount', label: 'Spend', cell: (row) => formatAmount(row.amount) },
+                  { key: 'amount', label: 'Spend', cell: (row) => format(row.amount) },
                   { key: 'conversions', label: 'Conversions', cell: (row) => (row.conversions == null ? '—' : row.conversions) },
-                  { key: 'cac', label: 'CAC', cell: (row) => row.cacLabel || (row.computed == null ? 'Not recorded' : formatAmount(row.computed)) },
+                  { key: 'cac', label: 'CAC', cell: (row) => row.cacLabel || (row.computed == null ? 'Not recorded' : format(row.computed)) },
                 ]}
               />
             </>

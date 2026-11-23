@@ -18,7 +18,7 @@ const model = buildWorkspace({
     rows: [
       { fid: 12, aaid: 'AG1', product: 'Netflix', due_date: '2026-12-05', paid_status: 'Unpaid', slots_total: 5, slots_taken: 3, slot_1: 'C1', slot_2: 'C2', slot_3: 'C3', password: 'must-not-render' },
       { fid: 18, aaid: 'AG2', product: 'Apple Music', due_date: '2027-01-15', paid_status: 'Unpaid', slots_total: 5, slots_taken: 1, slot_1: 'C4' },
-      { fid: 4, aaid: 'AG3', product: 'Spotify', due_date: '2026-08-06', paid_status: 'Unpaid', slots_total: 5, slots_taken: 2, slot_1: 'C5', slot_2: 'C6' },
+      { fid: 4, aaid: 'AG3', product: 'Spotify', due_date: '2026-11-06', paid_status: 'Unpaid', slots_total: 5, slots_taken: 2, slot_1: 'C5', slot_2: 'C6' },
       { fid: 9, aaid: 'AG4', product: 'Prime Video', due_date: '2026-05-24', paid_status: 'Unpaid', slots_total: 5, slots_taken: 0 },
       { fid: 21, aaid: 'AG5', product: 'Starlink', due_date: '2026-12-20', paid_status: 'Unpaid', slots_total: 1, slots_taken: 1, slot_1: 'C2' },
     ],
@@ -90,6 +90,8 @@ const model = buildWorkspace({
     access: 'ok',
     rows: [
       { id: 'acct-zmw', label: 'FNB current (ZMW)', bank: 'FNB Zambia', currency: 'ZMW', account_last4: '4242', opening_balance: 1500 },
+      { id: 'acct-mtn', label: 'MTN mobile money', bank: 'MTN', currency: 'ZMW', account_last4: '4412', opening_balance: 250 },
+      { id: 'acct-airtel', label: 'Airtel money', bank: 'Airtel', currency: 'ZMW', account_last4: '77819012', opening_balance: 80 },
     ],
   },
   bankTransactions: {

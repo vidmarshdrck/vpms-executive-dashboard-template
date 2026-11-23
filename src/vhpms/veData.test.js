@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   AGENT_COLUMNS, BANK_ACCOUNT_COLUMNS, BANK_TXN_COLUMNS, CUSTOMER_COLUMNS, EXPENSE_COLUMNS, FAMILY_COLUMNS, MARKETING_COLUMNS, ORDER_COLUMNS, PRODUCT_COLUMNS, SPEND_COLUMNS,
-  buildWorkspace, classifyResult, createVeClient, fetchVeWorkspace, filterCustomers, filterFunds, financeSummary, fundsByMonth, receivedInPeriod, seatedCustomerIds, sumReceived, weekStart, weeklyBudget, whatsappHref, whatsappNumber,
+  activeCustomerCount, buildWorkspace, classifyResult, createVeClient, customersDue, fetchVeWorkspace, filterCustomers, filterFunds, financeSummary, formatK, fundMovements, fundsByMonth, fundsGrouped, fundsInPeriod, lastFourDigits, moneySoFar, paymentAccounts, receivedInPeriod, seatedCustomerIds, subscriptionsThisWeek, sumReceived, weekStart, weeklyBudget, whatsappHref, whatsappNumber,
 } from './veData.js'
 
 const TODAY = '2026-11-08'
@@ -235,4 +235,75 @@ test('bank projection uses transaction prices and leaves an inactive plan out', 
   assert.equal(model.budget.fx.rate, 25)
   assert.equal(model.budget.projection, 399.75)
   assert.equal(JSON.stringify(model.budget).includes('9999'), false)
+  const listed = paymentAccounts(model.bankAccounts, model.bankTransactions)
+  assert.deepEqual(listed.map((row) => row.name), ['FNB Lifestart Student (ZMW)'])
+  assert.equal(listed[0].last4, '1583')
+  assert.equal(listed[0].balance, 36.67)
+  assert.equal(JSON.stringify(listed).includes('MTN'), false)
+  assert.equal(JSON.stringify(listed).includes('Airtel'), false)
+})
+
+test('payment accounts keep only stored rows and the last four digits', () => {
+  const rows = paymentAccounts([
+    { id: 'mtn', label: 'MTN MoMo 260977009991234', bank: 'MTN', currency: 'ZMW', last4: '991234', openingBalance: null },
+    { id: 'airtel', label: 'Airtel Money', bank: 'Airtel', currency: 'ZMW', last4: '4412', openingBalance: 80 },
+  ], [
+    { id: 2, accountId: 'mtn', date: '2026-11-02', amount: 40, balance: 140 },
+    { id: 1, accountId: 'mtn', date: '2026-10-02', amount: 100, balance: 100 },
+  ])
+  assert.deepEqual(rows.map((row) => [row.name, row.last4, row.balance]), [
+    ['MTN MoMo', '1234', 140],
+    ['Airtel Money', '4412', 80],
+  ])
+  assert.equal(lastFourDigits('12'), '')
+  assert.equal(JSON.stringify(rows).includes('260977009991234'), false)
+  const openOnly = paymentAccounts([{ id: 'fnb', label: 'FNB', currency: 'ZMW', last4: '', openingBalance: 10 }], [
+    { id: 1, accountId: 'fnb', date: '2026-11-01', amount: -4, balance: null },
+  ])
+  assert.equal(openOnly[0].balance, 6)
+  assert.equal(openOnly[0].last4, '')
+})
+
+test('funds group by month and date inside the selected period', () => {
+  const rows = fundMovements(
+    [{ id: 'in-1', date: '2026-11-08', title: 'Amara Banda', category: 'Netflix', amount: 120 }],
+    [{ id: 'out-1', date: '2026-10-04', title: 'Airtel', category: 'Airtime', amount: 30 }, { id: 'out-2', date: '2026-11-08', title: 'Netflix', category: 'Netflix', amount: 15 }],
+  )
+  const november = fundsInPeriod(rows, { year: 2026, from: 11, to: 11 })
+  assert.deepEqual(november.map((row) => row.id), ['in-1', 'out-2'])
+  const grouped = fundsGrouped(november)
+  assert.equal(grouped[0].label, 'November 2026')
+  assert.deepEqual(grouped[0].dates[0].rows.map((row) => row.description), ['Amara Banda · Netflix', 'Netflix'])
+  assert.equal(formatK(80), 'K 80.00')
+  assert.equal(formatK(930.75), 'K 930.75')
+  assert.equal(formatK(-45), `${'\u2212'}K 45.00`)
+  assert.equal(formatK(null), '—')
+  assert.equal(fundsGrouped(fundsInPeriod(rows, { year: 2026, from: 9, to: 9 })).length, 0)
+})
+
+test('weekly subscriptions and overview counts use the stored rows', () => {
+  const model = buildWorkspace(sources({
+    familyAccounts: { access: 'ok', rows: [
+      { fid: 1, aaid: 'AG1', product: 'Netflix', due_date: '2026-11-04', paid_status: 'Unpaid', slots_total: 1, slots_taken: 1 },
+      { fid: 2, aaid: 'AG2', product: 'Spotify', due_date: '2026-12-01', paid_status: 'Unpaid', slots_total: 1, slots_taken: 0 },
+    ], message: '' },
+    accountAgents: { access: 'ok', rows: [{ aaid: 'AG1', name: 'Twaambo Banda' }, { aaid: 'AG2', name: 'Imani Zulu' }] },
+    customers: { access: 'ok', rows: customers, message: '' },
+    products: { access: 'ok', rows: [{ id: 'p1', name: 'Netflix', price_zmw: 150, is_active: true }, { id: 'p2', name: 'Spotify', price_zmw: null, is_active: true }], message: '' },
+    orders: { access: 'ok', rows: [{ oid: 'O1', date: '2026-11-08', amount: 120, product: 'Netflix', cid: 'C1', status: 'CONNECTED' }] },
+    expenses: { access: 'ok', rows: [{ id: 1, date: '2026-11-04', amount: 30, category: 'Airtime', status: 'Paid', payee: 'Airtel' }] },
+  }), TODAY)
+  const week = subscriptionsThisWeek(model.accounts, model.products, model.budget, TODAY)
+  assert.equal(week.lines.length, 1)
+  assert.equal(week.lines[0].plan, 'Netflix')
+  assert.equal(week.lines[0].owner, 'Twaambo Banda')
+  assert.equal(week.lines[0].amount, 150)
+  assert.equal(week.total, 150)
+  assert.equal(subscriptionsThisWeek(model.accounts, model.products, model.budget, '2026-11-20').lines.length, 0)
+  assert.equal(activeCustomerCount(model.customers), 1)
+  assert.equal(customersDue(model.customers, { year: 2026, from: 12, to: 12 }).length, 1)
+  assert.equal(moneySoFar([{ id: 'fnb', currency: 'ZMW', openingBalance: 10 }, { id: 'mtn', currency: 'ZMW', openingBalance: 0 }], [{ accountId: 'fnb', date: '2026-11-08', balance: 288.95, id: 1 }, { accountId: 'mtn', date: '2026-11-01', balance: 40, id: 2 }], { bankAccounts: 'ok', bankTransactions: 'ok' }, '2026-12-31'), 'K 328.95')
+  assert.equal(moneySoFar([{ id: 'usd', currency: 'USD', openingBalance: 5 }, { id: 'zmw', currency: 'ZMW', openingBalance: 10 }], [], { bankAccounts: 'ok', bankTransactions: 'ok' }, '2026-12-31'), 'USD 5.00 · K 10.00')
+  assert.equal(moneySoFar([], [], { bankAccounts: 'blocked', bankTransactions: 'ok' }, '2026-12-31'), null)
+  assert.equal(moneySoFar([], [], { bankAccounts: 'empty', bankTransactions: 'empty' }, '2026-12-31'), '')
 })

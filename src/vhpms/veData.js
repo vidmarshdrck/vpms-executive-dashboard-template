@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 import { ownerDisplayFor } from './veOwnerDisplay.js'
 import { validReconciliation } from './veEvidence.js'
-import { projectBudget } from './bankBudget.js'
+import { closingBalances, projectBudget } from './bankBudget.js'
+import { formatAmount } from './workspaceCharts.js'
 import { slicesBy } from './books.js'
-import { periodBounds } from './reportingPeriod.js'
+import { monthLabel } from './fundsMonth.js'
+import { dateInPeriod, periodBounds } from './reportingPeriod.js'
 export { VE_UPCOMING } from './veUpcoming.js'
 
 export const FAMILY_COLUMNS = 'fid,aaid,product,due_date,paid_status,slots_total,slots_taken,slot_1,slot_2,slot_3,slot_4,slot_5'
@@ -44,6 +46,9 @@ export const COPY = {
   bankTxnsEmpty: 'No bank transactions were returned for this account.',
   currencyEmpty: 'No account in this currency was returned.',
   bankTrailEmpty: 'No transactions match this month and filter.',
+  paymentAccountsEmpty: 'No payment accounts were returned.',
+  fundsPeriodEmpty: 'No transactions in this period.',
+  subscriptionsEmpty: 'No subscriptions due this week.',
 }
 
 export function todayIso(now = new Date()) {
@@ -206,6 +211,8 @@ function mapAccount(row, customers, today, agents) {
   })
   const recordedEmail = String(row.email || '').trim()
   const agentId = String(row.aaid || '').trim()
+  // The account agent is the family-account owner. Slot customers are members.
+  // Adjust this lookup when the owner sends the connected-account list.
   const holder = personName(agents.get(agentId))
   return {
     id: String(row.fid ?? ''),
@@ -319,7 +326,7 @@ function mapBankAccount(row) {
     label: String(row.label || '').trim() || 'Bank account',
     bank: String(row.bank || '').trim(),
     currency: String(row.currency || '').trim() || 'ZMW',
-    last4: String(row.account_last4 ?? '').trim(),
+    last4: lastFourDigits(row.account_last4),
     openingBalance: parseAmount(row.opening_balance),
   }
 }
@@ -356,6 +363,141 @@ function categoryTotals(rows) {
   const totals = new Map()
   for (const row of rows) totals.set(row.category, (totals.get(row.category) || 0) + row.amount)
   return [...totals.entries()].map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name))
+}
+
+const MINUS = '\u2212'
+
+export function formatK(amount) {
+  if (amount == null || !Number.isFinite(Number(amount))) return '—'
+  const number = Number(amount)
+  const absolute = Math.abs(number)
+  const digits = Number.isInteger(absolute) ? 0 : 2
+  const text = absolute.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return number < 0 ? `${MINUS}K ${text}` : `K ${text}`
+}
+
+export function lastFourDigits(value) {
+  const digits = String(value || '').replace(/\D/g, '')
+  return digits.length >= 4 ? digits.slice(-4) : ''
+}
+
+export function paymentAccountName(account) {
+  const name = String(account?.label || account?.bank || 'Account').replace(/\d{5,}/g, ' ').replace(/\s{2,}/g, ' ').replace(/\(\s*\)/g, '').trim()
+  return name || 'Account'
+}
+
+function currentBalance(account, transactions) {
+  const mine = (transactions || []).filter((row) => row.accountId === account.id)
+  const dated = mine.filter((row) => row.date && row.balance != null).sort((a, b) => a.date.localeCompare(b.date) || String(a.id).localeCompare(String(b.id), undefined, { numeric: true }))
+  if (dated.length) return dated.at(-1).balance
+  if (account.openingBalance != null) {
+    const flow = mine.reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
+    return account.openingBalance + flow
+  }
+  return null
+}
+
+// Money accounts VE already stores for taking payment. Rows come only from
+// public.ve_bank_accounts. Nothing is added when a provider name is missing.
+export function paymentAccounts(bankAccounts, bankTransactions) {
+  return (bankAccounts || []).map((account) => ({
+    id: account.id,
+    name: paymentAccountName(account),
+    currency: account.currency || 'ZMW',
+    last4: lastFourDigits(account.last4),
+    balance: currentBalance(account, bankTransactions),
+  }))
+}
+
+export function movementDescription(title, category) {
+  const name = String(title || '').trim()
+  const group = String(category || '').trim()
+  if (name && group && name.toLowerCase() !== group.toLowerCase()) return `${name} · ${group}`
+  return name || group || 'Transaction'
+}
+
+export function fundMovements(income, expenses) {
+  const rows = []
+  for (const row of income || []) {
+    rows.push({ id: row.id, date: row.date, description: movementDescription(row.title, row.category), direction: 'in', amount: Math.abs(Number(row.amount) || 0) })
+  }
+  for (const row of expenses || []) {
+    rows.push({ id: row.id, date: row.date, description: movementDescription(row.title, row.category), direction: 'out', amount: Math.abs(Number(row.amount) || 0) })
+  }
+  return rows.filter((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.date))
+}
+
+export function fundsInPeriod(rows, period) {
+  return (rows || []).filter((row) => dateInPeriod(row.date, period))
+}
+
+export function fundsGrouped(rows) {
+  const sorted = [...(rows || [])].sort((a, b) => b.date.localeCompare(a.date) || String(a.id).localeCompare(String(b.id)))
+  const months = []
+  for (const row of sorted) {
+    const key = row.date.slice(0, 7)
+    let month = months.find((item) => item.month === key)
+    if (!month) {
+      month = { month: key, label: monthLabel(key), dates: [] }
+      months.push(month)
+    }
+    let day = month.dates.find((item) => item.date === row.date)
+    if (!day) {
+      day = { date: row.date, rows: [] }
+      month.dates.push(day)
+    }
+    day.rows.push(row)
+  }
+  return months
+}
+
+const BLOCKED_READ = new Set(['blocked', 'error', 'signed-out', 'unconfigured'])
+
+// Cash already held: the same closing balance as Balance on hand, summed per currency.
+export function moneySoFar(accounts, transactions, access = {}, end) {
+  if (BLOCKED_READ.has(access.bankAccounts) || BLOCKED_READ.has(access.bankTransactions)) return null
+  const totals = closingBalances(accounts, transactions, end)
+  if (!totals.length) return ''
+  return totals.map((line) => (line.currency === 'USD' ? formatAmount(line.amount, 'USD') : formatK(line.amount))).join(' · ')
+}
+
+export function customersDue(customers, period) {
+  return (customers || []).filter((row) => dateInPeriod(row.dueDate, period))
+}
+
+export function activeCustomerCount(customers) {
+  return (customers || []).filter((row) => /^(active|connected)$/i.test(String(row.status || '').trim())).length
+}
+
+function planPriceZmw(plan, products, budget) {
+  const key = String(plan || '').trim().toLowerCase()
+  if (!key) return null
+  const product = (products || []).find((row) => String(row.name || '').trim().toLowerCase() === key)
+  if (product?.price != null) return product.price
+  const line = (budget?.lines || []).find((row) => String(row.plan || '').trim().toLowerCase() === key)
+  return line?.unitZmw ?? null
+}
+
+export function weekRange(today) {
+  const start = weekStart(today)
+  if (!start) return null
+  const end = new Date(`${start}T00:00:00Z`)
+  end.setUTCDate(end.getUTCDate() + 6)
+  return { start, end: end.toISOString().slice(0, 10) }
+}
+
+export function subscriptionsThisWeek(accounts, products, budget, today) {
+  const range = weekRange(today)
+  if (!range) return { start: '', end: '', lines: [], total: null }
+  const lines = (accounts || []).filter((account) => account.dueDate >= range.start && account.dueDate <= range.end).map((account) => ({
+    id: account.id,
+    owner: account.owner,
+    plan: account.plan,
+    dueDate: account.dueDate,
+    amount: planPriceZmw(account.plan, products, budget),
+  })).sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.plan.localeCompare(b.plan))
+  const known = lines.map((line) => line.amount).filter((amount) => amount != null)
+  return { ...range, lines, total: known.length ? known.reduce((sum, amount) => sum + amount, 0) : null }
 }
 
 export function weeklyBudget(expenses) {

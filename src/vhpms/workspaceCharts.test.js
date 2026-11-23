@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { balancesByAccount } from './bankBudget.js'
 import { BUSINESS_SEED } from './books.js'
-import { EMPTY, accountCaption, axisMax, emptyDetail, formatAmount, formatDayHeading, formatDisplayDate, isNeedsNote, monthStripRows, sectionDetail, sentenceCase, sourceLine, statusLabel, weekBars } from './workspaceCharts.js'
+import { EMPTY, accountCaption, axisMax, chartAxis, emptyDetail, formatAmount, formatDayHeading, formatDisplayDate, isNeedsNote, monthStripRows, plottedRows, sectionDetail, sentenceCase, sourceLine, statusLabel, weekBars } from './workspaceCharts.js'
 
 const MINUS = '\u2212'
 
@@ -20,6 +20,23 @@ test('money uses one currency format, two decimals, and a real minus sign', () =
 test('chart axes sit one clean step above the peak', () => {
   assert.equal(axisMax(220), 250)
   assert.equal(axisMax(350), 400)
+  const days = [{ income: 220, expense: 40 }, { income: 80, expense: 30 }]
+  assert.equal(chartAxis(days, ['income', 'expense']), 250)
+  assert.notEqual(chartAxis([{ income: 220 + 80, expense: 40 + 30 }], ['income', 'expense']), chartAxis(days, ['income', 'expense']))
+  const week = [
+    { date: '2026-11-02', income: 150, expense: 0 },
+    { date: '2026-11-03', income: 0, expense: 220 },
+    { date: '2026-11-04', income: 0, expense: 40 },
+    { date: '2026-11-06', income: 0, expense: 90 },
+    { date: '2026-11-08', income: 80, expense: 0 },
+  ]
+  const fields = ['income', 'expense']
+  assert.equal(chartAxis(plottedRows(week, false), fields), 250)
+  const shown = plottedRows(week, true)
+  assert.equal(shown.length, 1)
+  assert.equal(shown[0].expense, 350)
+  assert.equal(chartAxis(shown, fields), 400)
+  for (const row of shown) for (const field of fields) assert.ok(row[field] <= 400)
   assert.equal(axisMax(0), 1)
   for (const peak of [40, 80, 180, 220, 260, 350, 499]) {
     const axis = axisMax(peak)

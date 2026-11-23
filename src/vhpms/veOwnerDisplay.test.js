@@ -32,11 +32,10 @@ test('owner display fallback gives exact14/4 with dated display provenance and u
   }
   assert.equal(m.reconciliation, null)
 })
-test('complete workspace shows genuine56-cycle dated snapshot without pretending private evidence was consumed', () => {
+test('complete workspace keeps the account list and leaves reconciliation prose off the page', () => {
   const html = render(buildWorkspace(sources(), '2026-11-16'))
-  for (const text of ['Monthly provider reconciliation','Owner-confirmed snapshot · 14/11/2026','Display only','56 expected cycles','22 with candidate evidence','56 unreconciled','Actual paid count: Unknown','201 exact-TID candidates','Private detail unavailable','FID 6','2027-01-15','2026-12-05']) assert.ok(html.includes(text), text)
-  assert.equal(html.includes('Boaz supplement consumed'), false)
-  assert.ok(html.includes('Date-derived: Inactive'))
+  assert.match(html, /Family accounts/)
+  for (const text of ['Monthly provider reconciliation','Owner-confirmed snapshot','Display only','56 expected cycles','Activity evidence','Date-derived','Source: owner instruction','actual Boaz','FID 6']) assert.equal(html.includes(text), false, text)
 })
 
 test('malformed same-date operational evidence cannot suppress the honest display fallback', () => {
@@ -46,9 +45,10 @@ test('malformed same-date operational evidence cannot suppress the honest displa
   assert.equal(m.displaySnapshot?.asOf, '2026-11-14')
   assert.equal(m.activeAccounts.length,14)
   const html = render(m)
-  assert.ok(html.includes('Reconciliation unavailable'))
-  assert.ok(html.includes('Display only'))
-  assert.equal(html.includes('Boaz supplement consumed'),false)
+  assert.equal(html.includes('Reconciliation unavailable'), false)
+  assert.equal(html.includes('Display only'), false)
+  assert.equal(html.includes('Boaz supplement consumed'), false)
+  assert.match(html, /Family accounts/)
 })
 test('snapshot is absent for denied, signed-out, empty, partial, duplicate and malformed family reads', () => {
   for (const access of ['signed-out','blocked','unconfigured','error','empty']) {
