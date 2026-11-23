@@ -8,7 +8,7 @@ import { MONTHS, monthsInPeriod, rowsInPeriod, weekOverlapsPeriod } from './repo
 import { useReportingPeriod } from './TimeframePopover.jsx'
 import { COPY, acquisitionSummary, weeklyBudget } from './veData.js'
 import { useVeFormat } from './veFormat.js'
-import { EMPTY, accountCaption, chartAxis, formatAmount, formatDayHeading, formatDisplayDate, isNeedsNote, moneyHidden, monthStripRows, sectionDetail, sentenceCase, statusLabel, weekBars } from './workspaceCharts.js'
+import { EMPTY, accountCaption, chartAxis, formatAmount, formatDayHeading, formatDisplayDate, isNeedsNote, moneyHidden, monthStripRows, plottedRows, sectionDetail, sentenceCase, statusLabel, weekBars } from './workspaceCharts.js'
 
 export function Panel({ title, children, note }) {
   return (
@@ -154,30 +154,10 @@ function monthBlocks(days) {
   return blocks
 }
 
-function weekStart(iso) {
-  const date = new Date(`${iso}T00:00:00Z`)
-  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7))
-  return date.toISOString().slice(0, 10)
-}
-
-function plotRows(days, weekly) {
-  if (!weekly) return days.map((day) => ({ ...day, month: day.date.slice(8, 10) === '01' ? day.date.slice(0, 7) : '' }))
-  const groups = new Map()
-  for (const day of days) {
-    const key = weekStart(day.date)
-    if (!groups.has(key)) groups.set(key, { date: key, income: 0, expense: 0, month: '' })
-    const bucket = groups.get(key)
-    bucket.income += Number(day.income) || 0
-    bucket.expense += Number(day.expense) || 0
-    if (day.date.slice(8, 10) === '01') bucket.month = day.date.slice(0, 7)
-  }
-  return [...groups.values()]
-}
-
 function PixelPlot({ title, days, series, legend = null }) {
   const [scrollRef, box] = usePlotBox()
   const weekly = useNarrowViewport()
-  const rows = plotRows(days, weekly)
+  const rows = plottedRows(days, weekly)
   const axisH = 34
   const topPad = 8
   const plotH = Math.max(48, box.height - axisH)
@@ -186,7 +166,8 @@ function PixelPlot({ title, days, series, legend = null }) {
   const weeks = weekly ? weekBars(svgWidth, rows.length, series.length) : null
   const barW = weekly ? weeks.barWidth : Math.min(4, Math.max(1, slot - 1))
   const format = useVeFormat()
-  const max = chartAxis(days, series.map((item) => item.field))
+  const fields = series.map((item) => item.field)
+  const max = chartAxis(rows, fields)
   const ticks = [max, max / 2, 0]
   const yFor = (value) => topPad + (1 - value / max) * (plotH - topPad - 1)
   return (
@@ -204,7 +185,7 @@ function PixelPlot({ title, days, series, legend = null }) {
               const step = weekly ? barW + weeks.innerGap : (series.length === 1 ? 0 : Math.max(1, inner - barW))
               return series.map((item, seriesIndex) => {
                 const value = Number(row[item.field]) || 0
-                const y = yFor(Math.min(value, max))
+                const y = yFor(value)
                 return <rect key={`${row.date}-${item.field}`} className="plot-bar" x={origin + seriesIndex * step} y={y} width={barW} height={Math.max(plotH - 1 - y, 0)} fill={item.color}><title>{`${formatDisplayDate(row.date)} ${format(value)}`}</title></rect>
               })
             })}
