@@ -94,6 +94,11 @@ export function axisMax(peak) {
   return Number(result.toPrecision(12))
 }
 
+export function chartAxis(rows, fields) {
+  const peak = Math.max(0, ...(rows || []).flatMap((row) => fields.map((field) => Number(row?.[field]) || 0)))
+  return axisMax(peak)
+}
+
 export function weekBars(width, count, seriesCount) {
   const bars = Math.max(seriesCount, 1)
   const weeks = Math.max(count, 1)

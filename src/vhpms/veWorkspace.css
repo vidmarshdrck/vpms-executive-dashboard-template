@@ -63,7 +63,7 @@
 }
 .vh-app .ve-pages .ve-move {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: baseline;
   padding: 8px 0;
@@ -74,8 +74,8 @@
   font-weight: 600;
   color: var(--text-primary);
 }
-.vh-app .ve-pages .ve-move .ve-dir { font-size: 13px; color: var(--text-secondary); }
 .vh-app .ve-pages .ve-move .num { color: var(--text-primary); }
+.vh-app .ve-pages .ve-in { color: #5f7d68; }
 
 .vh-app .ve-pages .ve-account {
   display: flex;
@@ -152,13 +152,37 @@
 .vh-app .ve-pages .ve-search-clear:hover { background: var(--surface-2); color: var(--text-primary); }
 .vh-app .ve-pages .ve-search-clear svg { position: static; width: 14px; height: 14px; stroke: currentColor; }
 
+.vh-app .ve-pages .ve-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.vh-app .ve-pages .ve-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex: none;
+}
+.vh-app .ve-pages .ve-status.green i { background: var(--rag-green); }
+.vh-app .ve-pages .ve-status.amber i { background: var(--rag-amber); }
+.vh-app .ve-pages .ve-status.red i { background: var(--rag-red); }
+.vh-app .ve-pages .kpi-grid.ve-finance { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
 @media (max-width: 900px) {
-  .vh-app .ve-pages .ve-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vh-app .ve-pages .ve-summary { grid-template-columns: 1fr 1fr; }
+  .vh-app .ve-pages .ve-summary .card:nth-child(5) { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .vh-app .ve-pages .month-strip { grid-template-columns: 1fr; }
+  .vh-app .ve-pages .month-strip strong,
+  .vh-app .ve-pages .month-strip small { white-space: normal; overflow-wrap: anywhere; }
+  .vh-app .ve-pages .kpi-grid.ve-finance { grid-template-columns: 1fr; }
 }
 @media (max-width: 480px) {
-  .vh-app .ve-pages .ve-summary { grid-template-columns: 1fr 1fr; }
   .vh-app .ve-pages .ve-summary .stat-num { font-size: 22px; }
   .vh-app .ve-pages .ve-search { max-width: none; flex-basis: 100%; }
-  .vh-app .ve-pages .ve-move { grid-template-columns: minmax(0, 1fr) auto; }
-  .vh-app .ve-pages .ve-move .ve-dir { grid-column: 1; }
 }

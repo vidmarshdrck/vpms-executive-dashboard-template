@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { balancesByAccount } from './bankBudget.js'
 import { BUSINESS_SEED } from './books.js'
-import { EMPTY, accountCaption, axisMax, emptyDetail, formatAmount, formatDayHeading, formatDisplayDate, isNeedsNote, monthStripRows, sectionDetail, sentenceCase, sourceLine, statusLabel, weekBars } from './workspaceCharts.js'
+import { EMPTY, accountCaption, axisMax, chartAxis, emptyDetail, formatAmount, formatDayHeading, formatDisplayDate, isNeedsNote, monthStripRows, sectionDetail, sentenceCase, sourceLine, statusLabel, weekBars } from './workspaceCharts.js'
 
 const MINUS = '\u2212'
 
@@ -20,6 +20,9 @@ test('money uses one currency format, two decimals, and a real minus sign', () =
 test('chart axes sit one clean step above the peak', () => {
   assert.equal(axisMax(220), 250)
   assert.equal(axisMax(350), 400)
+  const days = [{ income: 220, expense: 40 }, { income: 80, expense: 30 }]
+  assert.equal(chartAxis(days, ['income', 'expense']), 250)
+  assert.notEqual(chartAxis([{ income: 220 + 80, expense: 40 + 30 }], ['income', 'expense']), chartAxis(days, ['income', 'expense']))
   assert.equal(axisMax(0), 1)
   for (const peak of [40, 80, 180, 220, 260, 350, 499]) {
     const axis = axisMax(peak)

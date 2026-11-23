@@ -372,8 +372,8 @@ export function formatK(amount) {
   const number = Number(amount)
   const absolute = Math.abs(number)
   const digits = Number.isInteger(absolute) ? 0 : 2
-  const text = absolute.toLocaleString('en-GB', { minimumFractionDigits: digits, maximumFractionDigits: 2 })
-  return `K ${number < 0 ? MINUS : ''}${text}`
+  const text = absolute.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return number < 0 ? `${MINUS}K ${text}` : `K ${text}`
 }
 
 export function lastFourDigits(value) {
@@ -458,7 +458,7 @@ export function moneySoFar(accounts, transactions, access = {}, end) {
   if (BLOCKED_READ.has(access.bankAccounts) || BLOCKED_READ.has(access.bankTransactions)) return null
   const totals = closingBalances(accounts, transactions, end)
   if (!totals.length) return ''
-  return totals.map((line) => formatAmount(line.amount, line.currency)).join(' · ')
+  return totals.map((line) => (line.currency === 'USD' ? formatAmount(line.amount, 'USD') : formatK(line.amount))).join(' · ')
 }
 
 export function customersDue(customers, period) {

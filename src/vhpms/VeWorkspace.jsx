@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { validReconciliation, validSupplement } from './veEvidence.js'
 import SlideTabs from './SlideTabs.jsx'
 import { PageFooter } from './Donut.jsx'
-import { formatZmw } from './books.js'
+import { VeFormat } from './veFormat.js'
 import { ColumnLabel } from './icons.jsx'
 import { formatMoney } from './bankBudget.js'
 import { StandardMarketing, StandardOverview } from './businessPanels.jsx'
@@ -26,6 +26,17 @@ function Panel({ title, children, note }) {
 
 function Message({ children }) {
   return <p className="empty">{children}</p>
+}
+
+function StatusMark({ value }) {
+  const key = String(value || '').toLowerCase()
+  const tone = /inactive|disconnected/.test(key) ? 'amber' : /active|connected|paid/.test(key) ? 'green' : 'na'
+  return <span className={`ve-status ${tone}`}><i />{value}</span>
+}
+
+function PaidMark({ value }) {
+  if (/^unpaid$/i.test(String(value || '').trim())) return <StatusChip value={value} />
+  return <StatusMark value={value} />
 }
 
 function StatusChip({ value }) {
@@ -169,7 +180,7 @@ export function FamilyModal({ account, onClose }) {
                         <td>{member.name}</td>
                         <td>{member.slot}</td>
                         <td>{member.lastPayment ? paymentDate(member.lastPayment.date) : 'No payment recorded'}</td>
-                        <td className="num">{member.lastPayment ? formatZmw(member.lastPayment.amount) : '—'}</td>
+                        <td className="num">{member.lastPayment ? formatK(member.lastPayment.amount) : '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -180,7 +191,7 @@ export function FamilyModal({ account, onClose }) {
                   <li key={`${member.cid}-${member.slot}`} className="record-card">
                     <div className="record-line">
                       <strong>{member.name}</strong>
-                      <span className="num">{member.lastPayment ? formatZmw(member.lastPayment.amount) : '—'}</span>
+                      <span className="num">{member.lastPayment ? formatK(member.lastPayment.amount) : '—'}</span>
                     </div>
                     <p className="record-meta">Slot {member.slot} · {member.lastPayment ? paymentDate(member.lastPayment.date) : 'No payment recorded'}</p>
                   </li>
@@ -201,10 +212,10 @@ function AccountTable({ accounts, empty, onOpen }) {
   const columns = [
     { key: 'owner', label: <ColumnLabel icon="users">Account owner</ColumnLabel>, cell: (row) => row.owner },
     { key: 'plan', label: <ColumnLabel icon="package">Plan</ColumnLabel>, cell: (row) => row.plan },
-    { key: 'status', label: <ColumnLabel icon="activity">Status</ColumnLabel>, cell: (row) => <StatusChip value={row.activity} /> },
+    { key: 'status', label: <ColumnLabel icon="activity">Status</ColumnLabel>, cell: (row) => <StatusMark value={row.activity} /> },
     { key: 'due', label: <ColumnLabel icon="calendar">Due date</ColumnLabel>, cell: (row) => displayDate(row.dueDate) },
     { key: 'slots', label: <ColumnLabel icon="layers">Slots</ColumnLabel>, cell: (row) => slotButton(row, onOpen) },
-    { key: 'paid', label: <ColumnLabel icon="receipt">Account paid</ColumnLabel>, cell: (row) => <StatusChip value={row.paidStatus} /> },
+    { key: 'paid', label: <ColumnLabel icon="receipt">Account paid</ColumnLabel>, cell: (row) => <PaidMark value={row.paidStatus} /> },
   ]
   return (
     <>
@@ -215,8 +226,8 @@ function AccountTable({ accounts, empty, onOpen }) {
             <div className="record-line">
               <div className="record-title">
                 <strong>{row.owner}</strong>
-                <StatusChip value={row.activity} />
-                <StatusChip value={row.paidStatus} />
+                <StatusMark value={row.activity} />
+                <PaidMark value={row.paidStatus} />
               </div>
               {slotButton(row, onOpen)}
             </div>
@@ -338,7 +349,7 @@ function FamilyAccounts({ model }) {
       <h2 className="sr-only">Family accounts</h2>
       <section className="card family-received">
         <div className="card-body">
-          <div className="stat-num">{received == null ? '—' : formatZmw(received)}</div>
+          <div className="stat-num">{received == null ? '—' : formatK(received)}</div>
           <div className="stat-desc">Received · {period.label}</div>
           {!ordersReadable && <p className="stat-desc">{accessMessage(model.access.orders, '', COPY.ordersBlocked)}</p>}
         </div>
@@ -360,7 +371,7 @@ function FamilyAccounts({ model }) {
                   { key: 'name', label: 'Plan', cell: (row) => row.name },
                   { key: 'category', label: 'Category', cell: (row) => sentenceCase(row.category) },
                   { key: 'slots', label: 'Slots', cell: (row) => (row.shared ? `${row.slots ?? '—'} shared` : 'Not shared') },
-                  { key: 'price', className: 'num', label: 'Price', cell: (row) => (row.price == null ? 'Not recorded' : formatZmw(row.price)) },
+                  { key: 'price', className: 'num', label: 'Price', cell: (row) => (row.price == null ? 'Not recorded' : formatK(row.price)) },
                   { key: 'status', label: 'Status', cell: (row) => <StatusChip value={row.active ? 'Active' : 'Inactive'} /> },
                 ]}
               />
@@ -370,7 +381,7 @@ function FamilyAccounts({ model }) {
                 <li key={row.id} className="record-card">
                   <div className="record-line">
                     <strong>{row.name}</strong>
-                    <span className="num">{row.price == null ? 'Not recorded' : formatZmw(row.price)}</span>
+                    <span className="num">{row.price == null ? 'Not recorded' : formatK(row.price)}</span>
                   </div>
                   <p className="record-meta">{sentenceCase(row.category)} · {row.shared ? `${row.slots ?? '—'} shared` : 'Not shared'} · {row.active ? 'Active' : 'Inactive'}</p>
                 </li>
@@ -417,8 +428,8 @@ function Customers({ model }) {
                 { key: 'products', label: <ColumnLabel icon="package">Products</ColumnLabel>, cell: (row) => row.products },
                 { key: 'status', label: <ColumnLabel icon="activity">Status</ColumnLabel>, cell: (row) => <StatusChip value={row.status} /> },
                 { key: 'last', label: <ColumnLabel icon="receipt">Last payment</ColumnLabel>, cell: (row) => row.lastPayment?.date || 'No payment recorded' },
-                { key: 'lastAmount', label: <ColumnLabel icon="wallet">Last amount</ColumnLabel>, cell: (row) => row.lastPayment ? formatZmw(row.lastPayment.amount) : '—' },
-                { key: 'spent', label: <ColumnLabel icon="wallet">Total spent</ColumnLabel>, cell: (row) => formatZmw(row.totalSpent) },
+                { key: 'lastAmount', label: <ColumnLabel icon="wallet">Last amount</ColumnLabel>, cell: (row) => row.lastPayment ? formatK(row.lastPayment.amount) : '—' },
+                { key: 'spent', label: <ColumnLabel icon="wallet">Total spent</ColumnLabel>, cell: (row) => formatK(row.totalSpent) },
                 { key: 'whatsapp', label: <ColumnLabel icon="message">WhatsApp</ColumnLabel>, cell: (row) => {
                   const href = whatsappHref(row)
                   return href
@@ -489,8 +500,7 @@ function Funds({ model }) {
               {day.rows.map((row) => (
                 <div key={row.id} className="ve-move">
                   <strong>{row.description}</strong>
-                  <span className="ve-dir">{row.direction === 'in' ? 'In' : 'Out'}</span>
-                  <span className="num">{formatK(row.amount)}</span>
+                  <span className={row.direction === 'in' ? 'num ve-in' : 'num'}>{row.direction === 'in' ? `+${formatK(row.amount)}` : formatK(-row.amount)}</span>
                 </div>
               ))}
             </div>
@@ -551,8 +561,8 @@ export default function VeWorkspace({ token = '', model = null, today, loadWorks
   const loaded = token && remoteToken === token ? remote : null
   const failed = Boolean(token) && failureToken === token && !loaded
   const view = model || loaded || (failed ? buildWorkspace(emptySources('error'), clock) : (!token ? buildWorkspace(emptySources('signed-out'), clock) : null))
-  if (!view) return <div className="wrap biz ve-pages"><p className="empty" role="status">{COPY.loading}</p><PageFooter /></div>
-  return <VePages view={view} />
+  if (!view) return <VeFormat><div className="wrap biz ve-pages"><p className="empty" role="status">{COPY.loading}</p><PageFooter /></div></VeFormat>
+  return <VeFormat><VePages view={view} /></VeFormat>
 }
 
 function VePages({ view }) {
