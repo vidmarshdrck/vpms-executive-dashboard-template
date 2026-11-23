@@ -28,7 +28,6 @@ export default function ActivitiesBoard({ state, onChange, composing = false }) 
   }
   return (
     <div className="wrap">
-      <div className="topbar"><div><p className="brand-eyebrow">Vidmar Holdings</p><h1>Activities</h1><p className="sub">Personal activities, initiatives, and task force work.</p></div></div>
       {message && <p className="vh-status" role="status">{message}</p>}
       <SlideTabs label="Activities sections" tabs={['Activities', 'Initiatives', 'Task Force']} index={tab} onIndex={setTab} action={<button type="button" className="btn btn-primary" onClick={() => { setTab(0); setLocalOpen(true) }}>Add task</button>}>
         <div>

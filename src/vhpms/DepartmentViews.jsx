@@ -1,17 +1,10 @@
-import { operatingDepartments, kpisForDepartment, departmentAverage, deptAccent, ragFor, ragLabel, formatWeight, formatNum, formatPct } from './score.js'
+import { operatingDepartments, kpisForDepartment, departmentAverage, deptAccent, ragFor, ragLabel, formatWeight, formatNum, formatPct, publicDepartmentName } from './score.js'
 import { ScoreGauge, PageFooter } from './Donut.jsx'
 
 export function Departments({ scorecard, onOpen }) {
   const departments = operatingDepartments(scorecard.departments)
   return (
     <div className="wrap">
-      <div className="topbar">
-        <div>
-          <p className="brand-eyebrow">Vidmar Holdings</p>
-          <h1>Departments</h1>
-          <p className="sub">Select a department to view its Balanced Scorecard heat map.</p>
-        </div>
-      </div>
       <div className="grid-3">
         {departments.map((department) => {
           const stat = departmentAverage(scorecard.kpis, department.code)
@@ -19,7 +12,7 @@ export function Departments({ scorecard, onOpen }) {
           return (
             <button key={department.code} type="button" className="card-link" onClick={() => onOpen(department.code)}>
               <section className={`card accent-${deptAccent(department.code)}`}>
-                <div className="card-head"><h2>{department.name}</h2></div>
+                <div className="card-head"><h2>{publicDepartmentName(department)}</h2></div>
                 <div className="card-body">
                   {stat.pct == null ? <p className="stat-desc">No data entered yet.</p> : <><div className="stat-tile"><span className="stat-num" style={{ fontSize: 30 }}>{Math.round(stat.pct)}%</span></div><p className="stat-desc"><span className={`chip ${rag}`}>{ragLabel(rag)}</span> · based on {stat.count} KPI(s) with data</p></>}
                 </div>
@@ -45,11 +38,6 @@ export function DepartmentHeatMap({ scorecard, code }) {
   return (
     <div className="wrap">
       <div className="topbar">
-        <div>
-          <p className="brand-eyebrow">Vidmar Holdings · {department.name}</p>
-          <h1>{department.name} Heat Map</h1>
-          <p className="sub">Balanced Scorecard · {department.sheet || department.name}</p>
-        </div>
         <div className="legend" aria-label="Performance status legend">
           <span><i className="dot" style={{ background: 'var(--rag-green)' }} />On target (≥100%)</span>
           <span><i className="dot" style={{ background: 'var(--rag-amber)' }} />Near target (90–99%)</span>

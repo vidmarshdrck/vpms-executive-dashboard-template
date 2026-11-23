@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import './theme.css'
 import './vhpms.css'
 import { signIn, readSession, saveSession, clearSession } from './auth.js'
-import { parseDirectory, homeView, findAccount, withCurrentRole, canSee, scopedDepartment, entryDepartment, isViewOnly } from './directory.js'
+import { parseDirectory, homeView, findAccount, withCurrentRole, canSee, scopedDepartment, entryDepartment, isViewOnly, accountList } from './directory.js'
 import { emptyState, parseState, STORAGE_KEY } from './model.js'
-import { freshScorecard, loadScorecard, buildOrganisation, recordPeriod } from './score.js'
+import { freshScorecard, loadScorecard, buildOrganisation, recordPeriod, operatingDepartments, publicDepartmentName } from './score.js'
 import { emptyBooks, parseBooks } from './books.js'
 import { todayIso } from './veData.js'
 import { resetPeriodOnSignIn } from './reportingPeriod.js'
@@ -18,6 +18,8 @@ import WorkspaceViews from './WorkspaceViews.jsx'
 import ActivitiesBoard from './ActivitiesBoard.jsx'
 import ProfilePage from './ProfilePage.jsx'
 import { InboxView, SmsDashboard } from './InboxSms.jsx'
+import ScorecardsPage from './ScorecardsPage.jsx'
+import { emptyOwnerScorecards, parseOwnerScorecards } from './ownerScorecards.js'
 import { emptyActivities, parseActivities, ACTIVITY_KEY } from './activities.js'
 import { emptyLabels, parseLabels, mergeLabels, inboxFromSms, labelTransaction, clearPrivateSms, SMS_LABELS_KEY } from './sms.js'
 import { fetchSms, pushSmsLabel, endSmsSession, smsWatchKey } from './smsClient.js'
@@ -25,7 +27,8 @@ import { fetchSms, pushSmsLabel, endSmsSession, smsWatchKey } from './smsClient.
 const DIR_KEY = 'vhpms-directory-v1'
 const SCORE_KEY = 'vhpms-scorecard-v1'
 const BOOKS_KEY = 'vhpms-books-v1'
-const WORKSPACE = new Set(['operations', 'tasks', 'projects', 'priorities', 'calendar', 'receipts', 'sources'])
+const OWNER_SCORECARDS_KEY = 'vhpms-owner-scorecards-v1'
+const WORKSPACE = new Set(['operations', 'calendar'])
 const LIVE_VIEWS = new Set(['activities', 'inbox', 'sms', 'business', 'business-list', 'profile'])
 
 function readStored(key, parse, fallback) {
@@ -33,11 +36,12 @@ function readStored(key, parse, fallback) {
 }
 
 const TITLES = {
-  gm: 'GM Dashboard', hr: 'Human Resources', departments: 'Departments', upload: 'Upload Scorecard', 'kpi-entry': 'Enter KPI Data',
-  operations: 'Operations', tasks: 'Tasks', projects: 'Projects', priorities: 'Weekly priorities', calendar: 'Calendar',
-  receipts: 'Receipts', sources: 'Source records', 'admin-departments': 'Admin · Departments', 'admin-kpis': 'Admin · KPIs',
-  'admin-users': 'Admin · Users', 'admin-businesses': 'Admin · Businesses', 'business-list': 'Businesses', business: 'Business',
-  activities: 'Activities', inbox: 'Inbox', sms: 'SMS Transactions', profile: 'Profile',
+  gm: 'Dashboard', hr: 'Human Resources', departments: 'Departments', kpi: 'KPI', scorecards: 'Scorecards',
+  upload: 'Upload Scorecard', 'kpi-entry': 'KPI',
+  operations: 'Operations', calendar: 'Calendar',
+  'admin-departments': 'Departments', 'admin-kpis': 'KPIs',
+  'admin-users': 'Users', 'admin-businesses': 'Businesses', 'business-list': 'Businesses', business: 'Business',
+  activities: 'Activities', inbox: 'Inbox', sms: 'Mobile Money', profile: 'Profile',
 }
 
 export default function Vhpms() {
@@ -55,11 +59,13 @@ export default function Vhpms() {
   const [scorecard, setScorecard] = useState(() => readStored(SCORE_KEY, loadScorecard, freshScorecard()))
   const [books, setBooks] = useState(() => readStored(BOOKS_KEY, parseBooks, emptyBooks()))
   const [activities, setActivities] = useState(() => readStored(ACTIVITY_KEY, parseActivities, emptyActivities()))
+  const [ownerScorecards, setOwnerScorecards] = useState(() => readStored(OWNER_SCORECARDS_KEY, parseOwnerScorecards, emptyOwnerScorecards()))
   const [labels, setLabels] = useState(() => readStored(SMS_LABELS_KEY, parseLabels, emptyLabels()))
   const [smsRemote, setSmsRemote] = useState({ ok: true, rows: [] })
   const [smsFocus, setSmsFocus] = useState('')
   const smsGeneration = useRef(0)
   const smsKey = smsWatchKey(user)
+  useEffect(() => { document.title = 'VPMS' }, [])
 
   function persist(key, value, setter) {
     try { localStorage.setItem(key, JSON.stringify(value)); setter(value) } catch { setError('Could not save in this browser.') }
@@ -138,7 +144,9 @@ export default function Vhpms() {
   const deptCode = displayView === 'hr' ? 'hr' : (scopedDepartment(sessionUser) || selectedDept)
   const department = scorecard.departments.find((item) => item.code === deptCode)
   const business = books.businesses.find((item) => item.id === businessId)
-  const title = displayView === 'department' || displayView === 'hr' ? (department?.name || 'Department') : displayView === 'business' ? (business?.name || 'Business') : (TITLES[displayView] || 'Dashboard')
+  const title = displayView === 'department' || displayView === 'hr'
+    ? (publicDepartmentName(department) || 'Department')
+    : displayView === 'business' ? (business?.name || 'Business') : (TITLES[displayView] || 'Dashboard')
   const model = buildOrganisation(scorecard.kpis, scorecard.year)
   const smsRows = mergeLabels(smsRemote.rows, labels)
 
@@ -163,7 +171,8 @@ export default function Vhpms() {
       {displayView === 'gm' && <GmDashboard model={model} scorecard={scorecard} viewOnly={isViewOnly(sessionUser)} />}
       {displayView === 'departments' && <Departments scorecard={scorecard} onOpen={(code) => { setSelectedDept(code); open('department') }} />}
       {(displayView === 'department' || displayView === 'hr') && <DepartmentHeatMap scorecard={scorecard} code={deptCode} />}
-      {displayView === 'kpi-entry' && <KpiEntry scorecard={scorecard} user={{ ...sessionUser, dept: entryDepartment(sessionUser) }} onSave={(id, period) => persist(SCORE_KEY, recordPeriod(scorecard, id, period), setScorecard)} />}
+      {(displayView === 'kpi' || displayView === 'kpi-entry') && <KpiEntry scorecard={scorecard} user={{ ...sessionUser, dept: entryDepartment(sessionUser) }} onSave={(id, period) => persist(SCORE_KEY, recordPeriod(scorecard, id, period), setScorecard)} />}
+      {displayView === 'scorecards' && <ScorecardsPage departments={operatingDepartments(scorecard.departments)} users={accountList(directory)} cards={ownerScorecards} onChange={(next) => persist(OWNER_SCORECARDS_KEY, next, setOwnerScorecards)} />}
       {displayView === 'upload' && <UploadScorecard />}
       {displayView === 'admin-departments' && <AdminDepartments scorecard={scorecard} onChange={(next) => persist(SCORE_KEY, next, setScorecard)} />}
       {displayView === 'admin-kpis' && <AdminKpis scorecard={scorecard} onChange={(next) => persist(SCORE_KEY, next, setScorecard)} />}

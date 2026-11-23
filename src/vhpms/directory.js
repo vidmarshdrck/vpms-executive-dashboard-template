@@ -83,26 +83,32 @@ export function homeView(user) {
 export function managementLinks(user) {
   const roles = effectiveRoles(user)
   const links = []
-  if (roles.some((role) => ['gm', 'admin', 'board'].includes(role))) links.push({ id: 'gm', label: 'GM Dashboard', icon: 'dashboard' })
-  if (roles.includes('hrd')) links.push({ id: 'hr', label: 'Human Resources', icon: 'users' })
-  if (roles.some((role) => role === 'dept_head' || role === 'staff') && user.dept) links.push({ id: 'department', label: 'My Department', icon: 'building' })
-  if (roles.some((role) => ['admin', 'gm', 'board'].includes(role))) links.push({ id: 'departments', label: 'Departments', icon: 'building' })
-  if (roles.some((role) => ['gm', 'admin'].includes(role))) links.push({ id: 'upload', label: 'Upload Scorecard', icon: 'upload' })
-  if (roles.includes('hrd') || (roles.some((role) => role === 'dept_head' || role === 'staff') && user.dept)) {
-    links.push({ id: 'kpi-entry', label: 'Enter KPI Data', icon: 'clipboard' })
-  }
+  const leadership = roles.some((role) => ['gm', 'admin', 'board'].includes(role))
+  const departmentUser = roles.some((role) => role === 'dept_head' || role === 'staff') && user?.dept
+  if (leadership) links.push({ id: 'gm', label: 'Dashboard', icon: 'dashboard' })
+  if (leadership || roles.includes('hrd')) links.push({ id: 'departments', label: 'Departments', icon: 'building' })
+  if (departmentUser && !leadership && !roles.includes('hrd')) links.push({ id: 'department', label: 'My Department', icon: 'building' })
+  if (roles.some((role) => ['gm', 'admin', 'hrd'].includes(role)) || departmentUser) links.push({ id: 'kpi', label: 'KPI', icon: 'target' })
+  if (roles.some((role) => ['gm', 'admin'].includes(role))) links.push({ id: 'scorecards', label: 'Scorecards', icon: 'clipboard' })
   return links
 }
 
 export const WORKSPACE_LINKS = [
   { id: 'operations', label: 'Operations', icon: 'activity' },
-  { id: 'tasks', label: 'Tasks', icon: 'clipboard' },
-  { id: 'projects', label: 'Projects', icon: 'target' },
-  { id: 'priorities', label: 'Weekly priorities', icon: 'clipboard' },
-  { id: 'calendar', label: 'Calendar', icon: 'dashboard' },
-  { id: 'receipts', label: 'Receipts', icon: 'building' },
-  { id: 'sources', label: 'Source records', icon: 'shield' },
+  { id: 'calendar', label: 'Calendar', icon: 'calendar' },
 ]
+
+export function invoiceMakerUrl(env = {}) {
+  const raw = String(env.VITE_VPMS_INVOICE_URL || '').trim()
+  if (!raw) return ''
+  try {
+    const url = new URL(raw)
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return ''
+    return url.toString()
+  } catch {
+    return ''
+  }
+}
 
 export function adminLinks(user) {
   const roles = effectiveRoles(user)
@@ -125,7 +131,7 @@ export function grantedSections(user) {
 export function canSee(user, view) {
   if (!user || view === 'login') return false
   if (view === 'business' || view === 'business-list' || view === 'activities' || view === 'inbox' || view === 'sms' || view === 'profile') return true
-  if (view === 'department') return managementLinks(user).some((link) => link.id === 'department' || link.id === 'departments' || link.id === 'hr')
+  if (view === 'department' || view === 'hr') return managementLinks(user).some((link) => link.id === 'department' || link.id === 'departments' || link.id === 'hr')
   return [...managementLinks(user), ...adminLinks(user), ...WORKSPACE_LINKS].some((link) => link.id === view)
 }
 

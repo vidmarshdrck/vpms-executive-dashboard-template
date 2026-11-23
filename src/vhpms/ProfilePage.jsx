@@ -5,7 +5,6 @@ export default function ProfilePage({ user, onLogout }) {
   const roles = accountRoles(user).map(roleLabel)
   return (
     <div className="wrap">
-      <div className="topbar"><div><p className="brand-eyebrow">Account</p><h1>Profile</h1></div></div>
       <section className="card" style={{ maxWidth: 560 }}>
         <div className="card-body">
           <dl className="vh-evidence">

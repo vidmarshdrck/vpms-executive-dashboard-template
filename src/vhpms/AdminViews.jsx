@@ -16,7 +16,7 @@ export function AdminDepartments({ scorecard, onChange }) {
   }
   return (
     <div className="wrap">
-      <div className="topbar"><div><p className="brand-eyebrow">Admin</p><h1>Departments</h1><p className="sub">Departments mirror the scorecard heat-map sheets. Deleting one removes its KPIs.</p></div></div>
+      <p className="sub">Departments mirror the scorecard heat-map sheets. Deleting one removes its KPIs.</p>
       <Note message={message} error={error} />
       <section className="card" style={{ maxWidth: 640, marginBottom: 24 }}>
         <div className="card-head"><h2>Add department</h2></div>
@@ -72,7 +72,7 @@ export function AdminKpis({ scorecard, onChange }) {
   }
   return (
     <div className="wrap">
-      <div className="topbar"><div><p className="brand-eyebrow">Admin</p><h1>KPIs</h1><p className="sub">Every KPI belongs to a department and a Balanced Scorecard perspective.</p></div></div>
+      <p className="sub">Every KPI belongs to a department and a Balanced Scorecard perspective.</p>
       <Note message={message} error={error} />
       <section className="card" style={{ maxWidth: 680, marginBottom: 24 }}>
         <div className="card-head"><h2>Add KPI</h2></div>
@@ -128,7 +128,7 @@ export function AdminUsers({ directory, onChange }) {
   }
   return (
     <div className="wrap">
-      <div className="topbar"><div><p className="brand-eyebrow">Admin</p><h1>Users</h1><p className="sub">An account can hold more than one role. Administrator, General Manager, and HRD (Human Resources Director) can be combined. Board is view only. Department head and staff work inside one department. Sign-in is checked by the authentication service.</p></div></div>
+      <p className="sub">An account can hold more than one role. Administrator, General Manager, and HRD (Human Resources Director) can be combined. Board is view only. Department head and staff work inside one department. Sign-in is checked by the authentication service.</p>
       <Note message={message} error={error} />
       <section className="card" style={{ maxWidth: 640, marginBottom: 24 }}>
         <div className="card-head"><h2>Add user</h2></div>
@@ -176,7 +176,7 @@ export function AdminUsers({ directory, onChange }) {
 export function AdminBusinesses({ books, onChange }) {
   return (
     <div className="wrap">
-      <div className="topbar"><div><p className="brand-eyebrow">Admin</p><h1>Businesses</h1><p className="sub">Inactive businesses stay out of the Live workspace list. Their records remain stored.</p></div></div>
+      <p className="sub">Inactive businesses stay out of the Live workspace list. Their records remain stored.</p>
       <section className="card"><div className="card-body pad-0"><div className="tbl-scroll"><table className="data">
         <thead><tr><th>Business</th><th>Code</th><th>Status</th><th></th></tr></thead>
         <tbody>

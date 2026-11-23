@@ -26,7 +26,6 @@ export default function BusinessWorkspace({ business, token = '', model = null, 
   const tabs = ['Overview', 'Funds', 'Marketing', 'Budget', ...extraTabs]
   return (
     <div className="wrap biz">
-      <div className="topbar"><div><p className="brand-eyebrow">{business?.code || business?.id}</p><h1>{business?.name || 'Business'}</h1></div></div>
       <SlideTabs label="Business sections" tabs={tabs}>
         {[
           <div key="overview"><StandardOverview model={data} /></div>,

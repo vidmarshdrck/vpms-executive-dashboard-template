@@ -130,6 +130,11 @@ export function operatingDepartments(departments) {
   return [...departments].filter((department) => department.code !== 'gm' && department.name !== 'General Manager').sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name))
 }
 
+export function publicDepartmentName(department) {
+  if (!department) return ''
+  return department.code === 'hr' ? 'Human Resources' : department.name
+}
+
 export function kpisForDepartment(kpis, code) {
   const rows = kpis.filter((kpi) => kpi.dept === code && kpi.active !== false)
   const names = [...new Set(rows.map((kpi) => kpi.perspective))]
@@ -260,7 +265,7 @@ export function updateDepartment(scorecard, code, fields) {
 }
 
 export function deleteDepartment(scorecard, code) {
-  if (code === 'gm') throw new Error('The executive office stays on the GM Dashboard.')
+  if (code === 'gm') throw new Error('The executive office stays on the Dashboard.')
   return { ...scorecard, departments: scorecard.departments.filter((department) => department.code !== code), kpis: scorecard.kpis.filter((kpi) => kpi.dept !== code) }
 }
 
