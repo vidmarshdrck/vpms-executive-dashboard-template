@@ -122,7 +122,7 @@ function ShellFrame({ user, view, menu, setMenu, mode, books, businessId, inboxC
               {managementLinks(user).map((item) => <NavButton key={item.id} item={item} current={view} onOpen={onOpen} />)}
               <div className="side-label spaced">Workspace</div>
               {WORKSPACE_LINKS.map((item) => <NavButton key={item.id} item={item} current={view} onOpen={onOpen} />)}
-              {invoiceUrl ? <a href={invoiceUrl} target="_blank" rel="noopener noreferrer"><NavIcon name="receipt" /><span className="nav-label">Invoice maker</span></a> : null}
+              {invoiceUrl ? <a href={invoiceUrl} target="_blank" rel="noopener noreferrer"><NavIcon name="receipt" /><span className="nav-label">Invoice maker</span><span className="nav-external"><NavIcon name="external" /></span></a> : null}
               {adminLinks(user).length > 0 && <div className="side-label spaced">Administration</div>}
               {adminLinks(user).map((item) => <NavButton key={item.id} item={item} current={view} onOpen={onOpen} />)}
             </>
