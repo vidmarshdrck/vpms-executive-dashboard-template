@@ -14,4 +14,8 @@ test('hidden tab panels are not keyboard-focusable', () => {
   const source = readFileSync(new URL('./SlideTabs.jsx', import.meta.url), 'utf8')
   assert.match(source, /panelAccessibility\(childIndex === index\)/)
   assert.equal(source.includes('tabIndex="0"'), false)
+  assert.match(source, /scrollIntoView\(\{ inline: 'nearest', block: 'nearest' \}\)/)
+  const css = readFileSync(new URL('./theme.css', import.meta.url), 'utf8')
+  assert.match(css, /\.slide-track \{[^}]*transition: transform \.2s ease-out/)
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.slide-track[\s\S]*?transition: none/)
 })
