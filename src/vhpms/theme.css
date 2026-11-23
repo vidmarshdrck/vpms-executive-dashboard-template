@@ -317,8 +317,9 @@
 .vh-app .slide-tabs button.is-active { border-bottom-color: var(--brand); color: var(--brand); font-weight: 600; }
 .vh-app .slide-tabs button:hover { color: var(--text-primary); background: transparent; }
 .vh-app .slide-viewport { overflow: hidden; }
-.vh-app .slide-track { display: flex; transition: transform .7s cubic-bezier(.22, .7, .2, 1); }
-.vh-app .slide-page { min-width: 0; }
+.vh-app .slide-track { display: flex; align-items: flex-start; transition: transform .7s cubic-bezier(.22, .7, .2, 1); }
+.vh-app .slide-page { min-width: 0; align-self: flex-start; }
+.vh-app .slide-page[aria-hidden="true"] { height: 0; min-height: 0; overflow: hidden; visibility: hidden; }
 .vh-app tr.needs-label td { background: var(--rag-amber-bg); }
 .vh-app .card.needs-label { border-color: var(--rag-amber); }
 @media (prefers-reduced-motion: reduce) {
@@ -410,7 +411,7 @@
 .vh-app .login-slides img.is-transport { object-position: right center; transform: scale(1.11); transform-origin: right center; }
 .vh-app .login-markets-shade { position: absolute; inset: 0; background: rgba(11, 18, 32, 0.07); opacity: 0; pointer-events: none; transition: opacity 1s ease; }
 .vh-app .login-markets-shade.is-active { opacity: 1; }
-.vh-app .login-layout { position: relative; z-index: 1; min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 420px); align-items: stretch; }
+.vh-app .login-layout { position: relative; z-index: 1; min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr) max(420px, 38.2vw); align-items: stretch; }
 .vh-app .login-slides,
 .vh-app .login-slides img { filter: none; }
 .vh-app .login-card {
@@ -461,10 +462,12 @@
 .vh-app .password-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border: 0; border-radius: 6px; background: transparent; color: var(--text-secondary); display: grid; place-items: center; cursor: pointer; }
 .vh-app .password-toggle svg { width: 18px; height: 18px; stroke: currentColor; fill: none; }
 @media (max-width: 800px) {
+  .vh-app .header-tools { gap: 6px; }
+}
+@media (max-width: 600px) {
   .vh-app .login-layout { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
   .vh-app .login-stage { display: none; }
-  .vh-app .login-card { margin: 0; width: 100%; min-height: 100vh; min-height: 100dvh; border-left: 0; }
-  .vh-app .header-tools { gap: 6px; }
+  .vh-app .login-card { margin: 0; width: 100%; min-width: 0; min-height: 100vh; min-height: 100dvh; border-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .vh-app .login-slides img, .vh-app .login-markets-shade { transition: none; } }
 .vh-app .funds-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -505,7 +508,15 @@
 .vh-app .vh-modal { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 24px; }
 .vh-app .vh-modal-backdrop { position: absolute; inset: 0; margin: 0; padding: 0; border: 0; background: rgba(16, 24, 32, 0.55); cursor: pointer; }
 .vh-app .vh-modal-panel { position: relative; z-index: 1; width: min(640px, 100%); max-height: min(80vh, 720px); overflow: auto; margin: 0; }
-.vh-app .btn:disabled { opacity: .45; cursor: not-allowed; }
+.vh-app .robot-card .btn:disabled,
+.vh-app .robot-card .btn[aria-disabled="true"] {
+  opacity: 1;
+  background: #e7e5e4;
+  color: #78716c;
+  border-color: #e7e5e4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 .vh-app .robot-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
 .vh-app .robot-card h2 { margin: 0 0 10px; font-size: 16px; }
 .vh-app .robot-status { margin: 0 0 14px; }

@@ -9,7 +9,7 @@ import { formatMoney } from './bankBudget.js'
 import { StandardMarketing, StandardOverview } from './businessPanels.jsx'
 import { glanceFromVe } from './businessSources.js'
 import { useReportingPeriod } from './TimeframePopover.jsx'
-import { COPY, activeCustomerCount, buildWorkspace, customersDue, emptySources, fetchVeWorkspace, filterCustomers, formatK, fundMovements, fundsGrouped, fundsInPeriod, moneySoFar, paymentAccounts, receivedInPeriod, subscriptionsThisWeek, todayIso, whatsappHref } from './veData.js'
+import { COPY, activeCustomerCount, buildWorkspace, customerResultMessage, customersDue, emptySources, fetchVeWorkspace, filterCustomers, formatK, fundMovements, fundsGrouped, fundsInPeriod, moneySoFar, paymentAccounts, receivedInPeriod, subscriptionsThisWeek, todayIso, whatsappHref } from './veData.js'
 import './veWorkspace.css'
 
 function Panel({ title, children, note }) {
@@ -93,12 +93,12 @@ function ClearIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
 }
 
-export function SearchField({ id, label, value, onChange }) {
+export function SearchField({ id, label, placeholder, value, onChange }) {
   return (
     <div className="ve-search">
       <SearchIcon />
       <label className="sr-only" htmlFor={id}>{label}</label>
-      <input id={id} aria-label={label} type="search" value={value} onChange={(event) => onChange(event.target.value)} />
+      <input id={id} aria-label={label} placeholder={placeholder || label} type="search" value={value} onChange={(event) => onChange(event.target.value)} />
       <button type="button" className="ve-search-clear" hidden={value ? undefined : true} aria-label="Clear search" onClick={() => onChange('')}>
         <ClearIcon />
       </button>
@@ -404,9 +404,10 @@ function WhatsAppLink({ row }) {
 function Customers({ model }) {
   const [status, setStatus] = useState('All')
   const [query, setQuery] = useState('')
-  const message = accessMessage(model.access.customers, COPY.customersEmpty, COPY.customersBlocked)
+  const message = accessMessage(model.access.customers, '', COPY.customersBlocked)
   const statuses = [...new Set(model.customers.map((row) => row.status))]
   const rows = filterCustomers(model.customers, { status, query })
+  const emptyCopy = customerResultMessage(query, rows.length)
   return (
     <>
       <h2 className="sr-only">Customers</h2>
@@ -415,7 +416,7 @@ function Customers({ model }) {
           <div className="card-head" style={{ flexWrap: 'wrap' }}>
             <h2 className="sr-only">Customer list</h2>
             <div className="vh-actions" style={{ marginLeft: 'auto' }}>
-              <SearchField id="ve-customer-search" label="Search customers" value={query} onChange={setQuery} />
+              <SearchField id="ve-customer-search" label="Search customers" placeholder="Search customers" value={query} onChange={setQuery} />
               <div className="field" style={{ margin: 0, minWidth: 160, maxWidth: 220 }}>
                 <label htmlFor="ve-customer-status">Status</label>
                 <select id="ve-customer-status" aria-label="Customer status" value={status} onChange={(event) => setStatus(event.target.value)}>
@@ -429,7 +430,7 @@ function Customers({ model }) {
             <div className="ve-customer-table">
             <DataTable
               rows={rows}
-              empty={COPY.customersEmpty}
+              empty={emptyCopy}
               columns={[
                 { key: 'name', label: <ColumnLabel icon="user">Name</ColumnLabel>, cell: (row) => row.name },
                 { key: 'due', label: <ColumnLabel icon="calendar">Due date</ColumnLabel>, cell: (row) => row.dueDate },
@@ -454,7 +455,7 @@ function Customers({ model }) {
                   <p className="record-meta">Total spent {formatK(row.totalSpent)}</p>
                   <WhatsAppLink row={row} />
                 </li>
-              )) : <li className="record-card"><p className="empty">{COPY.customersEmpty}</p></li>}
+              )) : <li className="record-card"><p className="empty">{emptyCopy}</p></li>}
             </ul>
           </div>
         </section>

@@ -118,7 +118,7 @@ function ShellFrame({ user, view, menu, setMenu, mode, books, businessId, inboxC
             </>
           ) : (
             <>
-              <div className="side-label">Management views</div>
+              <div className="side-label">Management</div>
               {managementLinks(user).map((item) => <NavButton key={item.id} item={item} current={view} onOpen={onOpen} />)}
               <div className="side-label spaced">Workspace</div>
               {WORKSPACE_LINKS.map((item) => <NavButton key={item.id} item={item} current={view} onOpen={onOpen} />)}

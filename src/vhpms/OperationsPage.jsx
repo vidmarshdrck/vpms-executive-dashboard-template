@@ -3,7 +3,7 @@ import { OPERATIONS_ROBOTS, robotHttpUrl, robotStatus } from './operationsRobots
 
 function RobotAction({ href, children }) {
   if (href) return <a className="btn btn-primary btn-sm" href={href} target="_blank" rel="noopener noreferrer">{children}</a>
-  return <button type="button" className="btn btn-ghost btn-sm" disabled>{children}</button>
+  return <button type="button" className="btn btn-sm robot-action" disabled aria-disabled="true">{children}</button>
 }
 
 export default function OperationsPage({ robots = OPERATIONS_ROBOTS }) {

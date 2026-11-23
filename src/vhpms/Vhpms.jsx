@@ -36,8 +36,8 @@ function readStored(key, parse, fallback) {
 }
 
 const TITLES = {
-  gm: 'Dashboard', hr: 'Human Resources', departments: 'Departments', kpi: 'KPI', scorecards: 'Scorecards',
-  upload: 'Upload Scorecard', 'kpi-entry': 'KPI',
+  gm: 'Dashboard', hr: 'Human Resources', departments: 'Departments', kpi: 'KPIs', scorecards: 'Scorecards',
+  upload: 'Upload Scorecard', 'kpi-entry': 'KPIs',
   operations: 'Operations', calendar: 'Calendar',
   'admin-departments': 'Departments', 'admin-kpis': 'KPIs',
   'admin-users': 'Users', 'admin-businesses': 'Businesses', 'business-list': 'Businesses', business: 'Business',

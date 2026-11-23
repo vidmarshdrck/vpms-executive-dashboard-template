@@ -183,7 +183,7 @@ function resolveSlot(slot, sources, reads = []) {
   const readable = parts.filter((part) => part.access === 'ok' || part.access === 'empty')
   if (!readable.length && signedOut.length) {
     const access = signedOut[0].access
-    return { access, rows: [], note: access === 'unconfigured' ? 'Supabase is not configured for this sign-in.' : 'Sign in with Supabase to load these records.' }
+    return { access, rows: [], note: access === 'unconfigured' ? COPY.unconfigured : COPY.signedOut }
   }
   if (!readable.length && blocked.length) {
     const detail = blocked.find((part) => part.message)?.message
@@ -385,7 +385,7 @@ export function glanceFromVe(model) {
     incomeRows: model.income || [],
     expenseRows: model.expenses || [],
     clients,
-    clientsNote: model.access?.customers === 'blocked' ? 'Customer records are not visible to this account.' : model.access?.customers === 'empty' ? 'No customers yet.' : model.access?.customers === 'signed-out' ? 'Sign in with Supabase to load these records.' : '',
+    clientsNote: model.access?.customers === 'blocked' ? 'Customer records are not visible to this account.' : model.access?.customers === 'empty' ? 'No customers yet.' : model.access?.customers === 'signed-out' ? COPY.signedOut : '',
     counts: clientCounts(clients, model.today),
     operations,
     operationsNote: model.access?.familyAccounts === 'blocked' ? 'Family accounts are not visible to this account.' : model.access?.familyAccounts === 'empty' ? 'No family account rows were returned for this account.' : '',

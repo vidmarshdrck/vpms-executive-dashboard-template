@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { readFileSync } from 'node:fs'
 import { build } from 'esbuild'
 import { createRequire } from 'node:module'
-import { findAccount, managementLinks, WORKSPACE_LINKS, invoiceMakerUrl, canSee } from './directory.js'
+import { findAccount, managementLinks, adminLinks, WORKSPACE_LINKS, invoiceMakerUrl, canSee } from './directory.js'
 import { emptyBooks } from './books.js'
 import { emptyState } from './model.js'
 import { freshScorecard } from './score.js'
@@ -40,8 +40,8 @@ const { Shell, OperationsPage, ScorecardsPage, SearchField, WorkspaceViews } = a
 
 const owner = findAccount('shadrickvidmar')
 
-test('management reads Dashboard, Departments, KPI, Scorecards and HR is not a top-level item', () => {
-  assert.deepEqual(managementLinks(owner).map((link) => link.label), ['Dashboard', 'Departments', 'KPI', 'Scorecards'])
+test('management reads Dashboard, Departments, KPIs, Scorecards and HR is not a top-level item', () => {
+  assert.deepEqual(managementLinks(owner).map((link) => link.label), ['Dashboard', 'Departments', 'KPIs', 'Scorecards'])
   assert.equal(managementLinks(owner).some((link) => /GM Dashboard|Human Resources/.test(link.label)), false)
   assert.deepEqual(WORKSPACE_LINKS.map((link) => link.label), ['Operations', 'Calendar'])
   for (const id of ['tasks', 'projects', 'priorities', 'receipts', 'sources']) {
@@ -51,6 +51,12 @@ test('management reads Dashboard, Departments, KPI, Scorecards and HR is not a t
   assert.equal(canSee(owner, 'calendar'), true)
   assert.equal(canSee(owner, 'scorecards'), true)
   assert.equal(canSee(owner, 'kpi'), true)
+  const departments = [...managementLinks(owner), ...adminLinks(owner)].filter((link) => link.label === 'Departments')
+  const kpis = [...managementLinks(owner), ...adminLinks(owner)].filter((link) => link.label === 'KPIs')
+  assert.equal(departments.length, 2)
+  assert.equal(new Set(departments.map((link) => link.icon)).size, 1)
+  assert.equal(kpis.length, 2)
+  assert.equal(new Set(kpis.map((link) => link.icon)).size, 1)
 })
 
 test('invoice maker is an external address and stays hidden when unset', () => {
@@ -76,7 +82,9 @@ test('invoice maker is an external address and stays hidden when unset', () => {
   assert.match(shown, /target="_blank"/)
   assert.match(shown, /Invoice maker/)
   const labels = [...shown.matchAll(/class="nav-label">([^<]+)/g)].map((match) => match[1])
-  assert.deepEqual(labels.slice(0, 4), ['Dashboard', 'Departments', 'KPI', 'Scorecards'])
+  assert.deepEqual(labels.slice(0, 4), ['Dashboard', 'Departments', 'KPIs', 'Scorecards'])
+  assert.match(shown, /side-label">Management</)
+  assert.equal(shown.includes('Management views'), false)
   assert.deepEqual(labels.filter((label) => label === 'Operations' || label === 'Calendar' || label === 'Invoice maker'), ['Operations', 'Calendar', 'Invoice maker'])
 })
 
@@ -100,8 +108,9 @@ test('operations robots stay disconnected until a watch or start address is set'
   assert.equal(robotStatus({ status: '' }), 'Not connected')
   const html = renderToStaticMarkup(createElement(OperationsPage))
   assert.equal((html.match(/Not connected/g) || []).length, 5)
-  assert.equal((html.match(/disabled="">Watch/g) || []).length, 5)
-  assert.equal((html.match(/disabled="">Start/g) || []).length, 5)
+  assert.equal((html.match(/aria-disabled="true"[^>]*>Watch/g) || []).length, 5)
+  assert.equal((html.match(/aria-disabled="true"[^>]*>Start/g) || []).length, 5)
+  assert.match(readFileSync(new URL('./theme.css', import.meta.url), 'utf8'), /\.robot-card \.btn:disabled[\s\S]*?#e7e5e4[\s\S]*?cursor: not-allowed/)
   assert.equal(/\b(draft|demo|sample|placeholder|preview|will appear here)\b/i.test(html), false)
   const ready = renderToStaticMarkup(createElement(OperationsPage, { robots: [{ name: 'Valet', status: 'Ready', watchUrl: 'https://watch.example/valet', startAction: 'https://start.example/valet' }] }))
   assert.match(ready, /href="https:\/\/watch\.example\/valet"/)
@@ -155,6 +164,8 @@ test('calendar keeps weekly priorities and search fields use one control', () =>
   assert.match(html, /Weekly priorities/)
   assert.match(html, /aria-label="Weekly priorities"/)
   assert.match(html, /aria-label="Monthly calendar"/)
+  assert.match(html, /Powered by/)
+  assert.match(readFileSync(new URL('./theme.css', import.meta.url), 'utf8'), /\.slide-page\[aria-hidden="true"\] \{ height: 0;/)
   assert.equal(html.includes('Vidmar Holdings'), false)
   const search = renderToStaticMarkup(createElement(SearchField, { id: 'find-customers', label: 'Search customers', placeholder: 'Search customers', value: 'Amina', onChange: () => {} }))
   assert.match(search, /placeholder="Search customers"/)

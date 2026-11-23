@@ -88,7 +88,7 @@ export function managementLinks(user) {
   if (leadership) links.push({ id: 'gm', label: 'Dashboard', icon: 'dashboard' })
   if (leadership || roles.includes('hrd')) links.push({ id: 'departments', label: 'Departments', icon: 'building' })
   if (departmentUser && !leadership && !roles.includes('hrd')) links.push({ id: 'department', label: 'My Department', icon: 'building' })
-  if (roles.some((role) => ['gm', 'admin', 'hrd'].includes(role)) || departmentUser) links.push({ id: 'kpi', label: 'KPI', icon: 'target' })
+  if (roles.some((role) => ['gm', 'admin', 'hrd'].includes(role)) || departmentUser) links.push({ id: 'kpi', label: 'KPIs', icon: 'target' })
   if (roles.some((role) => ['gm', 'admin'].includes(role))) links.push({ id: 'scorecards', label: 'Scorecards', icon: 'clipboard' })
   return links
 }
@@ -114,7 +114,7 @@ export function adminLinks(user) {
   const roles = effectiveRoles(user)
   if (roles.includes('admin')) {
     return [
-      { id: 'admin-departments', label: 'Departments', icon: 'shield' },
+      { id: 'admin-departments', label: 'Departments', icon: 'building' },
       { id: 'admin-kpis', label: 'KPIs', icon: 'target' },
       { id: 'admin-users', label: 'Users', icon: 'users' },
       { id: 'admin-businesses', label: 'Businesses', icon: 'building' },
