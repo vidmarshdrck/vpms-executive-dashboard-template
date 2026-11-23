@@ -87,6 +87,8 @@
   background: transparent; text-align: left; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text-secondary); overflow: hidden; text-decoration: none;
 }
 .vh-app .nav-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vh-app .nav-external { margin-left: auto; display: grid; flex: none; color: var(--text-muted); }
+.vh-app .side-nav .nav-external svg { width: 14px; height: 14px; }
 .vh-app .side-nav button:hover,
 .vh-app .side-nav a:hover { background: var(--surface-2); color: var(--text-primary); }
 .vh-app .side-nav button[aria-current="page"] { color: var(--brand); font-weight: 650; }
