@@ -1,17 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { validReconciliation, validSupplement } from './veEvidence.js'
-import { VE_RECONCILIATION_DISPLAY } from './veReconciliationDisplay.js'
 import SlideTabs from './SlideTabs.jsx'
-import { Donut, PageFooter } from './Donut.jsx'
-import { formatZmw, slicesBy } from './books.js'
+import { PageFooter } from './Donut.jsx'
+import { formatZmw } from './books.js'
 import { ColumnLabel } from './icons.jsx'
-import { accountPeriod, accountsByCurrency, categoryLabel, filterBankTransactions, formatMoney, fxText } from './bankBudget.js'
-import { categoryShare } from './fundsMonth.js'
-import { StandardBudget, StandardFunds, StandardMarketing, StandardOverview } from './businessPanels.jsx'
+import { formatMoney } from './bankBudget.js'
+import { StandardMarketing, StandardOverview } from './businessPanels.jsx'
 import { glanceFromVe } from './businessSources.js'
 import { useReportingPeriod } from './TimeframePopover.jsx'
-import { COPY, buildWorkspace, emptySources, fetchVeWorkspace, filterCustomers, receivedInPeriod, todayIso, whatsappHref } from './veData.js'
+import { COPY, activeCustomerCount, buildWorkspace, customersDue, emptySources, fetchVeWorkspace, filterCustomers, formatK, fundMovements, fundsGrouped, fundsInPeriod, moneySoFar, paymentAccounts, receivedInPeriod, subscriptionsThisWeek, todayIso, whatsappHref } from './veData.js'
+import './veWorkspace.css'
 
 function Panel({ title, children, note }) {
   return (
@@ -75,16 +74,25 @@ function sentenceCase(value) {
   return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
 }
 
-function agentPlain(row) {
-  if (!row.agent) return '—'
-  if (row.agent === row.owner) return 'Same as owner'
-  return row.agent
+function SearchIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
 }
 
-function agentLabel(row) {
-  if (!row.agent) return '—'
-  if (row.agent === row.owner) return <span className="same-owner">Same as owner</span>
-  return row.agent
+function ClearIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+}
+
+export function SearchField({ id, label, value, onChange }) {
+  return (
+    <div className="ve-search">
+      <SearchIcon />
+      <label className="sr-only" htmlFor={id}>{label}</label>
+      <input id={id} aria-label={label} type="search" value={value} onChange={(event) => onChange(event.target.value)} />
+      <button type="button" className="ve-search-clear" hidden={value ? undefined : true} aria-label="Clear search" onClick={() => onChange('')}>
+        <ClearIcon />
+      </button>
+    </div>
+  )
 }
 
 function slotButton(row, onOpen) {
@@ -188,23 +196,15 @@ export function FamilyModal({ account, onClose }) {
   return createPortal(dialog, document.querySelector('.vh-app') || document.body)
 }
 
-function accountCardLine(row) {
-  return [row.plan, displayDate(row.dueDate), agentPlain(row)].join(' · ')
-}
-
 function AccountTable({ accounts, empty, onOpen }) {
   if (!accounts.length) return <Message>{empty}</Message>
   const columns = [
-    { key: 'fid', label: 'FID', cell: row => row.id },
-    { key: 'activitySource', label: 'Activity evidence', cell: row => row.activitySource },
     { key: 'owner', label: <ColumnLabel icon="users">Account owner</ColumnLabel>, cell: (row) => row.owner },
-    { key: 'status', label: <ColumnLabel icon="activity">Status</ColumnLabel>, cell: (row) => <StatusChip value={row.activity} /> },
     { key: 'plan', label: <ColumnLabel icon="package">Plan</ColumnLabel>, cell: (row) => row.plan },
+    { key: 'status', label: <ColumnLabel icon="activity">Status</ColumnLabel>, cell: (row) => <StatusChip value={row.activity} /> },
     { key: 'due', label: <ColumnLabel icon="calendar">Due date</ColumnLabel>, cell: (row) => displayDate(row.dueDate) },
-    { key: 'email', label: <ColumnLabel icon="mail">Email</ColumnLabel>, cell: (row) => row.email || <span aria-label="Email not recorded" /> },
     { key: 'slots', label: <ColumnLabel icon="layers">Slots</ColumnLabel>, cell: (row) => slotButton(row, onOpen) },
     { key: 'paid', label: <ColumnLabel icon="receipt">Account paid</ColumnLabel>, cell: (row) => <StatusChip value={row.paidStatus} /> },
-    { key: 'agent', label: <ColumnLabel icon="user">Agent</ColumnLabel>, cell: (row) => agentLabel(row) },
   ]
   return (
     <>
@@ -220,8 +220,7 @@ function AccountTable({ accounts, empty, onOpen }) {
               </div>
               {slotButton(row, onOpen)}
             </div>
-            <p className="record-meta">{accountCardLine(row)}</p>
-            <p className="record-meta">FID {row.id} · {row.activitySource}</p>
+            <p className="record-meta">{row.plan} · {displayDate(row.dueDate)}</p>
           </li>
         ))}
       </ul>
@@ -229,45 +228,27 @@ function AccountTable({ accounts, empty, onOpen }) {
   )
 }
 
-function Overview({ model }) {
-  return <StandardOverview model={glanceFromVe(model)} />
+function Tile({ label, value }) {
+  return <section className="card"><div className="card-body"><div className="stat-num">{value}</div><div className="stat-desc">{label}</div></div></section>
 }
 
-function OwnerDisplayReconciliation({ model }) {
-  const [fid, setFid] = useState('')
-  const [month, setMonth] = useState('')
-  if (!model.displaySnapshot || model.access.familyAccounts !== 'ok') return null
-  const data = VE_RECONCILIATION_DISPLAY
-  const cycles = data.accounts.flatMap(account => account.expected_cycle_dates.map(date => ({
-    id: `${account.fid}:${date}`, fid: account.fid, product: account.product,
-    anchor: account.due_date_unchanged, date,
-  })))
-  const mismatches = data.accounts.filter(account => {
-    const source = model.accounts.find(row => Number(row.id) === account.fid)
-    return source?.dueDate !== (account.due_date_unchanged || 'Not dated')
-  })
-  return <Panel title="Monthly provider reconciliation" note="Owner-confirmed snapshot · 14/11/2026">
-    <p><strong>Display only · version {model.displaySnapshot.version}</strong> — 14 owner-confirmed active · 4 owner-confirmed inactive. Not database synchronization. Source payment status, dates and slots are unchanged; activity is separate from Account paid.</p>
-    <p>{data.summary.expected_cycles} expected cycles · {data.summary.cycles_with_candidate_evidence} with candidate evidence · {data.summary.unreconciled_cycles} unreconciled.</p>
-    <p><strong>Actual paid count: Unknown</strong> · Actual paid total: Unknown · Truly missing payments: Unknown · Historical costs, FNB FX and fees: Unknown.</p>
-    <p className="stat-desc">Original eleven continuous from stored anchors: owner assertion, not independently verified service or finance history. Monthly anniversaries through 14/11/2026 inclusive, not monthly debts. Candidate pools may recur across accounts and must not be summed. No verified match is not evidence of no payment.</p>
-    <p>Boaz report summary · 14/11/2026 · HOLD: {data.cashSummary.groups_matching_exact_order_tid} exact-TID candidates, NOT verified payments; {data.cashSummary.groups_with_order_amount_match} amount-concordant, {data.cashSummary.exact_tid_groups_with_amount_mismatch} amount mismatches; {data.cashSummary.groups_with_current_product_slot} current product-slot links, {data.cashSummary.groups_with_current_active_product_slot} active. Zero payment verifications and zero historically proven allocations. Incoming customer cash is not provider expense proof.</p>
-    <p>Private detail unavailable in this display snapshot. Both MTN and Airtel CSV exports were reviewed and deduplicated by Boaz; coverage remains incomplete. No raw customer or bank evidence is bundled. Historical costs remain unavailable; no estimates posted as expenses.</p>
-    <p>FID 6 annual · future anchor 2027-01-15; FID 9 future anchor 2026-12-05; FID 18 missing anchor. No monthly cycles invented for these accounts.</p>
-    {mismatches.length > 0 && <p role="status">Source anchor mismatch for FID {mismatches.map(row => row.fid).join(', ')}. Anniversary rows below are the dated report snapshot, not recalculated live payment findings. Current source dates remain in the account table.</p>}
-    <details><summary>56 expected anniversary rows · unchanged report anchors</summary>
-      <div className="vh-actions" style={{flexWrap:'wrap'}}>
-        <label>Account<select aria-label="Snapshot reconciliation account" value={fid} onChange={event => setFid(event.target.value)}><option value="">Original eleven accounts</option>{data.accounts.filter(row => row.expected_cycle_dates.length).map(row => <option key={row.fid} value={row.fid}>FID {row.fid} · {row.product}</option>)}</select></label>
-        <label>Expected month<select aria-label="Snapshot reconciliation month" value={month} onChange={event => setMonth(event.target.value)}><option value="">All anniversary months</option>{[...new Set(cycles.map(row => row.date.slice(0,7)))].sort().map(value => <option key={value}>{value}</option>)}</select></label>
-      </div>
-      <DataTable rows={cycles.filter(row => (!fid || String(row.fid) === fid) && (!month || row.date.startsWith(month)))} empty="No expected anniversaries in this selection; not a payment finding." columns={[
-        {key:'fid',label:'FID / plan',cell:row => `FID ${row.fid} · ${row.product}`},
-        {key:'anchor',label:'Original report anchor',cell:row => row.anchor},
-        {key:'date',label:'Expected anniversary',cell:row => row.date},
-        {key:'status',label:'Evidence / payment',cell:() => 'Unreconciled · per-cycle private detail unavailable · actual paid unknown'},
-      ]}/>
-    </details>
-  </Panel>
+function Overview({ model }) {
+  const period = useReportingPeriod(model.today)
+  const familyReadable = model.access.familyAccounts === 'ok' || model.access.familyAccounts === 'empty'
+  const customersReadable = model.access.customers === 'ok' || model.access.customers === 'empty'
+  const money = moneySoFar(model.income, model.expenses, model.access, period)
+  return (
+    <>
+      <section className="ve-summary" aria-label="Summary">
+        <Tile label="Active accounts" value={familyReadable ? model.activeAccounts.length : '—'} />
+        <Tile label="Accounts ready to activate" value={familyReadable ? model.inactiveAccounts.length : '—'} />
+        <Tile label="Active customers" value={customersReadable ? activeCustomerCount(model.customers) : '—'} />
+        <Tile label="Money so far" value={formatK(money)} />
+        <Tile label="Customers due" value={customersReadable ? customersDue(model.customers, period).length : '—'} />
+      </section>
+      <StandardOverview model={glanceFromVe(model)} />
+    </>
+  )
 }
 
 export function ProviderReconciliation({ model }) {
@@ -344,14 +325,13 @@ export function ProviderReconciliation({ model }) {
 
 function FamilyAccounts({ model }) {
   const [account, setAccount] = useState(null)
-  const [group, setGroup] = useState('active')
   const closeAccount = useCallback(() => setAccount(null), [])
   const period = useReportingPeriod(model.today)
   const ordersReadable = model.access.orders === 'ok' || model.access.orders === 'empty'
   const received = ordersReadable ? receivedInPeriod(model.income, period) : null
   const message = accessMessage(model.access.familyAccounts, COPY.familyEmpty, COPY.familyBlocked)
   const plansMessage = accessMessage(model.access.products, COPY.plansEmpty, COPY.plansEmpty)
-  const rows = group === 'active' ? model.activeAccounts : model.inactiveAccounts
+  const rows = [...model.accounts].sort((a, b) => a.owner.localeCompare(b.owner) || a.plan.localeCompare(b.plan) || a.id.localeCompare(b.id))
   return (
     <div className="family-accounts">
       <h2 className="sr-only">Family accounts</h2>
@@ -363,18 +343,10 @@ function FamilyAccounts({ model }) {
         </div>
       </section>
       <FamilyModal account={account} onClose={closeAccount} />
-      <OwnerDisplayReconciliation model={model} />
-      <ProviderReconciliation model={model} />
       {message ? <Message>{message}</Message> : (
-        <>
-          <div className="segmented" role="tablist" aria-label="Account activity">
-            <button type="button" role="tab" aria-selected={group === 'active'} className={group === 'active' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'} onClick={() => setGroup('active')}>Active ({model.activeAccounts.length})</button>
-            <button type="button" role="tab" aria-selected={group === 'inactive'} className={group === 'inactive' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'} onClick={() => setGroup('inactive')}>Inactive ({model.inactiveAccounts.length})</button>
-          </div>
-          <Panel title={group === 'active' ? 'Active accounts' : 'Inactive accounts'}>
-            <AccountTable accounts={rows} empty={group === 'active' ? COPY.activeEmpty : COPY.inactiveEmpty} onOpen={setAccount} />
-          </Panel>
-        </>
+        <Panel title="Family accounts">
+          <AccountTable accounts={rows} empty={COPY.familyEmpty} onOpen={setAccount} />
+        </Panel>
       )}
       <Panel title="Plans">
         {plansMessage || !model.products.length ? <Message>{plansMessage || COPY.plansEmpty}</Message> : (
@@ -424,10 +396,7 @@ function Customers({ model }) {
           <div className="card-head" style={{ flexWrap: 'wrap' }}>
             <h2 className="sr-only">Customer list</h2>
             <div className="vh-actions" style={{ marginLeft: 'auto' }}>
-              <div className="field" style={{ margin: 0, minWidth: 180, maxWidth: 260 }}>
-                <label htmlFor="ve-customer-search">Search</label>
-                <input id="ve-customer-search" aria-label="Search customers" type="search" value={query} onChange={(event) => setQuery(event.target.value)} />
-              </div>
+              <SearchField id="ve-customer-search" label="Search customers" value={query} onChange={setQuery} />
               <div className="field" style={{ margin: 0, minWidth: 160, maxWidth: 220 }}>
                 <label htmlFor="ve-customer-status">Status</label>
                 <select id="ve-customer-status" aria-label="Customer status" value={status} onChange={(event) => setStatus(event.target.value)}>
@@ -464,155 +433,107 @@ function Customers({ model }) {
   )
 }
 
-function RankedSplit({ title, rows, center, format = formatZmw }) {
-  const share = categoryShare(rows)
-  const slices = slicesBy(share.map((item) => ({ group: item.name, amount: item.amount })), 'group')
-  const max = Math.max(...share.map((item) => item.amount), 1)
-  return (
-    <Panel title={title}>
-      {share.length ? (
-        <>
-          <Donut items={slices} center={center} format={format} />
-          <ul className="vh-list" aria-label={`${title} ranking`}>
-            {share.map((item) => (
-              <li key={item.name}>
-                <div style={{ flex: 1 }}>
-                  <strong>{item.name}</strong>
-                  <span style={{ display: 'block', height: 8, marginTop: 6, borderRadius: 99, background: 'var(--surface-2)' }}><span style={{ display: 'block', height: '100%', width: `${item.amount / max * 100}%`, borderRadius: 99, background: 'var(--brand)' }} /></span>
-                </div>
-                <b>{format(item.amount)} · {Math.round(item.pct)}%</b>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : <Message>No {center.toLowerCase()} was returned for this period.</Message>}
-    </Panel>
-  )
-}
-
-
-function BalanceChart({ title, points, currency }) {
-  const width = 640
-  const height = 180
-  const values = points.map((point) => point.balance)
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const span = max - min || 1
-  const coords = points.map((point, index) => {
-    const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * width
-    const y = height - 16 - ((point.balance - min) / span) * (height - 32)
-    return { ...point, x, y }
-  })
-  return (
-    <Panel title={title}>
-      <svg className="chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title}>
-        <polyline fill="none" stroke="var(--brand)" strokeWidth="3" points={coords.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ')} />
-        {coords.map((point) => <circle key={point.id} cx={point.x} cy={point.y} r="3.5" fill="var(--brand)"><title>{point.date}: {formatMoney(point.balance, currency)}</title></circle>)}
-      </svg>
-    </Panel>
-  )
-}
-
-function BankAccountBlock({ account, model, range, query, category }) {
-  const period = accountPeriod(account, model.bankTransactions, range)
-  const own = model.bankTransactions.filter((row) => row.accountId === account.id)
-  const trail = filterBankTransactions(own, { start: range.start, end: range.end, query, category })
-  const spend = filterBankTransactions(own, { start: range.start, end: range.end }).filter((row) => row.amount < 0).map((row) => ({ category: categoryLabel(row.category), amount: -row.amount }))
-  const money = (amount) => formatMoney(amount, account.currency)
-  return (
-    <>
-      <article className="card" style={{ marginBottom: 16 }}>
-        <div className="card-head">
-          <h2>{account.label}</h2>
-          <span className="chip na">{account.last4 ? `Ending ${account.last4}` : account.currency}</span>
-        </div>
-        <div className="card-body">
-          {account.bank && <p className="stat-desc">{account.bank}</p>}
-          <div className="grid-3">
-            <div><div className="stat-num" style={{ fontSize: 28 }}>{money(period.current)}</div><div className="stat-desc">Current balance</div></div>
-            <div><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-green)' }}>{money(period.moneyIn)}</div><div className="stat-desc">In this period</div></div>
-            <div><div className="stat-num" style={{ fontSize: 28, color: 'var(--rag-red)' }}>{money(period.moneyOut)}</div><div className="stat-desc">Out this period</div></div>
-          </div>
-          {account.openingBalance != null && <p className="stat-desc">Opening balance {money(account.openingBalance)}</p>}
-        </div>
-      </article>
-      {period.points.length ? <BalanceChart title="Balance over time" points={period.points} currency={account.currency} /> : <Panel title="Balance over time"><Message>No balance points in this period.</Message></Panel>}
-      <RankedSplit title="Spending by category" rows={spend} center="Spending" format={money} />
-      <Panel title="Transactions">
-        {own.length ? (
-          <DataTable
-            rows={trail}
-            empty={COPY.bankTrailEmpty}
-            columns={[
-              { key: 'date', label: 'Date', cell: (row) => row.date },
-              { key: 'description', label: 'Description', cell: (row) => <>{row.description || '—'}{row.reference ? <small style={{ display: 'block' }}>{row.reference}</small> : null}</> },
-              { key: 'category', label: 'Category', cell: (row) => categoryLabel(row.category) },
-              { key: 'amount', label: 'Amount', cell: (row) => <span style={{ color: row.amount < 0 ? 'var(--rag-red)' : 'var(--rag-green)' }}>{money(row.amount)}</span> },
-              { key: 'balance', label: 'Balance', cell: (row) => (row.balance == null ? '—' : money(row.balance)) },
-              { key: 'fx', label: 'USD and FX', cell: (row) => fxText(row) || '—' },
-            ]}
-          />
-        ) : <Message>No transactions were returned for this account.</Message>}
-      </Panel>
-    </>
-  )
+function moneyLabel(account) {
+  if (account.balance == null) return '—'
+  return account.currency === 'USD' ? formatMoney(account.balance, 'USD') : formatK(account.balance)
 }
 
 function Accounts({ model }) {
-  const reporting = useReportingPeriod(model.today)
-  const range = { start: reporting.start, end: reporting.end }
-  const [query, setQuery] = useState('')
-  const [category, setCategory] = useState('All')
   const access = model.access.bankAccounts
   const readable = access === 'ok' || access === 'empty'
-  const monthCategories = [...new Set(model.bankTransactions.filter((row) => row.date >= range.start && row.date <= range.end).map((row) => row.category))].sort()
-  const selectedCategory = monthCategories.includes(category) ? category : 'All'
-  const groups = accountsByCurrency(model.bankAccounts)
+  const rows = readable && access === 'ok' ? paymentAccounts(model.bankAccounts, model.bankTransactions) : []
   return (
     <>
       <h2 className="sr-only">Accounts</h2>
       {!readable ? <Message>{accessMessage(access, '', COPY.bankAccountsBlocked)}</Message> : (
-        <>
-          {model.bankAccounts.length > 0 && (
-            <div className="vh-actions" style={{ marginBottom: 16 }}>
-              <div className="field" style={{ margin: 0, minWidth: 180, maxWidth: 260 }}>
-                <label htmlFor="ve-bank-search">Search</label>
-                <input id="ve-bank-search" aria-label="Search transactions" type="search" value={query} onChange={(event) => setQuery(event.target.value)} />
-              </div>
-              <div className="field" style={{ margin: 0, minWidth: 180, maxWidth: 260 }}>
-                <label htmlFor="ve-bank-category">Category</label>
-                <select id="ve-bank-category" aria-label="Transaction category" value={selectedCategory} onChange={(event) => setCategory(event.target.value)}>
-                  <option>All</option>
-                  {monthCategories.map((item) => <option key={item} value={item}>{categoryLabel(item)}</option>)}
-                </select>
-              </div>
+        rows.length ? (
+          <section className="card">
+            <div className="card-body">
+              <ul className="record-cards">
+                {rows.map((account) => (
+                  <li key={account.id} className="ve-account">
+                    <div>
+                      <strong>{account.name}</strong>
+                      {account.last4 ? <p>···· {account.last4}</p> : null}
+                    </div>
+                    <span className="num">{moneyLabel(account)}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          )}
-          {groups.map((group) => (
-            <section key={group.currency} style={{ marginBottom: 8 }}>
-              <h3 className="section-title" style={{ fontSize: 18, margin: '18px 0 8px' }}>{group.currency}</h3>
-              {group.accounts.length ? group.accounts.map((account) => <BankAccountBlock key={account.id} account={account} model={model} range={range} query={query} category={selectedCategory} />) : <Message>No {group.currency} account was returned.</Message>}
-            </section>
-          ))}
-        </>
+          </section>
+        ) : <Message>{COPY.paymentAccountsEmpty}</Message>
       )}
     </>
   )
 }
 
 function Funds({ model }) {
-  return <StandardFunds model={glanceFromVe(model)} />
+  const period = useReportingPeriod(model.today)
+  const ordersReadable = model.access.orders === 'ok' || model.access.orders === 'empty'
+  const expensesReadable = model.access.expenses === 'ok' || model.access.expenses === 'empty'
+  const movements = fundMovements(ordersReadable ? model.income : [], expensesReadable ? model.expenses : [])
+  const groups = fundsGrouped(fundsInPeriod(movements, period))
+  return (
+    <>
+      <h2 className="sr-only">Funds</h2>
+      {!ordersReadable && <Message>{accessMessage(model.access.orders, '', COPY.ordersBlocked)}</Message>}
+      {!expensesReadable && <Message>{accessMessage(model.access.expenses, '', COPY.expensesBlocked)}</Message>}
+      {groups.length ? groups.map((month) => (
+        <section key={month.month} className="ve-month" aria-label={month.label}>
+          <h3>{month.label}</h3>
+          {month.dates.map((day) => (
+            <div key={day.date} className="ve-day">
+              <h4>{paymentDate(day.date)}</h4>
+              {day.rows.map((row) => (
+                <div key={row.id} className="ve-move">
+                  <strong>{row.description}</strong>
+                  <span className="ve-dir">{row.direction === 'in' ? 'In' : 'Out'}</span>
+                  <span className="num">{formatK(row.amount)}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </section>
+      )) : (ordersReadable || expensesReadable) && <Message>{COPY.fundsPeriodEmpty}</Message>}
+    </>
+  )
 }
 
 function Budget({ model }) {
-  return <StandardBudget model={glanceFromVe(model)} />
+  const week = subscriptionsThisWeek(model.accounts, model.products, model.budget, model.today)
+  const blocked = accessMessage(model.access.familyAccounts, '', COPY.familyBlocked)
+  return (
+    <>
+      <h2 className="sr-only">Budgets</h2>
+      {blocked ? <Message>{blocked}</Message> : !week.lines.length ? <Message>{COPY.subscriptionsEmpty}</Message> : (
+        <section className="card">
+          <div className="card-head"><h2>This week</h2></div>
+          <div className="card-body">
+            <ul className="record-cards">
+              {week.lines.map((line) => (
+                <li key={line.id} className="ve-account">
+                  <div>
+                    <strong>{line.plan}</strong>
+                    <p>{line.owner} · {paymentDate(line.dueDate)}</p>
+                  </div>
+                  <span className="num">{line.amount == null ? '—' : formatK(line.amount)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="ve-total"><span>Total expected spend</span><span className="num">{week.total == null ? '—' : formatK(week.total)}</span></p>
+          </div>
+        </section>
+      )}
+    </>
+  )
 }
 
 function Marketing({ model }) {
   return <StandardMarketing model={glanceFromVe(model)} />
 }
 
-export default function VeWorkspace({ business, token = '', model = null, today, loadWorkspace }) {
+export default function VeWorkspace({ token = '', model = null, today, loadWorkspace }) {
   const clock = today || todayIso()
   const [remote, setRemote] = useState(null)
   const [remoteToken, setRemoteToken] = useState('')
@@ -629,15 +550,14 @@ export default function VeWorkspace({ business, token = '', model = null, today,
   const loaded = token && remoteToken === token ? remote : null
   const failed = Boolean(token) && failureToken === token && !loaded
   const view = model || loaded || (failed ? buildWorkspace(emptySources('error'), clock) : (!token ? buildWorkspace(emptySources('signed-out'), clock) : null))
-  if (!view) return <div className="wrap biz"><p className="empty" role="status">{COPY.loading}</p><PageFooter /></div>
-  return <VePages business={business} view={view} />
+  if (!view) return <div className="wrap biz ve-pages"><p className="empty" role="status">{COPY.loading}</p><PageFooter /></div>
+  return <VePages view={view} />
 }
 
-function VePages({ business, view }) {
+function VePages({ view }) {
   return (
-    <div className="wrap biz">
-      <div className="topbar"><div><p className="brand-eyebrow">Vidmar Holdings · {business?.code || 'VE'}</p><h1>{business?.name || 'Vidmar Entertainment'}</h1></div></div>
-      <SlideTabs label="VE sections" tabs={['Overview', 'Family Accounts', 'Customers', 'Funds', 'Accounts', 'Budget', 'Marketing']}>
+    <div className="wrap biz ve-pages">
+      <SlideTabs label="VE sections" tabs={['Overview', 'Family Accounts', 'Customers', 'Funds', 'Accounts', { label: 'Budgets', icon: 'calculator' }, 'Marketing']}>
         <div><Overview model={view} /></div>
         <div><FamilyAccounts model={view} /></div>
         <div><Customers model={view} /></div>

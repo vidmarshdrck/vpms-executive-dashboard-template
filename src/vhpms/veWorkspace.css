@@ -1,0 +1,164 @@
+/* VE pages only. Inactive slides must not stretch the page: the shared
+   track lays every tab in one row, and the tallest tab was leaving a blank
+   scroll above the footer. */
+.vh-app .ve-pages {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+.vh-app .ve-pages .slide-workspace,
+.vh-app .ve-pages .slide-viewport,
+.vh-app .ve-pages .slide-page {
+  max-width: 100%;
+  min-width: 0;
+}
+.vh-app .ve-pages .slide-track { align-items: flex-start; }
+.vh-app .ve-pages .slide-page[aria-hidden="true"] {
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+.vh-app .ve-pages .ve-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 8px;
+}
+.vh-app .ve-pages .ve-summary .card-body { padding: 14px 16px 16px; }
+.vh-app .ve-pages .ve-summary .stat-num {
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -.02em;
+}
+.vh-app .ve-pages .ve-summary .stat-desc { margin-top: 6px; font-size: 13px; }
+
+.vh-app .ve-pages .chip {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.vh-app .ve-pages .family-received .stat-num { font-size: 22px; font-weight: 500; }
+.vh-app .ve-pages .account-card .record-meta { white-space: normal; }
+
+.vh-app .ve-pages .ve-month { margin: 18px 0 8px; }
+.vh-app .ve-pages .ve-month h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.vh-app .ve-pages .ve-day {
+  margin: 0 0 12px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.vh-app .ve-pages .ve-day h4 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.vh-app .ve-pages .ve-move {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 8px 0;
+}
+.vh-app .ve-pages .ve-move strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.vh-app .ve-pages .ve-move .ve-dir { font-size: 13px; color: var(--text-secondary); }
+.vh-app .ve-pages .ve-move .num { color: var(--text-primary); }
+
+.vh-app .ve-pages .ve-account {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.vh-app .ve-pages .ve-account:last-child { border-bottom: 0; }
+.vh-app .ve-pages .ve-account strong { color: var(--text-primary); font-weight: 600; }
+.vh-app .ve-pages .ve-account p { margin: 4px 0 0; color: var(--text-muted); font-size: 13px; }
+.vh-app .ve-pages .ve-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.vh-app .ve-pages .ve-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1 1 180px;
+  max-width: 280px;
+}
+.vh-app .ve-pages .ve-search svg {
+  position: absolute;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  stroke: var(--text-muted);
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.vh-app .ve-pages .ve-search input[type="search"] {
+  width: 100%;
+  height: 40px;
+  margin: 0;
+  padding: 0 36px 0 36px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-primary);
+  font: 400 14px/1 var(--font-sans);
+}
+.vh-app .ve-pages .ve-search input[type="search"]::-webkit-search-cancel-button,
+.vh-app .ve-pages .ve-search input[type="search"]::-webkit-search-decoration { display: none; }
+.vh-app .ve-pages .ve-search input[type="search"]:focus {
+  outline: none;
+  border-color: #1454c0;
+  box-shadow: 0 0 0 3px rgba(20, 84, 192, .22);
+}
+.vh-app .ve-pages .ve-search:focus-within svg { stroke: #1454c0; }
+.vh-app .ve-pages .ve-search-clear {
+  position: absolute;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+.vh-app .ve-pages .ve-search-clear:hover { background: var(--surface-2); color: var(--text-primary); }
+.vh-app .ve-pages .ve-search-clear svg { position: static; width: 14px; height: 14px; stroke: currentColor; }
+
+@media (max-width: 900px) {
+  .vh-app .ve-pages .ve-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .vh-app .ve-pages .ve-summary { grid-template-columns: 1fr 1fr; }
+  .vh-app .ve-pages .ve-summary .stat-num { font-size: 22px; }
+  .vh-app .ve-pages .ve-search { max-width: none; flex-basis: 100%; }
+  .vh-app .ve-pages .ve-move { grid-template-columns: minmax(0, 1fr) auto; }
+  .vh-app .ve-pages .ve-move .ve-dir { grid-column: 1; }
+}
