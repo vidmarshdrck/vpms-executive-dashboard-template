@@ -97,6 +97,7 @@ test('the VE pages render mapped records', () => {
   assert.match(html, /K 288\.95<\/div><div class="stat-desc">Money so far/)
   assert.match(html, /class="ve-status green"/)
   assert.match(html, /class="ve-status amber"/)
+  assert.doesNotMatch(html, /class="chip (?:green|amber)">(?:CONNECTED|DISCONNECTED)</)
   assert.match(readFileSync(new URL('./veWorkspace.css', import.meta.url), 'utf8'), /month-strip \{ grid-template-columns: 1fr/)
   assert.match(readFileSync(new URL('./veWorkspace.css', import.meta.url), 'utf8'), /nth-child\(5\) \{ grid-column: 1 \/ -1/)
   assert.match(html, /ve-search/)
