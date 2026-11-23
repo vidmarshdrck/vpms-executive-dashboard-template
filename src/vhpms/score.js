@@ -1,4 +1,6 @@
 import { catalog } from './catalog.js'
+import { formatK } from './veData.js'
+import { effectiveRoles, entryDepartment } from './directory.js'
 
 export const BRAND = '#1454c0'
 export const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4']
@@ -80,6 +82,13 @@ function periodOrder(label) {
   return quarter >= 0 ? 20 + quarter : 99
 }
 
+function latestPeriod(periods) {
+  const rows = [...(periods || [])].filter((period) => finite(period.target) != null || finite(period.actual) != null)
+  if (!rows.length) return null
+  rows.sort((a, b) => (Number(a.year) - Number(b.year)) || (periodOrder(a.label) - periodOrder(b.label)))
+  return rows[rows.length - 1]
+}
+
 export function latestMeasurement(periods, direction = 'HIGHER_BETTER') {
   const rows = [...(periods || [])].filter((period) => finite(period.actual) != null)
   if (!rows.length) return null
@@ -111,18 +120,87 @@ export function formatPct(value, digits = 0) {
   return `${Number(value).toFixed(digits)}%`
 }
 
+export function formatMeasure(value, unit) {
+  const number = finite(value)
+  if (number == null) return null
+  if (unit === 'K' || unit === 'K per month') return formatK(number)
+  if (unit === '%') {
+    const text = Number.isInteger(number) ? number.toLocaleString('en-GB') : number.toLocaleString('en-GB', { maximumFractionDigits: 2 })
+    return `${text}%`
+  }
+  return Number.isInteger(number) ? number.toLocaleString('en-GB') : number.toLocaleString('en-GB', { maximumFractionDigits: 2 })
+}
+
+export function formatTarget(value, unit) {
+  return formatMeasure(value, unit) || 'No target set'
+}
+
+export function formatActual(value, unit) {
+  return formatMeasure(value, unit) || '—'
+}
+
+const LIVE_FIELDS = {
+  've.activeAccounts': 'activeAccounts',
+  've.customersDue': 'customersDue',
+  've.income': 'income',
+  've.cash': 'cash',
+  've.openSlots': 'openSlots',
+}
+
+export function presentScorecard(scorecard, figures) {
+  if (!scorecard || !figures) return scorecard
+  return {
+    ...scorecard,
+    kpis: scorecard.kpis.map((kpi) => {
+      const field = LIVE_FIELDS[kpi.live]
+      if (!field || figures[field] == null) return kpi
+      const actual = Number(figures[field])
+      return Number.isFinite(actual) ? { ...kpi, liveActual: actual } : kpi
+    }),
+  }
+}
+
+export function seesEveryKpi(user) {
+  return effectiveRoles(user).some((role) => role === 'admin' || role === 'gm')
+}
+
+export function kpiDepartment(user, departments) {
+  if (seesEveryKpi(user)) return ''
+  const codes = new Set((departments || []).map((item) => item.code))
+  const scoped = entryDepartment(user)
+  if (scoped && codes.has(scoped)) return scoped
+  const unit = String(user?.unit || '').trim().toLowerCase()
+  if (codes.has(unit)) return unit
+  return scoped || ''
+}
+
 export function freshScorecard() {
   return structuredClone(catalog)
 }
 
+function storedPeriods(value) {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((period) => {
+    const label = String(period?.label || '').toUpperCase()
+    const year = Number(period?.year)
+    if (!label || !Number.isInteger(year)) return []
+    return [{ label, year, target: finite(period.target), actual: finite(period.actual) }]
+  })
+}
+
 export function loadScorecard(raw) {
-  if (!raw) return freshScorecard()
+  const fresh = freshScorecard()
+  if (!raw) return fresh
   try {
     const scorecard = JSON.parse(raw)
-    if (scorecard?.version !== 1 || !Array.isArray(scorecard.kpis) || !Array.isArray(scorecard.departments)) return freshScorecard()
-    return scorecard
+    if (scorecard?.catalogue !== catalog.catalogue || !Array.isArray(scorecard.kpis)) return fresh
+    const saved = new Map(scorecard.kpis.map((kpi) => [kpi.id, storedPeriods(kpi.periods)]))
+    return {
+      ...fresh,
+      kpis: fresh.kpis.map((kpi) => (saved.has(kpi.id) ? { ...kpi, periods: saved.get(kpi.id) } : kpi)),
+    }
   } catch {
-    return freshScorecard()
+    return fresh
   }
 }
 
@@ -142,8 +220,20 @@ export function kpisForDepartment(kpis, code) {
   return names.map((perspective) => ({
     perspective,
     kpis: rows.filter((kpi) => kpi.perspective === perspective).map((kpi) => {
-      const latest = latestMeasurement(kpi.periods, kpi.direction)
-      return { ...kpi, latest, latestPct: latest ? latest.pct : null }
+      const stored = latestMeasurement(kpi.periods, kpi.direction)
+      const entry = latestPeriod(kpi.periods)
+      const actual = kpi.liveActual != null ? kpi.liveActual : (stored ? finite(stored.actual) : null)
+      const target = entry ? finite(entry.target) : null
+      const pct = departmentPct(target, actual, kpi.direction)
+      const source = stored || entry
+      const latest = actual == null && target == null ? null : {
+        label: source?.label || '',
+        year: source?.year || null,
+        target,
+        actual,
+        pct,
+      }
+      return { ...kpi, latest, latestPct: pct }
     }),
   }))
 }
@@ -170,7 +260,7 @@ export function buildOrganisation(kpis, year = catalog.year) {
   }))
   const rows = []
   for (const kpi of kpis) {
-    if (kpi.dept !== 'gm' || kpi.active === false) continue
+    if (kpi.active === false) continue
     const perspectiveIndex = perspectives.findIndex((item) => item.name === kpi.perspective)
     if (perspectiveIndex < 0) continue
     const quarters = [null, null, null, null]
@@ -207,7 +297,6 @@ export function buildOrganisation(kpis, year = catalog.year) {
   const perf = perspectives.flatMap((perspective) => (perspective.perf == null ? [] : [perspective.perf]))
   const status = { green: 0, amber: 0, red: 0, na: 0 }
   for (const row of rows) status[row.latest == null ? 'na' : ragFor(row.latest)] += 1
-  const objectives = new Set(kpis.filter((kpi) => kpi.active !== false && kpi.strategy).map((kpi) => `${kpi.perspective}:${kpi.strategy}`)).size
   return {
     year,
     perspectives,
@@ -220,7 +309,6 @@ export function buildOrganisation(kpis, year = catalog.year) {
       reporting: rows.length - status.na,
       onTarget: status.green,
       totalKpis: kpis.filter((kpi) => kpi.active !== false).length,
-      objectives,
     },
   }
 }
@@ -265,7 +353,6 @@ export function updateDepartment(scorecard, code, fields) {
 }
 
 export function deleteDepartment(scorecard, code) {
-  if (code === 'gm') throw new Error('The executive office stays on the Dashboard.')
   return { ...scorecard, departments: scorecard.departments.filter((department) => department.code !== code), kpis: scorecard.kpis.filter((kpi) => kpi.dept !== code) }
 }
 

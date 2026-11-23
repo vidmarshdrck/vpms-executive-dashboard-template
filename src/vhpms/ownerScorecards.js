@@ -23,10 +23,10 @@ export function saveOwnerScorecard(state, input, id) {
 
 function buildCard(input, id) {
   const name = String(input?.name || '').trim()
-  const subjectType = input?.subjectType === 'user' || input?.subjectType === 'department' ? input.subjectType : ''
+  const subjectType = input?.subjectType === 'user' || input?.subjectType === 'department' || input?.subjectType === 'business' ? input.subjectType : ''
   const subjectId = String(input?.subjectId || '').trim()
   if (!name) throw new Error('Enter a name for the scorecard.')
-  if (!subjectType || !subjectId) throw new Error('Choose a department or a user.')
+  if (!subjectType || !subjectId) throw new Error('Choose a department, a user, or a business.')
   const metrics = (Array.isArray(input?.metrics) ? input.metrics : []).map((metric) => ({
     id: String(metric?.id || crypto.randomUUID()),
     name: String(metric?.name || '').trim(),

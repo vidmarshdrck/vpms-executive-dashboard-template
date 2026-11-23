@@ -1,5 +1,7 @@
-import { QUARTERS, ragFor, ragLabel, departmentCoverage } from './score.js'
+import { QUARTERS, ragFor, ragLabel, departmentAverage, operatingDepartments, kpisForDepartment, presentScorecard, buildOrganisation, formatTarget, formatActual } from './score.js'
 import { Donut, ScoreGauge, PageFooter } from './Donut.jsx'
+import { useReportingPeriod } from './TimeframePopover.jsx'
+import { veKpiFigures } from './kpiLive.js'
 
 function Trend({ model }) {
   const width = 600
@@ -78,10 +80,13 @@ function ragColor(rag) {
   return 'var(--rag-na)'
 }
 
-export default function GmDashboard({ model, scorecard, viewOnly }) {
+export default function GmDashboard({ scorecard, workspace, viewOnly }) {
+  const period = useReportingPeriod()
+  const presented = presentScorecard(scorecard, veKpiFigures(workspace, period))
+  const model = buildOrganisation(presented.kpis, presented.year)
   const reported = model.kpis.filter((kpi) => kpi.latest != null)
-  const coverage = departmentCoverage(scorecard.kpis, scorecard.departments)
-  const maxTracked = Math.max(1, ...coverage.map((department) => department.tracked))
+  const businesses = operatingDepartments(presented.departments)
+  const kpiRows = businesses.flatMap((department) => kpisForDepartment(presented.kpis, department.code).flatMap((group) => group.kpis.map((kpi) => ({ ...kpi, business: department.name }))))
   const statusItems = [
     { name: 'On target', value: model.status.green, color: 'var(--rag-green)' },
     { name: 'Near target', value: model.status.amber, color: '#D69E2E' },
@@ -104,11 +109,30 @@ export default function GmDashboard({ model, scorecard, viewOnly }) {
       </div>
       <div className="kpi-strip">
         <div className="tile" style={{ '--t': 'var(--brand)' }}><div className="lab">Overall score</div><div className="val">{model.overall == null ? '—' : `${Math.round(model.overall)}%`}</div><div className="foot">avg. of perspectives with data</div></div>
-        <div className="tile" style={{ '--t': 'var(--teal)' }}><div className="lab">KPIs tracked</div><div className="val">{model.stats.tracked}</div><div className="foot">of {model.stats.totalKpis} in the strategy</div></div>
+        <div className="tile" style={{ '--t': 'var(--teal)' }}><div className="lab">KPIs</div><div className="val">{model.stats.totalKpis}</div><div className="foot">{model.stats.tracked ? `${model.stats.tracked} with a recorded period` : 'No target set'}</div></div>
         <div className="tile" style={{ '--t': 'var(--green)' }}><div className="lab">Reporting actuals</div><div className="val">{model.stats.reporting}</div><div className="foot">{model.stats.onTarget} currently on target</div></div>
-        <div className="tile" style={{ '--t': 'var(--violet)' }}><div className="lab">Departments tracked</div><div className="val">{coverage.length}</div><div className="foot">with KPI targets set</div></div>
-        <div className="tile" style={{ '--t': 'var(--orange)' }}><div className="lab">Active objectives</div><div className="val">{model.stats.objectives}</div><div className="foot">across 4 perspectives</div></div>
+        <div className="tile" style={{ '--t': 'var(--violet)' }}><div className="lab">Businesses</div><div className="val">{businesses.length}</div><div className="foot">{businesses.filter((department) => departmentAverage(presented.kpis, department.code).count > 0).length ? 'With a recorded actual' : 'No target set'}</div></div>
       </div>
+      <section className="card" style={{ marginBottom: 18 }}>
+        <div className="card-head"><h2>KPIs</h2></div>
+        <div className="card-body pad-0">
+          <div className="tbl-scroll">
+            <table className="data">
+              <thead><tr><th>Business</th><th>KPI</th><th>Target</th><th>Actual</th></tr></thead>
+              <tbody>
+                {kpiRows.map((kpi) => (
+                  <tr key={kpi.id}>
+                    <td>{kpi.business}</td>
+                    <td>{kpi.measure}</td>
+                    <td>{formatTarget(kpi.latest?.target, kpi.unit)}</td>
+                    <td>{formatActual(kpi.latest?.actual, kpi.unit)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
       <div className="hero">
         <section className="card"><div className="card-body"><ScoreGauge pct={model.overall} caption="Overall balanced scorecard" /></div></section>
         <div className="grid-4">
@@ -145,11 +169,11 @@ export default function GmDashboard({ model, scorecard, viewOnly }) {
           </div>
         </section>
         <section className="card accent-green">
-          <div className="card-head"><h2>Status mix & strategy coverage</h2></div>
+          <div className="card-head"><h2>Status mix</h2></div>
           <div className="card-body">
             {model.stats.tracked ? <Donut items={statusItems} center="KPIs" format={(value) => String(value)} /> : <p className="empty">No KPI actuals have been recorded yet.</p>}
             <hr style={{ border: 0, borderTop: '1px solid var(--border)', margin: '18px 0' }} />
-            <Donut items={perspectiveItems} center="strategy KPIs" format={(value) => String(value)} />
+            <Donut items={perspectiveItems} center="KPIs" format={(value) => String(value)} />
           </div>
         </section>
       </div>
@@ -170,19 +194,18 @@ export default function GmDashboard({ model, scorecard, viewOnly }) {
         </div>
       </section>
       <section className="card accent-yellow">
-        <div className="card-head"><h2>Department KPI coverage</h2></div>
+        <div className="card-head"><h2>Business KPI coverage</h2></div>
         <div className="card-body">
-          {coverage.length ? coverage.map((department) => (
-            <div className="dep" key={department.code}>
-              <div className="dn">{department.name}</div>
-              <div className="track">
-                <div className="fill trk" style={{ width: `${department.tracked / maxTracked * 100}%` }} />
-                <div className="fill rep" style={{ width: `${department.reporting / maxTracked * 100}%` }} />
+          {businesses.map((department) => {
+            const stat = departmentAverage(presented.kpis, department.code)
+            const hasTarget = presented.kpis.some((kpi) => kpi.dept === department.code && (kpi.periods || []).some((period) => period.target != null))
+            return (
+              <div className="dep" key={department.code}>
+                <div className="dn">{department.name}</div>
+                <div className="dv">{stat.pct == null ? (hasTarget ? 'No actual yet' : 'No target set') : `${Math.round(stat.pct)}%`}</div>
               </div>
-              <div className="dv">{department.reporting} / {department.tracked}</div>
-            </div>
-          )) : <p className="empty">No department KPI targets found.</p>}
-          <div className="lg"><span><i className="dot" style={{ background: 'var(--rag-green)' }} />KPIs reporting actuals</span><span><i className="dot" style={{ background: '#CBD5E1' }} />KPIs with targets only</span></div>
+            )
+          })}
         </div>
       </section>
       <PageFooter>Achievement = actual ÷ target (target ÷ actual for lower-is-better KPIs), capped at 150%. Thresholds: green ≥ 100%, amber 90–99%, red &lt; 90%.{viewOnly ? ' You are signed in with view-only access.' : ''}</PageFooter>

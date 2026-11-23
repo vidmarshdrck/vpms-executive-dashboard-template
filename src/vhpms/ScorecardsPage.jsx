@@ -5,16 +5,26 @@ import { saveOwnerScorecard } from './ownerScorecards.js'
 
 const blankMetric = () => ({ id: crypto.randomUUID(), name: '', target: '' })
 
-function subjectLabel(card, departments, users) {
+function subjectLabel(card, departments, users, businesses) {
   if (card.subjectType === 'department') {
     const department = departments.find((item) => item.code === card.subjectId)
     return department ? publicDepartmentName(department) : card.subjectId
+  }
+  if (card.subjectType === 'business') {
+    const business = businesses.find((item) => item.code === card.subjectId || item.id === card.subjectId)
+    return business?.name || card.subjectId
   }
   const user = users.find((item) => item.username === card.subjectId)
   return user?.name || card.subjectId
 }
 
-export default function ScorecardsPage({ departments, users, cards, onChange }) {
+function subjectKind(card) {
+  if (card.subjectType === 'user') return 'User'
+  if (card.subjectType === 'business') return 'Business'
+  return 'Department'
+}
+
+export default function ScorecardsPage({ departments, users, businesses = [], cards, onChange }) {
   const [editingId, setEditingId] = useState(null)
   const [draft, setDraft] = useState(null)
   const [error, setError] = useState('')
@@ -59,7 +69,7 @@ export default function ScorecardsPage({ departments, users, cards, onChange }) 
   }
 
   function setSubjectType(subjectType) {
-    const subjectId = subjectType === 'user' ? (users[0]?.username || '') : (departments[0]?.code || '')
+    const subjectId = subjectType === 'user' ? (users[0]?.username || '') : subjectType === 'business' ? (businesses[0]?.code || '') : (departments[0]?.code || '')
     setDraft({ ...draft, subjectType, subjectId })
   }
 
@@ -81,14 +91,17 @@ export default function ScorecardsPage({ departments, users, cards, onChange }) 
                 <div className="row-actions">
                   <label className="vh-check"><input type="radio" name="scorecard-subject" checked={draft.subjectType === 'department'} onChange={() => setSubjectType('department')} /> Department</label>
                   <label className="vh-check"><input type="radio" name="scorecard-subject" checked={draft.subjectType === 'user'} onChange={() => setSubjectType('user')} /> User</label>
+                  <label className="vh-check"><input type="radio" name="scorecard-subject" checked={draft.subjectType === 'business'} onChange={() => setSubjectType('business')} /> Business</label>
                 </div>
               </div>
               <div className="field">
-                <label htmlFor="scorecard-subject">{draft.subjectType === 'user' ? 'User' : 'Department'}</label>
+                <label htmlFor="scorecard-subject">{draft.subjectType === 'user' ? 'User' : draft.subjectType === 'business' ? 'Business' : 'Department'}</label>
                 <select id="scorecard-subject" value={draft.subjectId} onChange={(event) => setDraft({ ...draft, subjectId: event.target.value })} required>
                   {draft.subjectType === 'department'
                     ? departments.map((department) => <option key={department.code} value={department.code}>{publicDepartmentName(department)}</option>)
-                    : users.map((user) => <option key={user.username} value={user.username}>{user.name}</option>)}
+                    : draft.subjectType === 'business'
+                      ? businesses.map((business) => <option key={business.id} value={business.code}>{business.name}</option>)
+                      : users.map((user) => <option key={user.username} value={user.username}>{user.name}</option>)}
                 </select>
               </div>
               <div className="field">
@@ -128,7 +141,7 @@ export default function ScorecardsPage({ departments, users, cards, onChange }) 
               <section className="card" key={card.id}>
                 <div className="card-head"><h2>{card.name}</h2></div>
                 <div className="card-body">
-                  <p className="stat-desc">{card.subjectType === 'user' ? 'User' : 'Department'} · {subjectLabel(card, departments, users)}</p>
+                  <p className="stat-desc">{subjectKind(card)} · {subjectLabel(card, departments, users, businesses)}</p>
                   <ul className="vh-list">
                     {card.metrics.map((metric) => <li key={metric.id}><div><strong>{metric.name}</strong><small>Target {metric.target}</small></div></li>)}
                   </ul>
