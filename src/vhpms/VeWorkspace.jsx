@@ -394,6 +394,13 @@ function FamilyAccounts({ model }) {
   )
 }
 
+function WhatsAppLink({ row }) {
+  const href = whatsappHref(row)
+  return href
+    ? <a className="btn btn-primary btn-sm" href={href} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+    : <button type="button" className="btn btn-ghost btn-sm" disabled>WhatsApp</button>
+}
+
 function Customers({ model }) {
   const [status, setStatus] = useState('All')
   const [query, setQuery] = useState('')
@@ -419,6 +426,7 @@ function Customers({ model }) {
             </div>
           </div>
           <div className="card-body">
+            <div className="ve-customer-table">
             <DataTable
               rows={rows}
               empty={COPY.customersEmpty}
@@ -430,14 +438,24 @@ function Customers({ model }) {
                 { key: 'last', label: <ColumnLabel icon="receipt">Last payment</ColumnLabel>, cell: (row) => row.lastPayment?.date || 'No payment recorded' },
                 { key: 'lastAmount', label: <ColumnLabel icon="wallet">Last amount</ColumnLabel>, cell: (row) => row.lastPayment ? formatK(row.lastPayment.amount) : '—' },
                 { key: 'spent', label: <ColumnLabel icon="wallet">Total spent</ColumnLabel>, cell: (row) => formatK(row.totalSpent) },
-                { key: 'whatsapp', label: <ColumnLabel icon="message">WhatsApp</ColumnLabel>, cell: (row) => {
-                  const href = whatsappHref(row)
-                  return href
-                    ? <a className="btn btn-primary btn-sm" href={href} target="_blank" rel="noopener noreferrer">WhatsApp</a>
-                    : <button type="button" className="btn btn-ghost btn-sm" disabled>WhatsApp</button>
-                } },
+                { key: 'whatsapp', label: <ColumnLabel icon="message">WhatsApp</ColumnLabel>, cell: (row) => <WhatsAppLink row={row} /> },
               ]}
             />
+            </div>
+            <ul className="ve-customer-cards record-cards">
+              {rows.length ? rows.map((row) => (
+                <li key={row.id} className="record-card ve-customer-card">
+                  <div className="record-line">
+                    <strong>{row.name}</strong>
+                    <StatusMark value={row.status} />
+                  </div>
+                  <p className="record-meta">{row.products}</p>
+                  <p className="record-meta">{row.lastPayment ? `Last payment ${paymentDate(row.lastPayment.date)} · ${formatK(row.lastPayment.amount)}` : 'No payment recorded'}</p>
+                  <p className="record-meta">Total spent {formatK(row.totalSpent)}</p>
+                  <WhatsAppLink row={row} />
+                </li>
+              )) : <li className="record-card"><p className="empty">{COPY.customersEmpty}</p></li>}
+            </ul>
           </div>
         </section>
       )}

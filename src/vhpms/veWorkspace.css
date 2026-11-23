@@ -171,12 +171,18 @@
 .vh-app .ve-pages .ve-status.amber i { background: var(--rag-amber); }
 .vh-app .ve-pages .ve-status.red i { background: var(--rag-red); }
 .vh-app .ve-pages .kpi-grid.ve-finance { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.vh-app .ve-pages .ve-customer-cards { display: none; }
+.vh-app .ve-pages .ve-customer-card .btn { margin-top: 8px; }
+.vh-app .ve-pages .ve-customer-card .record-line { align-items: flex-start; }
+.vh-app .ve-pages .ve-customer-card strong { min-width: 0; overflow-wrap: anywhere; }
 
 @media (max-width: 900px) {
   .vh-app .ve-pages .ve-summary { grid-template-columns: 1fr 1fr; }
   .vh-app .ve-pages .ve-summary .card:nth-child(5) { grid-column: 1 / -1; }
 }
 @media (max-width: 600px) {
+  .vh-app .ve-pages .ve-customer-table { display: none; }
+  .vh-app .ve-pages .ve-customer-cards { display: block; }
   .vh-app .ve-pages .month-strip { grid-template-columns: 1fr; }
   .vh-app .ve-pages .month-strip strong,
   .vh-app .ve-pages .month-strip small { white-space: normal; overflow-wrap: anywhere; }
