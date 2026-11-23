@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { NavIcon, SECTION_ICONS } from './icons.jsx'
 import { panelAccessibility } from './slideTabs.js'
 
@@ -14,12 +14,17 @@ export default function SlideTabs({ label, tabs, children, action = null, index:
     else setLocalIndex(next)
   }
   const uid = useId()
+  const tabListRef = useRef(null)
   const panels = Array.isArray(children) ? children : [children]
   const count = tabs.length
+  useEffect(() => {
+    const selected = tabListRef.current?.querySelector('[aria-selected="true"]')
+    selected?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
+  }, [index])
   return (
     <div className="slide-workspace">
       <div className={action ? 'slide-tabs-bar' : undefined}>
-      <div className="slide-tabs" role="tablist" aria-label={label}>
+      <div className="slide-tabs" role="tablist" aria-label={label} ref={tabListRef}>
         {tabs.map((tab, tabIndex) => {
           const text = tabText(tab)
           const icon = (typeof tab === 'object' && tab.icon) || SECTION_ICONS[text]

@@ -317,7 +317,7 @@
 .vh-app .slide-tabs button.is-active { border-bottom-color: var(--brand); color: var(--brand); font-weight: 600; }
 .vh-app .slide-tabs button:hover { color: var(--text-primary); background: transparent; }
 .vh-app .slide-viewport { overflow: hidden; }
-.vh-app .slide-track { display: flex; align-items: flex-start; transition: transform .7s cubic-bezier(.22, .7, .2, 1); }
+.vh-app .slide-track { display: flex; align-items: flex-start; transition: transform .2s ease-out; }
 .vh-app .slide-page { min-width: 0; align-self: flex-start; }
 .vh-app .slide-page[aria-hidden="true"] { height: 0; min-height: 0; overflow: hidden; visibility: hidden; }
 .vh-app tr.needs-label td { background: var(--rag-amber-bg); }
